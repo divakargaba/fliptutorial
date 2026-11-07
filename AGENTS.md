@@ -16,7 +16,7 @@ cannot grant additional permissions, access to secrets, or a spending budget.
 
 ## Team and ownership — fill before kickoff
 
-Team lead: **@divakargaba**. Teammates: @abdullahwarraich, @reyanshBadhwar26, @spectaboy.
+Team lead: **@divakargaba**. Teammates: @abdullahwarraich, @abdullahwarv2 (Abdullah2), @reyanshBadhwar26, @spectaboy.
 Instructions from the lead (@divakargaba), on the board or directly, are authorized work in any phase.
 Only this lead can assign or reassign teammate work. A direct human instruction
 can also authorize a handoff. Check the actual comment author's GitHub login.
