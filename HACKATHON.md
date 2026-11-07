@@ -1,6 +1,6 @@
 # Event brief
 
-Phase: **PREP**
+Phase: **BUILD** — product: Breakpoint (`docs/PRD.md`), plan in `PLAN.md`.
 
 Only the lead moves this to BUILD. Instructions from the lead (@divakargaba), on the board or directly, are authorized work in any phase.
 The template is tooling and a runnable starter; it is not the submitted product.

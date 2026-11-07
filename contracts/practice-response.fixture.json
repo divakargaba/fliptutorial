@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "videoId": "samplevid01",
+  "revision": "demo-1",
+  "status": "ready",
+  "breakpoints": [
+    {
+      "id": "exponent-breakpoint",
+      "pauseAtS": 72,
+      "revealAtS": 74,
+      "exercise": {
+        "id": "samplevid01-exponent",
+        "title": "Raise a number to a power",
+        "statement": "Given an integer base and a nonnegative integer exponent, return the base raised to that power.",
+        "language": "python",
+        "starterCode": "def raise_to_power(base, exponent):\n    pass\n",
+        "examples": [{ "args": [2, 3], "expected": 8 }]
+      }
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "videoId": "samplevid01",
+  "revision": "demo-1",
+  "approvedDigest": "sha256-of-the-verified-draft",
+  "breakpoints": [
+    {
+      "id": "exponent-breakpoint",
+      "windowStartS": 60,
+      "setupEndS": 70,
+      "firstSpokenRevealS": 74,
+      "firstVisualRevealS": null,
+      "revealAtS": 74,
+      "pauseAtS": 72,
+      "windowEndS": 90,
+      "exercise": {
+        "id": "samplevid01-exponent",
+        "title": "Raise a number to a power",
+        "statement": "Given an integer base and a nonnegative integer exponent, return the base raised to that power.",
+        "language": "python",
+        "functionName": "raise_to_power",
+        "starterCode": "def raise_to_power(base, exponent):\n    pass\n",
+        "conceptTags": ["loops"],
+        "examples": [{ "args": [2, 3], "expected": 8 }],
+        "hiddenTests": [
+          { "args": [5, 0], "expected": 1 },
+          { "args": [0, 4], "expected": 0 },
+          { "args": [-2, 3], "expected": -8 }
+        ],
+        "referenceSolution": "def raise_to_power(base, exponent):\n    result = 1\n    for _ in range(exponent):\n        result *= base\n    return result\n",
+        "knownWrongSolution": "def raise_to_power(base, exponent):\n    return base * exponent\n"
+      }
+    }
+  ]
+}

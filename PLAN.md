@@ -1,103 +1,83 @@
-# Build plan — fill at kickoff
+# Build plan — Breakpoint
 
-Status: PREP. No product work is assigned yet.
-Integration branch: `main`.
+Status: **BUILD**. Integration branch: `main` (pull --rebase, never force-push).
+Spec: `docs/PRD.md` (source of truth). Shared contracts: `contracts/README.md`.
 
-## Runtime and checks (starter)
+Breakpoint is a Chrome extension (WXT + React + Tailwind + CodeMirror) plus a local
+FastAPI backend that grades Python through Judge0. It is **not** the Next.js /
+Supabase / Vercel starter in `web/`; leave `web/` untouched.
 
-Node 24, npm. From repo root:
+Demo target: one working Python exercise on freeCodeCamp *Learn Python – Full Course
+for Beginners* (`rfscVS0vtbw`), Exponent Function chapter (`9680–10033` s).
+Fallback window: Building a Basic Calculator (`52:37–58:27`).
+
+## Machine prerequisites (each human)
+
+Node 24, npm, Python 3.12, desktop Chrome. macOS/Linux use
+`python3.12 -m venv .venv` and `.venv/bin/python`; Windows uses the PRD's
+`py -3.12` / `.\.venv\Scripts\python.exe` commands.
+
+## Checks
 
 ```sh
-npm run setup         # installs dependencies and creates root .env.local if missing
-npm run env:check     # redacted presence check; missing required values exit nonzero
-npm run dev           # http://127.0.0.1:3000; Next.js UI + API routes
-npm run demo          # same app command, for rehearsal
-npm run with-env -- <command> [args]  # local env for agent tools
-npm run typecheck
-npm test              # board/runner regression tests + web unit/component tests
-npm run build
-npm run test:e2e      # browser smoke, after Playwright browser installation
-npm run vercel:check  # verifies the configured Vercel project/owner and settings
-npm run vercel:configure
-npm run vercel:env -- preview
-npm run deploy:preview
+# extension/
+npm ci && npm run typecheck && npm test && npm run build && npm run test:e2e
+# backend/
+.venv/bin/python -m pytest -q
 ```
+Default suites must pass without provider keys. Live Gemini scan and live Judge0 smoke run are separate gates.
 
-Record any additional project commands here when needed. Do not assume a command
-exists just because another team's project used it.
+## Ownership
 
-## Architecture decision
+| Human | Lane | Owned paths |
+| --- | --- | --- |
+| @divakargaba (Divakar, lead) | Contracts, video prep pipeline, exercise content, integration | `contracts/`, `docs/`, `PLAN.md`, `HACKATHON.md`, `AGENTS.md`, `backend/app/prepare.py`, `backend/content/`, `backend/tests/test_prepare.py`, `backend/tests/fixtures/transcripts/` |
+| @abdullahwarraich (Abdullah) | Backend API + Judge0 grader | `backend/app/main.py`, `backend/app/catalog.py`, `backend/app/grader.py`, `backend/app/__init__.py`, `backend/requirements.txt`, `backend/.env.example`, `backend/tests/` (except `test_prepare.py` and transcript fixtures), `backend/README.md` |
+| @abdullahwarv2 (Abdullah2) | Extension shell, worker, playback engine | `extension/package.json`, `extension/package-lock.json`, `extension/wxt.config.ts`, `extension/tsconfig.json`, `extension/vitest.config.ts`, `extension/entrypoints/`, `extension/src/playback.ts`, `extension/src/contracts.ts`, `extension/src/api.ts`, `extension/tests/unit/` |
+| @reyanshBadhwar26 (Reyansh) | Extension UI, editor, drafts, E2E | `extension/src/ui/`, `extension/src/drafts.ts`, `extension/assets/`, `extension/tests/e2e/`, `extension/playwright.config.ts` |
+| @spectaboy | Not assigned yet | None — do not claim work |
 
-Next.js + React + TypeScript + Tailwind, with Supabase Postgres and Next.js API
-routes for LLM calls. Use one LLM provider if needed. Read docs/STACK.md.
-Vercel hosts both UI and API functions; follow docs/DEPLOYMENT.md. Node 24,
-project root `web`, outside-root source access enabled, standard Next.js output.
-Aim for one real user journey that demonstrates well in five minutes. No separate
-backend/API server, AWS setup or account system by default.
-
-## Contracts — agree before parallel implementation
-
-Replace these with concrete definitions, examples and owners:
-
-- Pages and the one primary user journey: TBD
-- Tables, fields, RLS access and API route names / arguments / result / error: TBD
-- Minimal data needed by this demo; synthetic seed/reset: TBD
-- LLM input/output, selected provider/model, timeout/output limit, fallback: TBD
-- Shared TypeScript types and the owner of changes: TBD
-- Environment variable **names**, who supplies them, where they run: docs/CREDENTIALS.md
-
-## Event deployment record — fill with identifiers and results, never secrets
-
-| Item | Event value |
-| --- | --- |
-| Event GitHub repo | TBD |
-| Vercel project name / project ID / owner-team ID | TBD; credential values stay in local env |
-| Production branch | main |
-| Verified Production URL / commit / check time | TBD |
-| Latest tested Preview URL / commit | TBD |
-| Supabase project ref / region / Postgres version | TBD |
-| Selected model provider / model | TBD |
-| Required runtime env names beyond the default allowlist | None until a feature needs them |
-| Auth redirect URLs, if Auth is used | TBD |
-| Resource/deployment owner and approved spend | TBD |
+Need a dependency in a file you don't own (e.g. Reyansh needs an npm package)?
+Ask the owner on the board with the exact change.
 
 ## Assignments
 
-| ID | Owner login | Owned paths | Deliverable and acceptance check | Depends on | State |
-| --- | --- | --- | --- | --- | --- |
-| K0 | @divakargaba | HACKATHON.md, PLAN.md, AGENTS.md | Record prompt, roster, architecture, contracts and first assignments | Actual prompt | Waiting |
+Work top to bottom. Mark State in this table when shipped or blocked (only your rows).
 
-Each task must name a real owner, exact paths, a demonstrable outcome and a check.
-Post the kickoff tasks on the board; do not make teammates discover assignments
-only by reading a changed file. Update State when work is shipped or blocked.
+| ID | Owner | Deliverable and acceptance check | Depends on | State |
+| --- | --- | --- | --- | --- |
+| D0 | @divakargaba | `contracts/` fixtures + README (public response, approved record, submission response, messages, panel props). | — | Done |
+| D1 | @divakargaba | `backend/content/seeds.json` + transcript excerpt JSON for `rfscVS0vtbw` 9680–10033 s (`start_s`, `end_s`, `text`, stable cue ids) in `backend/content/transcripts/`. If the transcript can't be fetched automatically, post exactly what Divakar must paste. | — | Todo |
+| D2 | @divakargaba | `app.prepare scan/verify/publish` per PRD §3: transcript validation errors, Gemini structured-output candidate detection with cue-id checks, safe-pause math, verify runs reference + known-wrong solution, publish revalidates digest and writes atomically to `content/approved/`. Use `catalog.py` models from B2. pytest `backend/tests/test_prepare.py` covers PRD §8 prep rows with a stubbed Gemini. | B2 models | Todo |
+| D3 | @divakargaba | Reviewed approved exercise for `rfscVS0vtbw` (exponent): visible example(s), ≥3 hidden cases (zero exponent, zero base, negative base odd exponent), reference + wrong solution verified. Timing (`setup_end_s`, reveals, `pause_at_s`) needs Divakar to confirm in the video at 1× and 2× — post the proposed times and ask him. | D1, D2 | Todo |
+| D4 | @divakargaba | Integration: run backend + built extension together on the real video, record measured badge/grade times in this file, three clean walkthroughs. | all | Todo |
+| B1 | @abdullahwarraich | `backend/` skeleton: `requirements.txt` pinned (fastapi, uvicorn[standard], httpx, pydantic, google-genai, python-dotenv, pytest), `.env.example` (GEMINI_API_KEY, GEMINI_MODEL, JUDGE0_BASE_URL, JUDGE0_PYTHON_LANGUAGE_ID, Judge0 auth vars), `app/__init__.py`, `backend/README.md` run commands for macOS and Windows. Post when pushed (unblocks D2). | — | Todo |
+| B2 | @abdullahwarraich | `app/catalog.py`: Pydantic models matching `contracts/approved-record.fixture.json` and the public response; loads `content/approved/*.json` only, fails startup naming file + field; builds public response explicitly (no hidden data). Post the model names to @divakargaba when pushed. | B1 | Todo |
+| B3 | @abdullahwarraich | `app/main.py`: `/health`, `GET /v1/videos/{id}/practice`, `POST /v1/submissions`, error shape + request ids, CORS/host for the extension origin, logging without code/keys/hidden data. | B2 | Todo |
+| B4 | @abdullahwarraich | `app/grader.py`: Judge0 adapter per PRD §4 (one isolated run per case, fixed wrapper emitting JSON, compare outside sandbox, strict types, caps 16 KiB code / 8 KiB output, 3 concurrent cases, 2 s CPU / 4 s wall, 12 s deadline, 2 active grades per backend, structured timeout). Confirm the Python 3 language id via `GET /languages` and whether the host needs auth; ask Divakar for any key. | B3 | Todo |
+| B5 | @abdullahwarraich | pytest with stubbed Judge0 covering every PRD §8 API row; uses `contracts/practice-response.fixture.json`. One opt-in live Judge0 smoke test (skipped without env). | B3, B4 | Todo |
+| E1 | @abdullahwarv2 | `extension/` via WXT React template (npm), Tailwind 4 via `@tailwindcss/vite`, deps (codemirror, @codemirror/lang-python, lucide-react, zod, vitest, @playwright/test), manifest: top-frame content script on `https://www.youtube.com/*`, host permission `http://127.0.0.1/*`, `storage`. `npm run typecheck/test/build/test:e2e` scripts exist. Commit lockfile. **Post as soon as it builds — unblocks Reyansh.** | — | Todo |
+| E2 | @abdullahwarv2 | `src/contracts.ts` Zod schemas for public response, submission response, error shape; Vitest parses the contract fixtures. | E1 | Todo |
+| E3 | @abdullahwarv2 | `entrypoints/background.ts`: listener registered synchronously in `defineBackground`, accepts only typed `lookup`/`grade` messages from the YouTube content script, builds paths itself from `WXT_API_BASE_URL`, 3 s / 15 s timeouts, Zod-validates responses, no keys in the bundle. | E2 | Todo |
+| E4 | @abdullahwarv2 | `src/playback.ts` (pure) + `entrypoints/youtube.content.tsx`: route detection (`yt-navigate-finish` + poll), navigation generation counter, player binding/replacement (5 s observe), pause rule with `requestVideoFrameCallback`/`timeupdate`, seek/ad/visibility/fullscreen resets, claim-once, resume ownership, attempt state machine; mounts Reyansh's `Badge`/`PracticePanel` through `createShadowRootUi` (`cssInjectionMode: 'ui'`). Until UI lands, mount a stub that matches the props contract. | E2, E3 | Todo |
+| E5 | @abdullahwarv2 | Vitest playback suite for every PRD §8 playback row. | E4 | Todo |
+| U1 | @reyanshBadhwar26 | `src/ui/` Tailwind theme tokens + `PracticePanel` and `Badge` per PRD §6 and `contracts/README.md` props, rendered from the fixture; pixel tokens, explicit focus outline, reduced-motion. Start with a standalone preview if E1 isn't pushed yet, then move in. Post to @abdullahwarv2 when the components are importable. | E1 | Todo |
+| U2 | @reyanshBadhwar26 | CodeMirror 6 Python editor inside the shadow root (labelled, Tab-out, stops YouTube hotkeys space/j/k/l/f, destroyed on teardown); results list with `aria-live`; Skip reachable during grading; Resume video button. | U1 | Todo |
+| U3 | @reyanshBadhwar26 | `src/drafts.ts` (chrome.storage.local, debounced, flush on close) wired into the panel. | U1 | Todo |
+| U4 | @reyanshBadhwar26 | Playwright E2E per PRD §8: persistent Chromium with the built MV3 extension, intercepted `www.youtube.com/watch` fixture page with a controllable video, local test API; badge → pause → Run fail → Submit pass → resume, skip during grading, reload draft recovery; screenshots editing/failed/passed at 1440×900 and 1024×768. | E4, U2, U3 | Todo |
 
-## Delivery milestones
+## Handoffs (who to @mention)
 
-Use percentages of the actual available event time, then replace with timestamps:
+- B1 pushed → @divakargaba. B2 models pushed → @divakargaba. B3 serving fixture → @abdullahwarv2 @reyanshBadhwar26.
+- E1 builds → @reyanshBadhwar26. E3 worker ready → @reyanshBadhwar26.
+- U1 components importable → @abdullahwarv2. U2/U3 done → @abdullahwarv2.
+- D3 approved file pushed → @abdullahwarraich @abdullahwarv2.
+- Anyone changing a contract → ask @divakargaba first.
 
-1. **First 10%:** choose one user journey, agree the Supabase schema, access rules and function contracts, prove the connection.
-2. **By 35%:** complete one thin UI → server → data/LLM → UI flow using explicit mocks only where necessary.
-3. **By 65%:** replace critical mocks, integrate all must-haves, test access and provider failures.
-4. **By 85%:** freeze features; fix the demo, phone layout, loading/error/empty states and costs.
-5. **Final 15%:** rehearse from a clean session, capture a fallback demo, finish submission and cleanup notes.
+## Measured results (fill during integration)
 
-## Ship gate
-
-- [ ] Main journey and error path work with the actual selected providers.
-- [ ] Auth and row ownership are tested when the product has private/user data.
-- [ ] Typecheck, tests, production build and browser smoke pass.
-- [ ] Try a few real AI inputs if needed; mocks/fallbacks are labeled.
-- [ ] No client/admin key leaks; spending controls and teardown owner are recorded.
-- [ ] Another teammate can run the README instructions and demo it.
-- [ ] Vercel Production URL, actual Supabase/model flow and any Auth redirects are verified.
-- [ ] Lead posts DONE with the demo URL, commit and known limitations.
-
-## Five-minute presentation
-
-- **0:00–0:30:** who has the problem and what the demo does.
-- **0:30–3:30:** run the one main input → result journey with the actual backend.
-- **3:30–4:30:** show the useful outcome and one differentiating feature.
-- **4:30–5:00:** impact, limits and wrap-up. Keep reset/backup data ready.
-
-Five minutes is the presentation length, not the build deadline. Cut features
-that do not help this story; spend saved time making the main flow reliable.
+| Check | Result |
+| --- | --- |
+| Badge visible after player ready (target ≤ 2 s) | TBD |
+| Full grade round trip (target ≤ 8 s) | TBD |
+| Real YouTube walkthroughs (need 3 clean) | TBD |

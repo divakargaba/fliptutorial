@@ -1,5 +1,9 @@
 # Exact hackathon stack
 
+> **Superseded for this project.** Breakpoint uses the stack in `docs/PRD.md` §2
+> (WXT/React/Tailwind/CodeMirror extension + Python 3.12 FastAPI + Judge0 + Gemini for prep).
+> The table below describes the unused `web/` starter.
+
 **Next.js + TypeScript + Tailwind + Supabase + Vercel + one LLM provider.**
 Build one reliable five-minute demo. These are the defaults for every team agent.
 

@@ -19,3 +19,10 @@ supabase/.branches/
 .DS_Store
 Thumbs.db
 .projects/
+**/.venv/
+**/__pycache__/
+**/.pytest_cache/
+**/.output/
+**/.wxt/
+backend/content/drafts/*
+!backend/content/drafts/.gitkeep

@@ -1,0 +1,8 @@
+{
+  "outcome": "wrong_answer",
+  "passedCount": 0,
+  "totalCount": 1,
+  "results": [
+    { "kind": "visible", "index": 0, "passed": false, "args": [2, 3], "expected": 8, "actual": 6, "diagnostic": null }
+  ]
+}
