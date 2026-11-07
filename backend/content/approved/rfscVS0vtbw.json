@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 1,
+  "videoId": "rfscVS0vtbw",
+  "breakpoints": [
+    {
+      "id": "exponent-breakpoint",
+      "windowStartS": 9680,
+      "setupEndS": 9762.32,
+      "firstSpokenRevealS": 9805.32,
+      "firstVisualRevealS": 9808,
+      "revealAtS": 9805.32,
+      "pauseAtS": 9803.32,
+      "windowEndS": 10033,
+      "exercise": {
+        "id": "rfscVS0vtbw-exponent",
+        "title": "Raise a number to a power",
+        "statement": "Write raise_to_power(base_num, pow_num) that returns base_num raised to the power pow_num. base_num is an integer and pow_num is a nonnegative integer. Use a loop instead of the ** operator or pow().",
+        "language": "python",
+        "functionName": "raise_to_power",
+        "starterCode": "def raise_to_power(base_num, pow_num):\n    pass\n",
+        "conceptTags": [
+          "loops"
+        ],
+        "examples": [
+          {
+            "args": [
+              3,
+              2
+            ],
+            "expected": 9
+          },
+          {
+            "args": [
+              2,
+              3
+            ],
+            "expected": 8
+          }
+        ],
+        "hiddenTests": [
+          {
+            "args": [
+              5,
+              0
+            ],
+            "expected": 1
+          },
+          {
+            "args": [
+              0,
+              4
+            ],
+            "expected": 0
+          },
+          {
+            "args": [
+              -2,
+              3
+            ],
+            "expected": -8
+          },
+          {
+            "args": [
+              -3,
+              2
+            ],
+            "expected": 9
+          },
+          {
+            "args": [
+              3,
+              4
+            ],
+            "expected": 81
+          },
+          {
+            "args": [
+              7,
+              1
+            ],
+            "expected": 7
+          }
+        ],
+        "referenceSolution": "def raise_to_power(base_num, pow_num):\n    result = 1\n    for index in range(pow_num):\n        result = result * base_num\n    return result\n",
+        "knownWrongSolution": "def raise_to_power(base_num, pow_num):\n    return base_num * pow_num\n"
+      }
+    }
+  ],
+  "revision": "rfscVS0vtbw-b1327bb5997acd01",
+  "approvedDigest": "b1327bb5997acd01"
+}
