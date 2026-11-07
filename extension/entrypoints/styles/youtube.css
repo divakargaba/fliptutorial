@@ -1,0 +1,5 @@
+@import "tailwindcss";
+
+:host { all: initial; display: block; color-scheme: dark; }
+.breakpoint-shell:not(:empty) { font: 14px/1.5 system-ui, sans-serif; color: #f4f4f5; width: 100%; max-width: 520px; padding: 8px 0; }
+.breakpoint-shell *, .breakpoint-shell *::before, .breakpoint-shell *::after { box-sizing: border-box; }
