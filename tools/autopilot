@@ -29,6 +29,8 @@ esac
 cmd+=("$@")
 command -v "${cmd[0]}" >/dev/null || { echo "Install and sign in to $agent first." >&2; exit 1; }
 export BOARD_CONSUMER="autopilot-$agent"
+# Agent shells may not reach the gh keychain login; pass the token through the environment.
+if [[ -z "${GH_TOKEN:-}" ]] && token=$(gh auth token 2>/dev/null) && [[ -n "$token" ]]; then export GH_TOKEN="$token"; fi
 login=$(tools/board whoami)
 git_name=$(git config user.name || true)
 name="${AUTOPILOT_NAME:-${git_name%% *}}"
@@ -54,7 +56,10 @@ $handoff_dir/post.md. The runner then commits all changes as the human,
 pushes to main and posts your update with the commit hash."
 else
   git_rules="Commit only your work, pull --rebase, push to the agreed integration
-branch, and post one useful completion or blocker reply with prefix $prefix."
+branch, and post one useful completion or blocker reply with prefix $prefix.
+Post progress on the board as you go: a short [$name] note when you start each
+task and when you finish it (with commit and checks). If tools/board post fails,
+write the update to $handoff_dir/post.md instead; the runner posts it after you."
 fi
 
 finish_codex_run() {
@@ -80,7 +85,7 @@ finish_codex_run() {
 run_agent() {
   local posts="$1" prompt
   # A failed sync must not send an agent working from stale contracts.
-  [[ "$agent" == codex ]] && rm -f "$handoff_dir/commit-msg" "$handoff_dir/post.md"
+  rm -f "$handoff_dir/commit-msg" "$handoff_dir/post.md"
   git diff --quiet && git diff --cached --quiet || { echo 'Commit or stash tracked changes before starting autopilot.' >&2; return 1; }
   git pull --rebase || return 1
   IFS= read -r -d '' prompt <<EOF || true
@@ -109,7 +114,11 @@ Do not provision paid resources or reveal secrets. If blocked, describe the
 exact required action and stop. If nothing is actionable, finish without posting.
 EOF
   # claude's --allowedTools is variadic and would swallow a trailing prompt, so use stdin.
-  if [[ "$agent" == claude ]]; then printf '%s\n' "$prompt" | "${cmd[@]}"
+  if [[ "$agent" == claude ]]; then
+    mkdir -p "$handoff_dir"
+    printf '%s\n' "$prompt" | "${cmd[@]}" || return 1
+    if [[ -s "$handoff_dir/post.md" ]]; then tools/board post "$(cat "$handoff_dir/post.md")" >/dev/null || true; fi
+    rm -f "$handoff_dir/post.md"
   else
     mkdir -p "$handoff_dir"
     "${cmd[@]}" "$prompt" || return 1
