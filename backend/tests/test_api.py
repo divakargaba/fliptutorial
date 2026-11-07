@@ -454,3 +454,197 @@ class TestErrorShape:
         assert "code" in data["error"]
         assert "message" in data["error"]
         assert "retryable" in data["error"]
+
+
+# ---------------------------------------------------------------------------
+# T3: verify_exercise tests (test-me feature)
+# ---------------------------------------------------------------------------
+
+
+class TestVerifyExercise:
+    """Tests for Grader.verify_exercise — reference and wrong-solution checks."""
+
+    @pytest.fixture()
+    def grader(self) -> "Grader":
+        from app.grader import Grader
+        return Grader()
+
+    def test_valid_exercise(self, grader: "Grader") -> None:
+        """Reference passes all, wrong fails at least one → valid=True."""
+        from app.grader import VerificationCase
+
+        cases = [
+            VerificationCase(args=[2, 3], expected=8),
+            VerificationCase(args=[5, 0], expected=1),
+            VerificationCase(args=[0, 4], expected=0),
+        ]
+
+        call_idx = {"n": 0}
+
+        # Reference: raise_to_power returns correct values
+        # Wrong: base * exponent returns wrong values for most cases
+        ref_values = [8, 1, 0]
+        wrong_values = [6, 0, 0]  # 2*3=6, 5*0=0, 0*4=0
+
+        async def mock_submit(self, source):
+            idx = call_idx["n"]
+            call_idx["n"] += 1
+            return f"token-{idx}"
+
+        async def mock_poll(self, token, deadline):
+            idx = int(token.split("-")[1])
+            # First 3 calls are reference, next 3 are wrong
+            if idx < 3:
+                return _judge0_success(ref_values[idx])
+            else:
+                return _judge0_success(wrong_values[idx - 3])
+
+        import asyncio
+        with patch("app.grader.Grader._submit_case", mock_submit), \
+             patch("app.grader.Grader._poll_result", mock_poll):
+            result = asyncio.run(
+                grader.verify_exercise(
+                    function_name="raise_to_power",
+                    reference_solution="def raise_to_power(b, e):\n    return b ** e\n",
+                    known_wrong_solution="def raise_to_power(b, e):\n    return b * e\n",
+                    test_cases=cases,
+                )
+            )
+
+        assert result.valid is True
+        assert result.reference_passed is True
+        assert result.reference_passed_count == 3
+        assert result.reference_total_count == 3
+        assert result.wrong_failed is True
+        assert result.wrong_failed_count >= 1
+
+    def test_reference_fails(self, grader: "Grader") -> None:
+        """Reference fails a case → valid=False."""
+        from app.grader import VerificationCase
+
+        cases = [
+            VerificationCase(args=[2, 3], expected=8),
+            VerificationCase(args=[5, 0], expected=1),
+        ]
+
+        call_idx = {"n": 0}
+
+        async def mock_submit(self, source):
+            idx = call_idx["n"]
+            call_idx["n"] += 1
+            return f"token-{idx}"
+
+        async def mock_poll(self, token, deadline):
+            idx = int(token.split("-")[1])
+            if idx < 2:
+                # Reference: first case correct, second wrong
+                return _judge0_success(8 if idx == 0 else 999)
+            else:
+                # Wrong solution
+                return _judge0_success(6 if idx == 2 else 0)
+
+        import asyncio
+        with patch("app.grader.Grader._submit_case", mock_submit), \
+             patch("app.grader.Grader._poll_result", mock_poll):
+            result = asyncio.run(
+                grader.verify_exercise(
+                    function_name="raise_to_power",
+                    reference_solution="def raise_to_power(b, e):\n    return 999\n",
+                    known_wrong_solution="def raise_to_power(b, e):\n    return b * e\n",
+                    test_cases=cases,
+                )
+            )
+
+        assert result.valid is False
+        assert result.reference_passed is False
+        assert result.reference_passed_count < 2
+
+    def test_wrong_passes_all(self, grader: "Grader") -> None:
+        """Wrong solution passes all cases → valid=False (needs at least one failure)."""
+        from app.grader import VerificationCase
+
+        cases = [
+            VerificationCase(args=[2, 3], expected=8),
+        ]
+
+        call_idx = {"n": 0}
+
+        async def mock_submit(self, source):
+            idx = call_idx["n"]
+            call_idx["n"] += 1
+            return f"token-{idx}"
+
+        async def mock_poll(self, token, deadline):
+            # Both reference and wrong return correct answer
+            return _judge0_success(8)
+
+        import asyncio
+        with patch("app.grader.Grader._submit_case", mock_submit), \
+             patch("app.grader.Grader._poll_result", mock_poll):
+            result = asyncio.run(
+                grader.verify_exercise(
+                    function_name="raise_to_power",
+                    reference_solution="def raise_to_power(b, e):\n    return b ** e\n",
+                    known_wrong_solution="def raise_to_power(b, e):\n    return b ** e\n",
+                    test_cases=cases,
+                )
+            )
+
+        assert result.valid is False
+        assert result.reference_passed is True
+        assert result.wrong_failed is False
+        assert result.wrong_failed_count == 0
+
+    def test_reference_runtime_error(self, grader: "Grader") -> None:
+        """Reference hits a runtime error → valid=False."""
+        from app.grader import VerificationCase
+
+        cases = [VerificationCase(args=[2, 3], expected=8)]
+        call_idx = {"n": 0}
+
+        async def mock_submit(self, source):
+            idx = call_idx["n"]
+            call_idx["n"] += 1
+            return f"token-{idx}"
+
+        async def mock_poll(self, token, deadline):
+            idx = int(token.split("-")[1])
+            if idx == 0:
+                return _judge0_runtime_error()
+            return _judge0_success(6)
+
+        import asyncio
+        with patch("app.grader.Grader._submit_case", mock_submit), \
+             patch("app.grader.Grader._poll_result", mock_poll):
+            result = asyncio.run(
+                grader.verify_exercise(
+                    function_name="raise_to_power",
+                    reference_solution="def raise_to_power(b, e):\n    return 1/0\n",
+                    known_wrong_solution="def raise_to_power(b, e):\n    return b * e\n",
+                    test_cases=cases,
+                )
+            )
+
+        assert result.valid is False
+        assert result.reference_passed is False
+
+    def test_judge0_unavailable_propagates(self, grader: "Grader") -> None:
+        """Judge0 unavailable during verification raises Grader.Unavailable."""
+        from app.grader import Grader, VerificationCase
+
+        cases = [VerificationCase(args=[2, 3], expected=8)]
+
+        async def mock_submit(self, source):
+            raise Grader.Unavailable("Judge0 unreachable")
+
+        import asyncio
+        with patch("app.grader.Grader._submit_case", mock_submit):
+            with pytest.raises(Grader.Unavailable):
+                asyncio.run(
+                    grader.verify_exercise(
+                        function_name="f",
+                        reference_solution="def f(a, b): return a ** b",
+                        known_wrong_solution="def f(a, b): return a * b",
+                        test_cases=cases,
+                    )
+                )

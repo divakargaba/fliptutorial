@@ -4,6 +4,10 @@ Sends one isolated Judge0 run per test case with a fixed wrapper that calls
 the exercise function and emits a JSON result. Expected results and pass flags
 never enter the sandbox. Comparison happens server-side.
 
+Also provides exercise verification for generated (test-me) exercises: runs
+both a reference solution and a known-wrong solution through Judge0 to confirm
+the reference passes all test cases and the known-wrong fails at least one.
+
 Limits per PRD §4:
   - 16 KiB code, 8 KiB parsed output
   - 3 concurrent cases per request
@@ -23,6 +27,8 @@ from typing import Literal
 
 import httpx
 
+from pydantic import BaseModel
+
 from .catalog import ApprovedExercise, SubmissionResponse, VisibleResult, HiddenResult
 
 logger = logging.getLogger("breakpoint.grader")
@@ -35,6 +41,21 @@ GRADE_DEADLINE = 12.0
 MAX_CONCURRENT_CASES = 3
 MAX_ACTIVE_GRADES = 2
 POLL_INTERVAL = 0.5
+
+
+class VerificationCase(BaseModel):
+    args: list
+    expected: object
+
+
+class VerificationResult(BaseModel):
+    reference_passed: bool
+    reference_passed_count: int
+    reference_total_count: int
+    wrong_failed: bool
+    wrong_failed_count: int
+    wrong_total_count: int
+    valid: bool  # True iff reference passed all AND wrong failed at least one
 
 
 def _build_wrapper(user_code: str, function_name: str, args: list) -> str:
@@ -286,3 +307,95 @@ class Grader:
             totalCount=len(cases),
             results=[r for r in results if r is not None],
         )
+
+    # ------------------------------------------------------------------
+    # Exercise verification (T3: test-me feature)
+    # ------------------------------------------------------------------
+
+    async def verify_exercise(
+        self,
+        function_name: str,
+        reference_solution: str,
+        known_wrong_solution: str,
+        test_cases: list[VerificationCase],
+    ) -> VerificationResult:
+        """Run reference and known-wrong solutions through Judge0.
+
+        The reference must pass every test case. The known-wrong must fail
+        at least one. Both run under the same limits as regular grading.
+        Uses one active-grade slot for the whole verification.
+        """
+        if not self._active._value:
+            raise self.Busy("too many concurrent grades")
+
+        async with self._active:
+            ref_passed = await self._run_solution(
+                function_name, reference_solution, test_cases
+            )
+            wrong_passed = await self._run_solution(
+                function_name, known_wrong_solution, test_cases
+            )
+
+        ref_passed_count = sum(ref_passed)
+        wrong_failed_count = sum(not p for p in wrong_passed)
+
+        reference_ok = ref_passed_count == len(test_cases)
+        wrong_ok = wrong_failed_count >= 1
+
+        logger.info(
+            "verify function=%s ref=%d/%d wrong_failed=%d/%d valid=%s",
+            function_name,
+            ref_passed_count,
+            len(test_cases),
+            wrong_failed_count,
+            len(test_cases),
+            reference_ok and wrong_ok,
+        )
+
+        return VerificationResult(
+            reference_passed=reference_ok,
+            reference_passed_count=ref_passed_count,
+            reference_total_count=len(test_cases),
+            wrong_failed=wrong_ok,
+            wrong_failed_count=wrong_failed_count,
+            wrong_total_count=len(test_cases),
+            valid=reference_ok and wrong_ok,
+        )
+
+    async def _run_solution(
+        self,
+        function_name: str,
+        code: str,
+        test_cases: list[VerificationCase],
+    ) -> list[bool]:
+        """Run a solution against all test cases, return per-case pass flags."""
+        deadline = asyncio.get_event_loop().time() + GRADE_DEADLINE
+        sem = asyncio.Semaphore(MAX_CONCURRENT_CASES)
+        results: list[bool] = [False] * len(test_cases)
+
+        async def run_one(idx: int, case: VerificationCase) -> None:
+            async with sem:
+                source = _build_wrapper(code, function_name, case.args)
+                token = await self._submit_case(source)
+                data = await self._poll_result(token, deadline)
+
+            outcome, actual, _ = self._parse_sandbox_output(data, is_visible=True)
+            if outcome == "check":
+                results[idx] = (
+                    actual == case.expected
+                    and type(actual) is type(case.expected)
+                )
+
+        tasks = [
+            asyncio.create_task(run_one(i, tc))
+            for i, tc in enumerate(test_cases)
+        ]
+
+        try:
+            await asyncio.gather(*tasks)
+        except (self.Unavailable, self.Timeout, self.Busy):
+            for t in tasks:
+                t.cancel()
+            raise
+
+        return results
