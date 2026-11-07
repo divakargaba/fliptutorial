@@ -29,3 +29,10 @@ def submission_fixture() -> dict:
     return json.loads(
         (CONTRACTS_DIR / "submission-response.fixture.json").read_text(encoding="utf-8")
     )
+
+
+@pytest.fixture()
+def testme_fixture() -> dict:
+    return json.loads(
+        (CONTRACTS_DIR / "testme-response.fixture.json").read_text(encoding="utf-8")
+    )

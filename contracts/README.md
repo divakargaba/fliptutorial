@@ -7,6 +7,7 @@ Full product spec: `docs/PRD.md`.
 - `practice-response.fixture.json` — public `GET /v1/videos/{videoId}/practice` body. Used by backend pytest (Pydantic) and extension Vitest (Zod). Never contains hidden tests, reference code or functionName-only fields.
 - `approved-record.fixture.json` — private file shape for `backend/content/approved/{videoId}.json`. Written only by `app.prepare publish`, read by `app.catalog`.
 - `submission-response.fixture.json` — completed-grade body of `POST /v1/submissions`.
+- `testme-response.fixture.json` — public `POST /v1/test-me` body. Has the exercise shape plus `setId`, `generated: true`, `aiGenerated: true`. Used by extension Zod (T5). Never contains hidden tests, reference code or functionName.
 
 ## API (backend, local FastAPI on http://127.0.0.1:8000)
 - `GET /health` → `200 {"status":"ok"}` when the catalog loaded.

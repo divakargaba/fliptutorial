@@ -1,0 +1,13 @@
+{
+  "setId": "tm-a1b2c3d4e5f60718",
+  "generated": true,
+  "aiGenerated": true,
+  "exercise": {
+    "id": "tm-a1b2c3d4e5f60718-ex",
+    "title": "Double a number",
+    "statement": "Given an integer n, return n multiplied by 2.",
+    "language": "python",
+    "starterCode": "def double(n):\n    pass\n",
+    "examples": [{ "args": [3], "expected": 6 }]
+  }
+}

@@ -648,3 +648,182 @@ class TestVerifyExercise:
                         test_cases=cases,
                     )
                 )
+
+
+# ---------------------------------------------------------------------------
+# T4: POST /v1/test-me endpoint tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture()
+def testme_client(approved_dir: Path) -> TestClient:
+    """Test client with BREAKPOINT_TESTME enabled."""
+    with patch("app.catalog.APPROVED_DIR", approved_dir), \
+         patch.dict("os.environ", {"BREAKPOINT_TESTME": "1"}):
+        # Force re-evaluation of the module-level flag
+        import app.main as main_mod
+        original = main_mod.TESTME_ENABLED
+        main_mod.TESTME_ENABLED = True
+        try:
+            with TestClient(main_mod.app) as c:
+                yield c
+        finally:
+            main_mod.TESTME_ENABLED = original
+
+
+class TestTestMeDisabled:
+    def test_testme_off_by_default(self, client: TestClient) -> None:
+        """When BREAKPOINT_TESTME is not set, endpoint returns 404."""
+        resp = client.post("/v1/test-me", json={"videoId": "rfscVS0vtbw", "timestampS": 500})
+        assert resp.status_code == 404
+        assert resp.json()["error"]["code"] == "NOT_FOUND"
+
+
+class TestTestMeValidation:
+    def test_invalid_video_id(self, testme_client: TestClient) -> None:
+        resp = testme_client.post("/v1/test-me", json={"videoId": "bad!id", "timestampS": 500})
+        assert resp.status_code == 422
+        assert resp.json()["error"]["code"] == "INVALID_VIDEO_ID"
+
+    def test_negative_timestamp(self, testme_client: TestClient) -> None:
+        resp = testme_client.post("/v1/test-me", json={"videoId": "rfscVS0vtbw", "timestampS": -1})
+        assert resp.status_code == 422
+
+
+class TestTestMeTranscriptErrors:
+    def test_no_captions(self, testme_client: TestClient) -> None:
+        from app.transcripts import TranscriptError
+        with patch("app.main.fetcher") as mock_fetcher:
+            mock_fetcher.get = AsyncMock(
+                side_effect=TranscriptError("NO_CAPTIONS", "no English captions")
+            )
+            resp = testme_client.post(
+                "/v1/test-me", json={"videoId": "rfscVS0vtbw", "timestampS": 500}
+            )
+        assert resp.status_code == 404
+        assert resp.json()["error"]["code"] == "NO_CAPTIONS"
+        assert resp.json()["error"]["retryable"] is False
+
+    def test_too_early(self, testme_client: TestClient) -> None:
+        from app.transcripts import TranscriptError
+        with patch("app.main.fetcher") as mock_fetcher:
+            mock_fetcher.get = AsyncMock(
+                side_effect=TranscriptError("TOO_EARLY", "needs at least 180 s")
+            )
+            resp = testme_client.post(
+                "/v1/test-me", json={"videoId": "rfscVS0vtbw", "timestampS": 60}
+            )
+        assert resp.status_code == 422
+        assert resp.json()["error"]["code"] == "TOO_EARLY"
+
+    def test_captions_unavailable(self, testme_client: TestClient) -> None:
+        from app.transcripts import TranscriptError
+        with patch("app.main.fetcher") as mock_fetcher:
+            mock_fetcher.get = AsyncMock(
+                side_effect=TranscriptError("CAPTIONS_UNAVAILABLE", "YouTube unreachable", True)
+            )
+            resp = testme_client.post(
+                "/v1/test-me", json={"videoId": "rfscVS0vtbw", "timestampS": 500}
+            )
+        assert resp.status_code == 503
+        assert resp.json()["error"]["code"] == "GENERATOR_UNAVAILABLE"
+        assert resp.json()["error"]["retryable"] is True
+
+
+class TestTestMeGeneratorMissing:
+    def test_testme_module_not_available(self, testme_client: TestClient) -> None:
+        """When testme.py is not yet pushed, endpoint returns 503."""
+        from app.transcripts import Transcript, Cue
+        mock_transcript = Transcript(
+            video_id="rfscVS0vtbw", kind="asr", language="en", title="Test",
+            cues=tuple(
+                Cue(f"c{i:08d}", float(i), float(i + 1), f"word {i}")
+                for i in range(0, 300)
+            ),
+        )
+        with patch("app.main.fetcher") as mock_fetcher, \
+             patch("app.main.clip") as mock_clip:
+            mock_fetcher.get = AsyncMock(return_value=mock_transcript)
+            from app.transcripts import Clip
+            mock_clip.return_value = Clip(
+                video_id="rfscVS0vtbw", kind="asr", title="Test",
+                timestamp_s=500.0, start_s=0.0,
+                cues=mock_transcript.cues,
+            )
+            # Ensure the testme import fails
+            with patch.dict("sys.modules", {"app.testme": None}):
+                resp = testme_client.post(
+                    "/v1/test-me", json={"videoId": "rfscVS0vtbw", "timestampS": 500}
+                )
+        assert resp.status_code == 503
+        assert resp.json()["error"]["code"] == "GENERATOR_UNAVAILABLE"
+
+
+class TestSetExpired:
+    def test_submission_against_expired_set(self, testme_client: TestClient) -> None:
+        """Submitting code against an expired generated set returns SET_EXPIRED."""
+        import time
+        import app.main as main_mod
+        from app.catalog import ApprovedExercise, Example, HiddenTest
+
+        exercise = ApprovedExercise(
+            id="tm-test-exercise",
+            title="Test",
+            statement="Test statement",
+            language="python",
+            functionName="test_fn",
+            starterCode="def test_fn(x):\n    pass\n",
+            examples=[Example(args=[1], expected=1)],
+            hiddenTests=[HiddenTest(args=[2], expected=2)],
+            referenceSolution="def test_fn(x):\n    return x\n",
+            knownWrongSolution="def test_fn(x):\n    return 0\n",
+        )
+        # Store with an already-expired timestamp
+        main_mod._set_cache["tm-expired-set"] = (time.monotonic() - 1, exercise)
+
+        resp = testme_client.post("/v1/submissions", json={
+            "exerciseId": "tm-test-exercise",
+            "revision": "tm-expired-set",
+            "mode": "run",
+            "code": "def test_fn(x):\n    return x\n",
+        })
+        assert resp.status_code == 410
+        assert resp.json()["error"]["code"] == "SET_EXPIRED"
+
+    def test_submission_against_valid_set(self, testme_client: TestClient) -> None:
+        """Submitting code against a valid generated set grades through Judge0."""
+        import time
+        import app.main as main_mod
+        from app.catalog import ApprovedExercise, Example, HiddenTest
+
+        exercise = ApprovedExercise(
+            id="tm-test-exercise",
+            title="Test",
+            statement="Test statement",
+            language="python",
+            functionName="test_fn",
+            starterCode="def test_fn(x):\n    pass\n",
+            examples=[Example(args=[1], expected=1)],
+            hiddenTests=[HiddenTest(args=[2], expected=2)],
+            referenceSolution="def test_fn(x):\n    return x\n",
+            knownWrongSolution="def test_fn(x):\n    return 0\n",
+        )
+        # Store with a future expiry
+        main_mod._set_cache["tm-valid-set"] = (time.monotonic() + 3600, exercise)
+
+        mock_submit = AsyncMock(return_value="token-1")
+        mock_poll = AsyncMock(return_value=_judge0_success(1))
+
+        with patch("app.grader.Grader._submit_case", mock_submit), \
+             patch("app.grader.Grader._poll_result", mock_poll):
+            resp = testme_client.post("/v1/submissions", json={
+                "exerciseId": "tm-test-exercise",
+                "revision": "tm-valid-set",
+                "mode": "run",
+                "code": "def test_fn(x):\n    return x\n",
+            })
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["outcome"] == "passed"
+        assert data["passedCount"] == 1

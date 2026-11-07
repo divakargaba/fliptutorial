@@ -108,10 +108,10 @@ New error codes: `NO_CAPTIONS` 404, `NOT_PYTHON` 422, `TOO_EARLY` 422 (under
 
 | ID | Owner | Deliverable and acceptance check | Depends on | State |
 | --- | --- | --- | --- | --- |
-| T1 | @abdullahwarraichh | Runtime transcript fetch, clip and cache: `backend/app/transcripts.py` + tests. | — | Todo |
+| T1 | @abdullahwarraichh | Runtime transcript fetch, clip and cache: `backend/app/transcripts.py` + tests. | — | Done |
 | T2 | @abdullahwarraichh | Exercise generator (prompt, schema, rule and concept checks): `backend/app/testme.py` + tests. | T1 | Todo |
-| T3 | @divakargaba | Reference and wrong-solution checks through Judge0: new method in `grader.py`. Accepts a generated exercise (function name, reference solution, known-wrong solution, test cases), runs both through Judge0, returns pass/fail for each. Must confirm reference passes all tests and known-wrong fails at least one. | — | Todo |
-| T4 | @divakargaba | `POST /v1/test-me` endpoint in `main.py`: accepts `videoId` and `timestampS`, set cache with TTL, new error codes (`NO_CAPTIONS`, `NOT_PYTHON`, `TOO_EARLY`, `GENERATOR_UNAVAILABLE`, `GENERATOR_TIMEOUT`, `SET_EXPIRED`), catalog fallback for generated IDs, contract + fixture. | T2, T3 | Todo |
+| T3 | @divakargaba | Reference and wrong-solution checks through Judge0: new method in `grader.py`. Accepts a generated exercise (function name, reference solution, known-wrong solution, test cases), runs both through Judge0, returns pass/fail for each. Must confirm reference passes all tests and known-wrong fails at least one. | — | Done |
+| T4 | @divakargaba | `POST /v1/test-me` endpoint in `main.py`: accepts `videoId` and `timestampS`, set cache with TTL, new error codes (`NO_CAPTIONS`, `NOT_PYTHON`, `TOO_EARLY`, `GENERATOR_UNAVAILABLE`, `GENERATOR_TIMEOUT`, `SET_EXPIRED`), catalog fallback for generated IDs, contract + fixture. | T2, T3 | Done (wired to T1; lazy-imports T2 testme.py — returns 503 until T2 lands) |
 | T5 | @abdullahwarv2 | Background `testMe` message + Zod schema in `src/contracts.ts` and `entrypoints/background.ts`. | T4 contract | Todo |
 | T6 | @reyanshBadhwar26 | "Test me" button in `src/ui/`, loading and error states, "AI-generated practice" label. | T5 | Todo |
 | T7 | @abdullahwarraichh | Real-YouTube walkthrough on 2 unprepared videos at 1× and 2×, times in Measured results. 3 clean runs required. | T6 | Todo |
