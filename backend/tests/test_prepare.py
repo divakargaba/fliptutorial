@@ -458,7 +458,11 @@ def test_failed_rerun_leaves_approved_unchanged(workspace):
 
 def test_cli_exit_codes(monkeypatch, workspace, capsys):
     # Path defaults are bound at definition time, so route the CLI through the workspace.
-    monkeypatch.setattr(prepare, "verify", lambda v: _verify(workspace))
+    real_verify = prepare.verify
+    monkeypatch.setattr(
+        prepare, "verify",
+        lambda v: real_verify(v, reviewed_dir=workspace["reviewed"], drafts_dir=workspace["drafts"]),
+    )
     assert prepare.main(["verify", "--video-id", VID]) == 0
 
     assert prepare.main(["scan", "--video-id", "bad"]) == 1
