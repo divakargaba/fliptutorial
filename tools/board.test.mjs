@@ -30,7 +30,7 @@ function fixture(t, comments = []) {
   writeFileSync(store, JSON.stringify(data));
   writeFileSync(join(bin, 'gh'), '#!/usr/bin/env bash\nnode "$(dirname "$0")/fake-gh.mjs" "$@"\n', { mode:0o755 });
   writeFileSync(join(bin, 'codex'), '#!/usr/bin/env bash\nnode "$(dirname "$0")/fake-agent.mjs" "$@"\n', { mode:0o755 });
-  writeFileSync(join(bin, 'fake-agent.mjs'), `import {readFileSync,writeFileSync} from 'node:fs';\nconst f=process.env.BOARD_TEST_FIXTURE; const d=JSON.parse(readFileSync(f,'utf8')); d.agentArgs=process.argv.slice(2); writeFileSync(f,JSON.stringify(d)); process.exit(d.failAgent?1:0);\n`);
+  writeFileSync(join(bin, 'fake-agent.mjs'), `import {readFileSync,writeFileSync} from 'node:fs';\nconst f=process.env.BOARD_TEST_FIXTURE; const d=JSON.parse(readFileSync(f,'utf8')); d.agentArgs=process.argv.slice(2); writeFileSync(f,JSON.stringify(d)); for (const [p,c] of Object.entries(d.agentWrites||{})) writeFileSync(p,c); process.exit(d.failAgent?1:0);\n`);
   const upstream = join(dir, 'upstream.git');
   assert.equal(spawnSync(realGit, ['init','--bare','-q',upstream]).status, 0);
   for (const args of [['init','-q','-b','main'], ['remote','add','origin',upstream], ['add','.'], ['-c','user.name=Fixture','-c','user.email=fixture@example.invalid','commit','-qm','fixture'], ['push','-qu','origin','main']]) {
@@ -134,4 +134,17 @@ test('bounded runner uses current scoped Codex flags and stops on agent failure'
   f.update({ failAgent:true });
   assert.notEqual(f.run('autopilot', ['--once','codex']).status, 0);
   assert.ok(!existsSync(join(f.repo, '.git','board','autopilot-codex.lock')));
+});
+
+test('codex runner commits, pushes and posts the agent handoff outside the sandbox', t => {
+  const f = fixture(t);
+  f.update({ agentWrites:{ 'feature.txt':'hello\n', '.autopilot/commit-msg':'Add feature\n', '.autopilot/post.md':'[Mico] @all feature done' } });
+  const ident = { GIT_AUTHOR_NAME:'Mico', GIT_AUTHOR_EMAIL:'m@example.invalid', GIT_COMMITTER_NAME:'Mico', GIT_COMMITTER_EMAIL:'m@example.invalid' };
+  succeeds(f.run('autopilot', ['--once','codex'], { AUTOPILOT_NAME:'Mico', ...ident }));
+  const log = spawnSync(realGit, ['log','-1','--format=%s','origin/main'], { cwd:f.repo, encoding:'utf8' }).stdout.trim();
+  assert.equal(log, 'Add feature');
+  const status = spawnSync(realGit, ['status','--porcelain'], { cwd:f.repo, encoding:'utf8' }).stdout;
+  assert.doesNotMatch(status, /feature|commit-msg/);
+  const last = f.read().comments.at(-1).body;
+  assert.match(last, /^\[Mico\] @all feature done\n\nCommit: [0-9a-f]{7}/);
 });

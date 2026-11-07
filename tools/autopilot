@@ -41,9 +41,46 @@ mkdir "$lock" 2>/dev/null || { echo "A $agent runner already owns $lock. Stop it
 trap 'rmdir "$lock" 2>/dev/null || true' EXIT
 trap 'exit 0' INT TERM
 
+# Codex's workspace-write sandbox cannot write .git, so the runner commits,
+# pushes and posts for it after each run.
+handoff_dir=".autopilot"
+if [[ "$agent" == codex ]]; then
+  git_rules="Git and board posting are done by the runner because your sandbox cannot
+write .git. Do NOT run git commit, git pull, git push or tools/board post.
+Recent posts are above; tools/board read -n 20 shows more. When you finish
+(or get blocked), write a one-line commit message to $handoff_dir/commit-msg
+and your board update (starting with $prefix, @mentioning exact logins) to
+$handoff_dir/post.md. The runner then commits all changes as the human,
+pushes to main and posts your update with the commit hash."
+else
+  git_rules="Commit only your work, pull --rebase, push to the agreed integration
+branch, and post one useful completion or blocker reply with prefix $prefix."
+fi
+
+finish_codex_run() {
+  local msg="$handoff_dir/commit-msg" post="$handoff_dir/post.md" hash="" text
+  if [[ -n "$(git status --porcelain -- . ":!$handoff_dir")" ]]; then
+    git add -A -- . ":!$handoff_dir"
+    if [[ -s "$msg" ]]; then git commit -q -F "$msg"; else git commit -q -m "Update from $name"; fi
+    if ! git pull --rebase -q; then
+      git rebase --abort 2>/dev/null || true
+      echo 'Rebase conflict: your commit is kept locally; resolve it, then push.' >&2; return 1
+    fi
+    git push -q origin HEAD || { echo 'Push failed; commit kept locally.' >&2; return 1; }
+    hash=$(git rev-parse --short HEAD)
+  fi
+  if [[ -s "$post" ]]; then
+    text=$(cat "$post")
+    [[ -n "$hash" ]] && text+=$'\n\nCommit: '"$hash"
+    tools/board post "$text" >/dev/null
+  fi
+  rm -f "$msg" "$post"
+}
+
 run_agent() {
   local posts="$1" prompt
   # A failed sync must not send an agent working from stale contracts.
+  [[ "$agent" == codex ]] && rm -f "$handoff_dir/commit-msg" "$handoff_dir/post.md"
   git diff --quiet && git diff --cached --quiet || { echo 'Commit or stash tracked changes before starting autopilot.' >&2; return 1; }
   git pull --rebase || return 1
   IFS= read -r -d '' prompt <<EOF || true
@@ -60,9 +97,9 @@ Check the current plan, files and git log before acting. Do work the team lead
 During PREP with nothing assigned, help with readiness only; do not invent a
 product. Stay within your owned or assigned paths. Only the team lead can
 reassign work. Ask for a handoff on the board if needed.
-Use validation commands in PLAN.md. Commit only your work, pull --rebase,
-push to the agreed integration branch, and post one useful completion or
-blocker reply with prefix $prefix. Work through all your unfinished assigned tasks
+Use validation commands in PLAN.md.
+$git_rules
+Work through all your unfinished assigned tasks
 in this run. @mention the exact login of anyone your work unblocks or whom you
 need something from; only mentioned agents wake up. If blocked, post what you
 need from whom and stop. Never force-push or overwrite teammate work.
@@ -73,7 +110,11 @@ exact required action and stop. If nothing is actionable, finish without posting
 EOF
   # claude's --allowedTools is variadic and would swallow a trailing prompt, so use stdin.
   if [[ "$agent" == claude ]]; then printf '%s\n' "$prompt" | "${cmd[@]}"
-  else "${cmd[@]}" "$prompt"; fi
+  else
+    mkdir -p "$handoff_dir"
+    "${cmd[@]}" "$prompt" || return 1
+    finish_codex_run
+  fi
 }
 
 posts=$(tools/board unread)

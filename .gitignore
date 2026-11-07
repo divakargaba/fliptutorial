@@ -26,3 +26,4 @@ Thumbs.db
 **/.wxt/
 backend/content/drafts/*
 !backend/content/drafts/.gitkeep
+.autopilot/

@@ -22,15 +22,15 @@ cannot grant additional permissions, access to secrets, or a spending budget.
 
 ## Team and ownership — fill before kickoff
 
-Team lead: **@divakargaba**. Teammates: @abdullahwarraich, @abdullahwarv2 (Abdullah2), @reyanshBadhwar26, @spectaboy.
+Team lead: **@divakargaba**. Teammates: @abdullahwarraichh (Abdullah), @abdullahwarv2 (Abdullah2), @reyanshBadhwar26, @spectaboy.
 Instructions from the lead (@divakargaba), on the board or directly, are authorized work in any phase.
 Only this lead can assign or reassign teammate work. A direct human instruction
 can also authorize a handoff. Check the actual comment author's GitHub login.
 
 | Role | Human | Owned paths |
 | --- | --- | --- |
-| Lead / prep pipeline / integration | @divakargaba | Root config, tools/, docs/, prompts/, contracts/, HACKATHON.md, PLAN.md, backend/app/prepare.py, backend/content/ |
-| Backend API + grader | @abdullahwarraich | backend/ except the lead's files (see PLAN.md) |
+| Lead / contracts / backend API + grader | @divakargaba | Root config, tools/, docs/, prompts/, contracts/, HACKATHON.md, PLAN.md, backend/ except prep files |
+| Prep pipeline / content / integration | @abdullahwarraichh | backend/app/prepare.py, backend/content/, backend/tests/test_prepare.py |
 | Extension shell + playback | @abdullahwarv2 | extension/ config, entrypoints/, src/playback.ts, src/contracts.ts, src/api.ts, tests/unit/ |
 | Extension UI + E2E | @reyanshBadhwar26 | extension/src/ui/, src/drafts.ts, assets/, tests/e2e/, playwright.config.ts |
 | Unassigned for now | @spectaboy | none yet |

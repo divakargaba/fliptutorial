@@ -31,11 +31,13 @@ Default suites must pass without provider keys. Live Gemini scan and live Judge0
 
 | Human | Lane | Owned paths |
 | --- | --- | --- |
-| @divakargaba (Divakar, lead) | Contracts, video prep pipeline, exercise content, integration | `contracts/`, `docs/`, `PLAN.md`, `HACKATHON.md`, `AGENTS.md`, `backend/app/prepare.py`, `backend/content/`, `backend/tests/test_prepare.py`, `backend/tests/fixtures/transcripts/` |
-| @abdullahwarraich (Abdullah) | Backend API + Judge0 grader | `backend/app/main.py`, `backend/app/catalog.py`, `backend/app/grader.py`, `backend/app/__init__.py`, `backend/requirements.txt`, `backend/.env.example`, `backend/tests/` (except `test_prepare.py` and transcript fixtures), `backend/README.md` |
+| @divakargaba (Divakar, lead) | Contracts + backend API + Judge0 grader | `contracts/`, `docs/`, `PLAN.md`, `HACKATHON.md`, `AGENTS.md`, `backend/app/main.py`, `backend/app/catalog.py`, `backend/app/grader.py`, `backend/app/__init__.py`, `backend/requirements.txt`, `backend/.env.example`, `backend/tests/` (except `test_prepare.py` and transcript fixtures), `backend/README.md` |
+| @abdullahwarraichh (Abdullah) | Video prep pipeline, exercise content, integration | `backend/app/prepare.py`, `backend/content/`, `backend/tests/test_prepare.py`, `backend/tests/fixtures/transcripts/` |
 | @abdullahwarv2 (Abdullah2) | Extension shell, worker, playback engine | `extension/package.json`, `extension/package-lock.json`, `extension/wxt.config.ts`, `extension/tsconfig.json`, `extension/vitest.config.ts`, `extension/entrypoints/`, `extension/src/playback.ts`, `extension/src/contracts.ts`, `extension/src/api.ts`, `extension/tests/unit/` |
 | @reyanshBadhwar26 (Reyansh) | Extension UI, editor, drafts, E2E | `extension/src/ui/`, `extension/src/drafts.ts`, `extension/assets/`, `extension/tests/e2e/`, `extension/playwright.config.ts` |
 | @spectaboy | Not assigned yet | None — do not claim work |
+
+The Gemini key goes only in the prep owner's gitignored `backend/.env` (`GEMINI_API_KEY`). The backend owner adds `backend/.env.example` and the venv in B1; until then the prep owner may create `backend/.env` locally.
 
 Need a dependency in a file you don't own (e.g. Reyansh needs an npm package)?
 Ask the owner on the board with the exact change.
@@ -47,15 +49,15 @@ Work top to bottom. Mark State in this table when shipped or blocked (only your 
 | ID | Owner | Deliverable and acceptance check | Depends on | State |
 | --- | --- | --- | --- | --- |
 | D0 | @divakargaba | `contracts/` fixtures + README (public response, approved record, submission response, messages, panel props). | — | Done |
-| D1 | @divakargaba | `backend/content/seeds.json` + transcript excerpt JSON for `rfscVS0vtbw` 9680–10033 s (`start_s`, `end_s`, `text`, stable cue ids) in `backend/content/transcripts/`. If the transcript can't be fetched automatically, post exactly what Divakar must paste. | — | Todo |
-| D2 | @divakargaba | `app.prepare scan/verify/publish` per PRD §3: transcript validation errors, Gemini structured-output candidate detection with cue-id checks, safe-pause math, verify runs reference + known-wrong solution, publish revalidates digest and writes atomically to `content/approved/`. Use `catalog.py` models from B2. pytest `backend/tests/test_prepare.py` covers PRD §8 prep rows with a stubbed Gemini. | B2 models | Todo |
-| D3 | @divakargaba | Reviewed approved exercise for `rfscVS0vtbw` (exponent): visible example(s), ≥3 hidden cases (zero exponent, zero base, negative base odd exponent), reference + wrong solution verified. Timing (`setup_end_s`, reveals, `pause_at_s`) needs Divakar to confirm in the video at 1× and 2× — post the proposed times and ask him. | D1, D2 | Todo |
-| D4 | @divakargaba | Integration: run backend + built extension together on the real video, record measured badge/grade times in this file, three clean walkthroughs. | all | Todo |
-| B1 | @abdullahwarraich | `backend/` skeleton: `requirements.txt` pinned (fastapi, uvicorn[standard], httpx, pydantic, google-genai, python-dotenv, pytest), `.env.example` (GEMINI_API_KEY, GEMINI_MODEL, JUDGE0_BASE_URL, JUDGE0_PYTHON_LANGUAGE_ID, Judge0 auth vars), `app/__init__.py`, `backend/README.md` run commands for macOS and Windows. Post when pushed (unblocks D2). | — | Todo |
-| B2 | @abdullahwarraich | `app/catalog.py`: Pydantic models matching `contracts/approved-record.fixture.json` and the public response; loads `content/approved/*.json` only, fails startup naming file + field; builds public response explicitly (no hidden data). Post the model names to @divakargaba when pushed. | B1 | Todo |
-| B3 | @abdullahwarraich | `app/main.py`: `/health`, `GET /v1/videos/{id}/practice`, `POST /v1/submissions`, error shape + request ids, CORS/host for the extension origin, logging without code/keys/hidden data. | B2 | Todo |
-| B4 | @abdullahwarraich | `app/grader.py`: Judge0 adapter per PRD §4 (one isolated run per case, fixed wrapper emitting JSON, compare outside sandbox, strict types, caps 16 KiB code / 8 KiB output, 3 concurrent cases, 2 s CPU / 4 s wall, 12 s deadline, 2 active grades per backend, structured timeout). Confirm the Python 3 language id via `GET /languages` and whether the host needs auth; ask Divakar for any key. | B3 | Todo |
-| B5 | @abdullahwarraich | pytest with stubbed Judge0 covering every PRD §8 API row; uses `contracts/practice-response.fixture.json`. One opt-in live Judge0 smoke test (skipped without env). | B3, B4 | Todo |
+| D1 | @abdullahwarraichh | `backend/content/seeds.json` + transcript excerpt JSON for `rfscVS0vtbw` 9680–10033 s (`start_s`, `end_s`, `text`, stable cue ids) in `backend/content/transcripts/`. Fetch it yourself (e.g. `youtube-transcript-api` or `yt-dlp --write-auto-subs`, run outside the repo venv if needed); only if every method fails, ask @abdullahwarraichh on the board. | — | Todo |
+| D2 | @abdullahwarraichh | `app.prepare scan/verify/publish` per PRD §3: transcript validation errors, Gemini structured-output candidate detection with cue-id checks, safe-pause math, verify runs reference + known-wrong solution, publish revalidates digest and writes atomically to `content/approved/`. Use `catalog.py` models from B2. pytest `backend/tests/test_prepare.py` covers PRD §8 prep rows with a stubbed Gemini. | B2 models | Todo |
+| D3 | @abdullahwarraichh | Reviewed approved exercise for `rfscVS0vtbw` (exponent): visible example(s), ≥3 hidden cases (zero exponent, zero base, negative base odd exponent), reference + wrong solution verified. Determine timing (`setup_end_s`, reveals, `pause_at_s`) yourself from the transcript plus Gemini video analysis of the YouTube URL; record the evidence in the draft. No human confirmation is required. | D1, D2 | Todo |
+| D4 | @abdullahwarraichh | Integration: run backend + built extension together on the real video, record measured badge/grade times in this file, three clean walkthroughs. | all | Todo |
+| B1 | @divakargaba | `backend/` skeleton: `requirements.txt` pinned (fastapi, uvicorn[standard], httpx, pydantic, google-genai, python-dotenv, pytest), `.env.example` (GEMINI_API_KEY, GEMINI_MODEL, JUDGE0_BASE_URL, JUDGE0_PYTHON_LANGUAGE_ID, Judge0 auth vars), `app/__init__.py`, `backend/README.md` run commands for macOS and Windows. Post to @abdullahwarraichh when pushed (unblocks D2). | — | Todo |
+| B2 | @divakargaba | `app/catalog.py`: Pydantic models matching `contracts/approved-record.fixture.json` and the public response; loads `content/approved/*.json` only, fails startup naming file + field; builds public response explicitly (no hidden data). Post the model names to @abdullahwarraichh when pushed. | B1 | Todo |
+| B3 | @divakargaba | `app/main.py`: `/health`, `GET /v1/videos/{id}/practice`, `POST /v1/submissions`, error shape + request ids, CORS/host for the extension origin, logging without code/keys/hidden data. | B2 | Todo |
+| B4 | @divakargaba | `app/grader.py`: Judge0 adapter per PRD §4 (one isolated run per case, fixed wrapper emitting JSON, compare outside sandbox, strict types, caps 16 KiB code / 8 KiB output, 3 concurrent cases, 2 s CPU / 4 s wall, 12 s deadline, 2 active grades per backend, structured timeout). Use `https://ce.judge0.com` (no key) unless it requires auth; confirm the Python 3 language id via `GET /languages`. | B3 | Todo |
+| B5 | @divakargaba | pytest with stubbed Judge0 covering every PRD §8 API row; uses `contracts/practice-response.fixture.json`. One opt-in live Judge0 smoke test (skipped without env). | B3, B4 | Todo |
 | E1 | @abdullahwarv2 | `extension/` via WXT React template (npm), Tailwind 4 via `@tailwindcss/vite`, deps (codemirror, @codemirror/lang-python, lucide-react, zod, vitest, @playwright/test), manifest: top-frame content script on `https://www.youtube.com/*`, host permission `http://127.0.0.1/*`, `storage`. `npm run typecheck/test/build/test:e2e` scripts exist. Commit lockfile. **Post as soon as it builds — unblocks Reyansh.** | — | Todo |
 | E2 | @abdullahwarv2 | `src/contracts.ts` Zod schemas for public response, submission response, error shape; Vitest parses the contract fixtures. | E1 | Todo |
 | E3 | @abdullahwarv2 | `entrypoints/background.ts`: listener registered synchronously in `defineBackground`, accepts only typed `lookup`/`grade` messages from the YouTube content script, builds paths itself from `WXT_API_BASE_URL`, 3 s / 15 s timeouts, Zod-validates responses, no keys in the bundle. | E2 | Todo |
@@ -68,10 +70,10 @@ Work top to bottom. Mark State in this table when shipped or blocked (only your 
 
 ## Handoffs (who to @mention)
 
-- B1 pushed → @divakargaba. B2 models pushed → @divakargaba. B3 serving fixture → @abdullahwarv2 @reyanshBadhwar26.
+- B1 pushed → @abdullahwarraichh. B2 models pushed → @abdullahwarraichh. B3 serving fixture → @abdullahwarv2 @reyanshBadhwar26.
 - E1 builds → @reyanshBadhwar26. E3 worker ready → @reyanshBadhwar26.
 - U1 components importable → @abdullahwarv2. U2/U3 done → @abdullahwarv2.
-- D3 approved file pushed → @abdullahwarraich @abdullahwarv2.
+- D3 approved file pushed → @divakargaba @abdullahwarv2.
 - Anyone changing a contract → ask @divakargaba first.
 
 ## Measured results (fill during integration)
