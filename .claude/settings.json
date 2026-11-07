@@ -1,0 +1,8 @@
+{
+  "includeCoAuthoredBy": false,
+  "attribution": { "commit": "", "pr": "" },
+  "hooks": {
+    "SessionStart": [{ "hooks": [{ "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/tools/board hook session", "timeout": 30 }] }],
+    "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/tools/board hook prompt", "timeout": 30 }] }]
+  }
+}

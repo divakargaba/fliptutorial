@@ -1,0 +1,28 @@
+{
+  "name": "hackathon-agent-template",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "setup": "npm --prefix web ci && node tools/env.mjs init",
+    "env:init": "node tools/env.mjs init",
+    "env:check": "node tools/env.mjs check",
+    "with-env": "node tools/env.mjs run",
+    "supabase": "node tools/env.mjs run npm exec --yes --package=supabase@3.0.0 -- supabase",
+    "vercel": "node tools/env.mjs run npm exec --yes --package=vercel@65.10.0 -- vercel",
+    "vercel:check": "node tools/vercel.mjs check",
+    "vercel:configure": "node tools/vercel.mjs configure",
+    "vercel:env": "node tools/vercel.mjs env",
+    "deploy:preview": "node tools/vercel.mjs deploy preview",
+    "deploy:production": "node tools/vercel.mjs deploy production",
+    "dev": "npm --prefix web run dev",
+    "demo": "npm --prefix web run demo",
+    "build": "npm --prefix web run build",
+    "typecheck": "npm --prefix web run typecheck",
+    "test:tools": "node --test tools/*.test.mjs",
+    "test": "npm run test:tools && npm --prefix web test",
+    "test:e2e": "npm --prefix web run test:e2e",
+    "test:e2e:dev": "npm --prefix web run test:e2e:dev",
+    "check": "npm test && npm run build"
+  },
+  "engines": { "node": "24.x" }
+}

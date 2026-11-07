@@ -1,0 +1,12 @@
+.git
+**/node_modules
+**/.next
+**/test-results
+**/playwright-report
+**/coverage
+**/.env
+**/.env.*
+!**/.env.example
+**/*.pem
+**/*.key
+**/.aws

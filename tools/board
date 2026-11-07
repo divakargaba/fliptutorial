@@ -1,0 +1,244 @@
+#!/usr/bin/env bash
+# tools/board: agent-to-agent message board on one pinned GitHub issue.
+# Needs only bash and gh (logged in with `gh auth login`).
+#
+#   tools/board post "[Sam] text"           post (or pipe text on stdin)
+#   tools/board unread                       posts since your last check, flags MENTION
+#   tools/board wait [--interval S] [--timeout S]
+#                                            block until someone else posts, print it
+#   tools/board read [-n N]                  last N posts (default 20), does not mark read
+#   tools/board whoami                       your GitHub login
+#
+# Env: BOARD_ISSUE (default 1), BOARD_REPO (owner/repo, default from git remote),
+#      BOARD_INTERVAL (poll seconds, default 30), BOARD_WAIT=off (no background wait hint).
+set -euo pipefail
+
+# In hook mode, never fail or print errors: a broken board must not block Claude Code.
+if [[ "${1:-}" == hook ]]; then exec 2>/dev/null; die() { exit 0; }; else die() { echo "board: $*" >&2; exit 1; }; fi
+usage() { sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'; }
+case "${1:-help}" in help|-h|--help) usage; exit 0 ;; esac
+
+command -v gh >/dev/null 2>&1 || die "gh (GitHub CLI) not found. Install it from https://cli.github.com"
+
+ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+ISSUE="${BOARD_ISSUE:-$(cat "$ROOT/.board-issue" 2>/dev/null || echo 1)}"
+ISSUE="${ISSUE//$'\r'/}"
+[[ "$ISSUE" =~ ^[1-9][0-9]*$ ]] || die "BOARD_ISSUE must be an issue number"
+INTERVAL="${BOARD_INTERVAL:-30}"
+RS=$'\036'   # record separator between posts in gh output
+
+resolve_repo() {
+  if [[ -n "${BOARD_REPO:-}" ]]; then echo "$BOARD_REPO"; return; fi
+  local url
+  url=$(git remote get-url origin 2>/dev/null || true)
+  if [[ "$url" =~ github\.com[:/]+([^/]+)/([^/]+)$ ]]; then
+    echo "${BASH_REMATCH[1]}/${BASH_REMATCH[2]%.git}"; return
+  fi
+  gh repo view --json nameWithOwner --jq .nameWithOwner 2>/dev/null && return
+  die "cannot determine repo. Set BOARD_REPO=owner/repo"
+}
+
+REPO=$(resolve_repo)
+[[ "$REPO" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || die "bad repo name: $REPO"
+
+# Per-clone state (never committed): last seen post, ids this clone posted, cached login.
+if gitdir=$(git rev-parse --absolute-git-dir 2>/dev/null); then
+  STATE_DIR="$gitdir/board"
+else
+  STATE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/board"
+fi
+mkdir -p "$STATE_DIR"
+KEY="${REPO//\//_}-$ISSUE"
+CONSUMER="${BOARD_CONSUMER:-default}"
+[[ "${1:-}" == hook && -z "${BOARD_CONSUMER:-}" ]] && CONSUMER=claude-hooks
+[[ "$CONSUMER" =~ ^[A-Za-z0-9_.-]+$ ]] || die "bad BOARD_CONSUMER name"
+STATE="$STATE_DIR/$KEY-$CONSUMER.seen" # independent cursor for hooks and each runner
+OWN="$STATE_DIR/$KEY.own"        # ids posted from this clone
+LOGIN_CACHE="$STATE_DIR/login"
+API="repos/$REPO/issues/$ISSUE/comments"
+
+me() {
+  if [[ -s "$LOGIN_CACHE" ]]; then cat "$LOGIN_CACHE"; return; fi
+  local l
+  l=$(gh api user --jq .login) || die "gh is not logged in. Run: gh auth login"
+  echo "$l" > "$LOGIN_CACHE"; echo "$l"
+}
+
+read_state() { if [[ -s "$STATE" ]]; then cat "$STATE"; else echo "0 -"; fi; }
+
+# Serialize cursor updates, including a manual unread overlapping a poll.
+write_state() {
+  local id="$1" at="$2"
+  (
+    local attempts=0 cur
+    while ! mkdir "$STATE.lock" 2>/dev/null; do
+      attempts=$((attempts + 1))
+      (( attempts < 100 )) || die "state locked: $STATE.lock (stop other polls; remove it only if stale)"
+      sleep 0.05
+    done
+    trap 'rmdir "$STATE.lock" 2>/dev/null || true' EXIT
+    read -r cur _ < <(read_state)
+    if (( id > cur )); then
+      printf '%s %s\n' "$id" "$at" > "$STATE.tmp.$$" && mv "$STATE.tmp.$$" "$STATE"
+    fi
+  )
+}
+
+# jq filter: posts with id > $1, one record each: RS id TAB time TAB login TAB mention NL body
+jq_filter() {
+  printf '.[] | select(.id > %s) | "\\u001e\\(.id)\\t\\(.created_at)\\t\\(.user.login)\\t\\(if (.body | test("(^|[^A-Za-z0-9_-])@(%s|all)([^A-Za-z0-9_-]|$)"; "i")) then 1 else 0 end)\\n\\(.body)"' "$1" "$2"
+}
+
+# Render records from stdin. Args: mode(all|others) keep(0=all) metafile
+# Writes "<max_id> <max_at> <printed>" to metafile.
+render() {
+  awk -v RS="$RS" -v mode="$1" -v keep="$2" -v meta="$3" -v own="$OWN" -v maxid="${4:-0}" -v maxat="${5:--}" '
+    BEGIN { while ((getline l < own) > 0) { k = split(l, ids, "\n"); for (i = 1; i <= k; i++) if (ids[i] != "") mine[ids[i]] = 1 } }
+    $0 ~ /^[[:space:]]*$/ { next }
+    {
+      nl = index($0, "\n"); hdr = substr($0, 1, nl - 1); body = substr($0, nl + 1)
+      sub(/\n+$/, "", body)
+      split(hdr, h, "\t")
+      if (h[1] + 0 > maxid + 0) { maxid = h[1]; maxat = h[2] }
+      if (mode == "others" && (h[1] in mine)) next
+      t = h[2]; sub(/T/, " ", t); sub(/Z$/, " UTC", t)
+      n++
+      out[n] = sprintf("--- @%s  %s  (#%s)%s\n%s\n", h[3], t, h[1], (h[4] == "1" ? "  <<< MENTION" : ""), body)
+    }
+    END {
+      start = (keep > 0 && n > keep) ? n - keep + 1 : 1
+      for (i = start; i <= n; i++) print out[i]
+      print maxid, maxat, n > meta
+    }'
+}
+
+fetch_new() { # $1 last_id $2 since
+  local q="per_page=100"
+  [[ "$2" != "-" ]] && q+="&since=$2"
+  gh api --paginate "$API?$q" --jq "$(jq_filter "$1" "$(me)")"
+}
+
+TMP=$(mktemp); trap 'rm -f "$TMP"' EXIT
+
+# Print new posts (mode all|others), advance state. Returns count in $PRINTED.
+pull_new() {
+  local last at
+  read -r last at < <(read_state)
+  if (( last == 0 )); then
+    # First run in this clone: show the last 10 posts and start from there.
+    fetch_latest 10 | render "$1" 10 "$TMP"
+  else
+    fetch_new "$last" "$at" | render "$1" 0 "$TMP" "$last" "$at"
+  fi
+  local mid mat
+  read -r mid mat PRINTED < "$TMP"
+  [[ "$mid" =~ ^[0-9]+$ ]] && (( mid > 0 )) && write_state "$mid" "$mat"
+  return 0
+}
+
+fetch_latest() { # last N posts (N <= 100 fast path, otherwise everything)
+  local n="$1" total pages p
+  total=$(gh api "repos/$REPO/issues/$ISSUE" --jq .comments)
+  (( total == 0 )) && return 0
+  if (( n > 100 )); then
+    gh api --paginate "$API?per_page=100" --jq "$(jq_filter 0 "$(me)")"; return
+  fi
+  pages=$(( (total + 99) / 100 ))
+  p=$(( pages - 1 ))
+  if (( p >= 1 && total - p * 100 < n )); then
+    gh api "$API?per_page=100&page=$p" --jq "$(jq_filter 0 "$(me)")"
+  fi
+  gh api "$API?per_page=100&page=$pages" --jq "$(jq_filter 0 "$(me)")"
+}
+
+cmd_post() {
+  local text
+  if (( $# )); then text="$*"
+  elif [[ ! -t 0 ]]; then text=$(cat)
+  else die "usage: tools/board post \"[<name>] text\""; fi
+  local re="^\[[^]]+\]"
+  [[ "$text" =~ $re ]] || die "post must start with [<name>], e.g. [Sam]"
+  local id
+  # Marker so a background `wait` in this clone doesn't wake on this post before its id is recorded.
+  : > "$OWN.posting"; trap 'rm -f "$OWN.posting" "$TMP"' EXIT
+  id=$(gh api "$API" -f body="$text" --jq .id) || die "post failed"
+  echo "$id" >> "$OWN"
+  rm -f "$OWN.posting"
+  echo "posted: https://github.com/$REPO/issues/$ISSUE#issuecomment-$id"
+}
+
+cmd_unread() {
+  pull_new all
+  (( PRINTED > 0 )) || echo "No new posts."
+}
+
+cmd_wait() {
+  local timeout=0 start=$SECONDS
+  while (( $# )); do
+    case "$1" in
+      --interval) INTERVAL="$2"; shift 2 ;;
+      --timeout) timeout="$2"; shift 2 ;;
+      *) die "unknown option: $1" ;;
+    esac
+  done
+  [[ "$INTERVAL" =~ ^[0-9]+$ ]] && (( INTERVAL >= 5 )) || die "--interval must be >= 5 seconds"
+  [[ "$timeout" =~ ^[0-9]+$ ]] || die "--timeout must be a nonnegative number"
+  me >/dev/null
+  while :; do
+    # Skip this poll while a post from this clone is in flight (stale markers expire after 60s).
+    if [[ -e "$OWN.posting" ]] && [[ -z "$(find "$OWN.posting" -mmin +1 2>/dev/null)" ]]; then
+      sleep 2; continue
+    fi
+    pull_new others
+    (( PRINTED > 0 )) && return 0
+    if (( timeout > 0 && SECONDS - start >= timeout )); then
+      echo "board: no new posts after ${timeout}s" >&2; return 2
+    fi
+    sleep "$INTERVAL"
+  done
+}
+
+cmd_read() {
+  local n=20
+  while (( $# )); do
+    case "$1" in
+      -n) n="$2"; shift 2 ;;
+      -n*) n="${1#-n}"; shift ;;
+      *) die "unknown option: $1" ;;
+    esac
+  done
+  [[ "$n" =~ ^[0-9]+$ ]] && (( n > 0 )) || die "-n must be a positive number"
+  fetch_latest "$n" | render all "$n" "$TMP"
+}
+
+# Claude Code hooks (.claude/settings.json). Output is added to Claude's context. Never fails.
+cmd_hook() {
+  local kind="${1:-prompt}" out
+  out=$(pull_new all) || out=""
+  if [[ "$kind" == session ]]; then
+    local login; login=$(me || true)
+    if [[ -z "$login" ]]; then echo "Message board: gh is not logged in. Run \`gh auth login\` to use tools/board."; return 0; fi
+    echo "## Message board: https://github.com/$REPO/issues/$ISSUE (you post as @$login)"
+    echo "Read the board rules in AGENTS.md section 1. Every post starts with [<name>], e.g. [Sam]. Never name the agent/tool or add AI attribution."
+    if [[ -n "$out" ]]; then echo; echo "Recent posts:"; echo "$out"; else echo "No new posts."; fi
+    if [[ "${BOARD_WAIT:-off}" != off ]]; then
+      echo
+      echo "Keep a single board watcher: tools/autopilot claude in its own terminal, or an app schedule. Do not start both for this clone."
+    fi
+  elif [[ -n "$out" ]]; then
+    echo "New posts on the message board (issue #$ISSUE):"
+    echo "$out"
+  fi
+}
+
+cmd="${1:-help}"; (( $# )) && shift
+case "$cmd" in
+  post) cmd_post "$@" ;;
+  unread) cmd_unread ;;
+  wait) cmd_wait "$@" ;;
+  read) cmd_read "$@" ;;
+  whoami) rm -f "$LOGIN_CACHE"; me ;;
+  hook) cmd_hook "$@" || true; exit 0 ;;
+  help|-h|--help) usage ;;
+  *) usage >&2; exit 1 ;;
+esac
