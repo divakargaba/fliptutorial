@@ -88,6 +88,53 @@ Work top to bottom. Mark State in this table when shipped or blocked (only your 
 | R3 | @reyanshBadhwar26 | **Failure matrix + accessibility (PRD §6–7).** Add MV3 E2E cases with screenshots for every grader/API failure the UI must handle: `GRADER_UNAVAILABLE`, `GRADER_TIMEOUT`, `BUSY`, `STALE_EXERCISE` (draft kept, exercise reloads), `INVALID_CODE`, network timeout. Each must keep the draft, keep playback paused and leave Skip reachable. Run an automated contrast/a11y check (e.g. axe-core in Playwright) on the panel in dark and light themes; fix anything below WCAG AA in `src/ui/`. | Todo |
 | M1 | @abdullahwarv2 | Manual desktop-Chrome checks (assigned on the board): tab switch before a pause, ads, keyboard-only, light theme. | Todo |
 
+## "Test me" feature (stretch scope, off by default)
+
+Spec: `docs/TEST-ME.md` (Abdullah to export). A "Test me" button on any captioned
+Python tutorial, including ones we never prepared. Pressing it pauses the video;
+the backend takes the transcript up to that moment, has Gemini write a coding
+exercise, checks it, and serves it in the same practice panel. Grading reuses
+`/v1/submissions` and Judge0. v1 is coding exercise only; quiz is phase 2.
+
+Rules: generated exercises are allowed only if the reference solution passes every
+test and a known-wrong solution fails at least one (checked in Judge0, never on
+our machine). Every generated screen says "AI-generated practice". Uses the team
+Gemini key, capped at 10 sets per minute, with a cache. Goes in the demo only
+after 3 clean runs on a video we never prepared.
+
+New error codes: `NO_CAPTIONS` 404, `NOT_PYTHON` 422, `TOO_EARLY` 422 (under
+180 s of transcript), `GENERATOR_UNAVAILABLE` 503, `GENERATOR_TIMEOUT` 504
+(20 s), `SET_EXPIRED` 410.
+
+| ID | Owner | Deliverable and acceptance check | Depends on | State |
+| --- | --- | --- | --- | --- |
+| T1 | @abdullahwarraichh | Runtime transcript fetch, clip and cache: `backend/app/transcripts.py` + tests. | — | Todo |
+| T2 | @abdullahwarraichh | Exercise generator (prompt, schema, rule and concept checks): `backend/app/testme.py` + tests. | T1 | Todo |
+| T3 | @divakargaba | Reference and wrong-solution checks through Judge0: new method in `grader.py`. Accepts a generated exercise (function name, reference solution, known-wrong solution, test cases), runs both through Judge0, returns pass/fail for each. Must confirm reference passes all tests and known-wrong fails at least one. | — | Todo |
+| T4 | @divakargaba | `POST /v1/test-me` endpoint in `main.py`: accepts `videoId` and `timestampS`, set cache with TTL, new error codes (`NO_CAPTIONS`, `NOT_PYTHON`, `TOO_EARLY`, `GENERATOR_UNAVAILABLE`, `GENERATOR_TIMEOUT`, `SET_EXPIRED`), catalog fallback for generated IDs, contract + fixture. | T2, T3 | Todo |
+| T5 | @abdullahwarv2 | Background `testMe` message + Zod schema in `src/contracts.ts` and `entrypoints/background.ts`. | T4 contract | Todo |
+| T6 | @reyanshBadhwar26 | "Test me" button in `src/ui/`, loading and error states, "AI-generated practice" label. | T5 | Todo |
+| T7 | @abdullahwarraichh | Real-YouTube walkthrough on 2 unprepared videos at 1× and 2×, times in Measured results. 3 clean runs required. | T6 | Todo |
+| T8 | @abdullahwarraichh, @divakargaba | Phase 2: quiz generation + `POST /v1/test-me/answer`. | T7 | Todo |
+| T9 | @reyanshBadhwar26 | Phase 2: quiz view and score line in `src/ui/`. | T8 | Todo |
+
+### Test-me handoffs
+
+- T1 pushed → @abdullahwarraichh starts T2.
+- T3 pushed → @divakargaba ready for T4 once T2 lands.
+- T4 contract pushed → @abdullahwarv2 starts T5.
+- T5 pushed → @reyanshBadhwar26 starts T6.
+- T6 pushed → @abdullahwarraichh starts T7 walkthrough.
+
+### Test-me owned paths (additions)
+
+| Human | New paths |
+| --- | --- |
+| @abdullahwarraichh | `backend/app/transcripts.py`, `backend/app/testme.py`, `backend/tests/test_transcripts.py`, `backend/tests/test_testme.py` |
+| @divakargaba | `backend/app/grader.py` (T3 additions), `backend/app/main.py` (T4 route), `docs/TEST-ME.md` approval |
+| @abdullahwarv2 | `extension/src/contracts.ts` (T5 schema), `extension/entrypoints/background.ts` (T5 message) |
+| @reyanshBadhwar26 | `extension/src/ui/` (T6 button + states) |
+
 ## Handoffs (who to @mention)
 
 - B1 pushed → @abdullahwarraichh. B2 models pushed → @abdullahwarraichh. B3 serving fixture → @abdullahwarv2 @reyanshBadhwar26.

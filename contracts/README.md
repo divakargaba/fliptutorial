@@ -15,12 +15,15 @@ Full product spec: `docs/PRD.md`.
   - `outcome`: `passed | wrong_answer | syntax_error | runtime_error | time_limit | invalid_output`.
   - `results[]` rows: `{ kind: "visible"|"hidden", index, passed, args?, expected?, actual?, diagnostic? }`. Hidden rows carry only `kind`, `index`, `passed`.
   - Only `mode: submit` + `outcome: passed` may resume the video.
+- `POST /v1/test-me` body `{ "videoId", "timestampS" }` — generates a coding exercise from the transcript up to `timestampS`. Returns the same exercise shape as a breakpoint exercise, plus `"generated": true` and `"setId"` for cache lookups. Grading reuses `/v1/submissions`. Generated exercises carry an `"aiGenerated": true` flag. The set expires after a TTL; submitting against an expired set returns `SET_EXPIRED` 410.
 - Errors: `{ "error": { "code", "message", "retryable" }, "requestId" }`.
   Codes: `INVALID_CODE` 422, `EXERCISE_NOT_FOUND` 404, `STALE_EXERCISE` 409, `BUSY` 429, `GRADER_UNAVAILABLE` 503, `GRADER_TIMEOUT` 504.
+  Test-me codes: `NO_CAPTIONS` 404, `NOT_PYTHON` 422, `TOO_EARLY` 422 (under 180 s of transcript), `GENERATOR_UNAVAILABLE` 503, `GENERATOR_TIMEOUT` 504 (20 s), `SET_EXPIRED` 410.
 
 ## Extension messages (content script → background service worker)
 - `{ type: "lookup", videoId }` → `{ ok: true, data: PracticeResponse } | { ok: false, error }` (3 s timeout).
 - `{ type: "grade", exerciseId, revision, mode, code }` → `{ ok: true, data: SubmissionResponse } | { ok: false, error }` (15 s timeout).
+- `{ type: "testMe", videoId, timestampS }` → `{ ok: true, data: TestMeResponse } | { ok: false, error }` (20 s timeout). Response includes exercise + `setId` + `aiGenerated: true`.
 - `error` uses the API error shape; network/timeout failures use code `NETWORK` or `TIMEOUT` with `retryable: true`.
 
 ## Panel component (owner of UI: @reyanshBadhwar26; caller: @abdullahwarv2)
