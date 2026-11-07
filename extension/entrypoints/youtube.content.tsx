@@ -7,6 +7,7 @@ import { createShadowRootUi, type ShadowRootContentScriptUi } from 'wxt/utils/co
 import { sendRequest } from '../src/api';
 import { PracticeResponseSchema, SubmissionResponseSchema, type WorkerMessage } from '../src/contracts';
 import { flushDraft, loadDraft, saveDraft } from '../src/drafts';
+import { listSolved, markSolved } from '../src/progress';
 import { PlaybackSession, watchVideoId, type Ticket } from '../src/playback';
 import { Badge } from '../src/ui/Badge';
 import { PracticePanel } from '../src/ui/PracticePanel';
@@ -58,7 +59,7 @@ export default defineContentScript({
       if (!ui?.mounted || !isCurrent() || uiFailed) return;
       const active = session.active;
       const state = bindExpired || session.route === 'unavailable' ? 'unavailable' : session.route === 'loading' ? 'loading' : 'ready';
-      const count = session.data?.breakpoints.filter(b => !session.consumed.has(b.id)).length ?? 0;
+      const count = session.data?.breakpoints.filter(b => session.available(b)).length ?? 0;
       try {
         flushSync(() => ui!.mounted!.render(<div className="breakpoint-shell">
           {session.route !== 'unsupported' && <div data-breakpoint-badge>
@@ -120,9 +121,12 @@ export default defineContentScript({
       if (!videoId) return;
       if (!refresh) { session.route = 'loading'; render(); }
       const reply = await sendRequest({ type: 'lookup', videoId }, PracticeResponseSchema, send);
+      const solvedIds = reply.ok && reply.data.status === 'ready'
+        ? await listSolved(videoId, reply.data.revision).catch(() => new Set<string>())
+        : new Set<string>();
       if (generation !== session.generation || sequence !== lookupSequence || !isCurrent() ||
           (refresh && !session.isCurrent(refresh.ticket))) return;
-      if (reply.ok && session.acceptLookup(generation, reply.data)) {
+      if (reply.ok && session.acceptLookup(generation, reply.data, solvedIds)) {
         if (refresh && session.active) {
           const updated = reply.data.breakpoints.find(b => b.exercise.id === session.active!.breakpoint.exercise.id);
           if (updated && reply.data.revision) {
@@ -159,7 +163,8 @@ export default defineContentScript({
 
     async function grade(mode: 'run' | 'submit', code: string) {
       const active = session.active;
-      if (!active || active.error?.code === 'EXERCISE_NOT_FOUND') return;
+      const videoId = session.videoId;
+      if (!videoId || !active || active.error?.code === 'EXERCISE_NOT_FOUND') return;
       const ticket = session.beginGrade();
       if (!ticket) return;
       render();
@@ -171,6 +176,9 @@ export default defineContentScript({
         session.active!.state = 'checking'; render(); await lookup({ ticket, submittedCode: code });
       } else {
         render();
+        if (mode === 'submit' && active.state === 'passed') {
+          await markSolved(videoId, active.breakpoint.exercise.id, active.revision).catch(() => {});
+        }
         if (action === 'resume') await resume(ticket);
       }
     }
@@ -205,7 +213,7 @@ export default defineContentScript({
       }
       const video = player;
       if (session.active || !video || !playerReady || !isCurrent() || video !== currentPlayer() || isAd() || isFullscreen() || !mountable()) return;
-      const breakpoint = session.data?.breakpoints.find(b => !session.consumed.has(b.id));
+      const breakpoint = session.data?.breakpoints.find(b => session.available(b));
       if (!breakpoint) return;
       if (session.open(breakpoint, video.currentTime, !video.paused)) {
         video.pause(); render(); focusPanel();

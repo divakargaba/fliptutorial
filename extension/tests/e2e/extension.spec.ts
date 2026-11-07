@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test';
-import { automaticPause, correctCode, expectPlaying, test } from './extension.fixture';
+import { automaticPause, correctCode, expectPlaying, secondPauseAtS, secondTitle, test } from './extension.fixture';
 
 test('built extension pauses once, Run fails, Submit passes and resumes', async ({ app }, info) => {
   const { page } = app;
@@ -129,4 +129,35 @@ test('navigation invalidates a pending attempt without resuming the next video',
   await app.release();
   await expect(page.locator('.bp-panel')).toHaveCount(0);
   expect(await page.locator('video').evaluate(video => video.paused)).toBe(true);
+});
+
+test.describe('multiple breakpoints', () => {
+  test.use({ breakpointCount: 2 });
+
+  test('skip and solve are independent, and only the solve survives reload', async ({ app }) => {
+    const { page } = app;
+    const secondHeading = page.getByRole('heading', { name: secondTitle });
+    const skip = page.getByRole('button', { name: 'Skip and watch' });
+    const video = page.locator('video');
+
+    await automaticPause(page);
+    await skip.click();
+    await expect(secondHeading).toBeVisible();
+    const pause = await video.evaluate(v => ({ paused: v.paused, time: v.currentTime }));
+    expect(pause.paused).toBe(true);
+    expect(pause.time).toBeGreaterThanOrEqual(secondPauseAtS);
+    expect(pause.time).toBeLessThanOrEqual(secondPauseAtS + 0.5);
+    await page.getByRole('textbox', { name: 'Python code' }).fill(correctCode);
+    await page.getByRole('button', { name: 'Submit', exact: true }).click();
+    await expectPlaying(page);
+    expect(app.requests.map(({ exerciseId }) => exerciseId)).toEqual(['samplevid01-second']);
+
+    await page.reload();
+    await expect(page.getByRole('button', { name: 'Breakpoint · 1 exercise' })).toBeVisible();
+    await automaticPause(page);
+    await skip.click();
+    await expect.poll(() => video.evaluate(v => v.currentTime)).toBeGreaterThan(secondPauseAtS + 0.5);
+    await expectPlaying(page);
+    await expect(secondHeading).toHaveCount(0);
+  });
 });

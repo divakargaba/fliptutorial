@@ -145,3 +145,51 @@ describe('grading and resume ownership', () => {
     expect(session.canResume(ticket, 72, true)).toBe(false);
   });
 });
+
+describe('multiple breakpoints and saved progress', () => {
+  const second = {
+    ...breakpoint, id: 'second-breakpoint', pauseAtS: 76, revealAtS: 78,
+    exercise: { ...breakpoint.exercise, id: 'second-exercise' },
+  };
+  const multiple = PracticeResponseSchema.parse({ ...data, breakpoints: [breakpoint, second] });
+
+  it('skips the first, then pauses at the second without marking the skip solved', () => {
+    const session = new PlaybackSession();
+    session.acceptLookup(session.navigate(data.videoId), multiple);
+    session.sample(sample(71.9, 0));
+    expect(session.sample(sample(72, 100))).toEqual(breakpoint);
+    session.skip();
+    session.interrupt();
+    expect(session.solvedIds.size).toBe(0);
+    session.sample(sample(75.9, 4000));
+    expect(session.sample(sample(76, 4100))).toEqual(second);
+    const run = session.beginGrade()!;
+    session.finishGrade(run, 'run', { ok: true, data: passed });
+    expect(session.solvedIds.size).toBe(0);
+    session.finishGrade(session.beginGrade()!, 'submit', { ok: true, data: passed });
+    expect(session.solvedIds).toEqual(new Set([second.exercise.id]));
+  });
+
+  it('seeking between exercises leaves the missed one available and arms the next', () => {
+    const session = new PlaybackSession();
+    session.acceptLookup(session.navigate(data.videoId), multiple);
+    session.sample(sample(71.9, 0));
+    expect(session.sample(sample(75, 100, { seeking: true }))).toBeNull();
+    expect(session.sample(sample(75.8, 300))).toBeNull();
+    expect(session.available(breakpoint)).toBe(true);
+    expect(session.sample(sample(76, 500))).toEqual(second);
+  });
+
+  it('suppresses only a saved exercise on reload and clears it for a new revision', () => {
+    const session = new PlaybackSession();
+    session.acceptLookup(session.navigate(data.videoId), multiple, new Set([breakpoint.exercise.id]));
+    expect(session.consumed.size).toBe(0);
+    expect(session.open(breakpoint, 72, true)).toBeNull();
+    session.sample(sample(71.9, 0));
+    expect(session.sample(sample(72, 100))).toBeNull();
+    session.sample(sample(75.9, 4000));
+    expect(session.sample(sample(76, 4100))).toEqual(second);
+    session.acceptLookup(session.generation, { ...multiple, status: 'ready', revision: 'new-revision' });
+    expect(session.available(breakpoint)).toBe(true);
+  });
+});

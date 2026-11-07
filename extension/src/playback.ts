@@ -26,6 +26,7 @@ export class PlaybackSession {
   data: PracticeResponse | null = null;
   active: ActiveAttempt | null = null;
   readonly consumed = new Set<string>();
+  readonly solvedIds = new Set<string>();
   private previous: Sample | null = null;
   private attempt = 0;
 
@@ -37,12 +38,18 @@ export class PlaybackSession {
     this.active = null;
     this.attempt++;
     this.consumed.clear();
+    this.solvedIds.clear();
     this.reset();
     return this.generation;
   }
 
-  acceptLookup(generation: number, data: PracticeResponse): boolean {
+  acceptLookup(generation: number, data: PracticeResponse, savedSolvedIds: ReadonlySet<string> = new Set()): boolean {
     if (generation !== this.generation || data.videoId !== this.videoId) return false;
+    if (this.data?.revision !== data.revision) this.solvedIds.clear();
+    for (const breakpoint of data.breakpoints) {
+      const id = breakpoint.exercise.id;
+      if (savedSolvedIds.has(id)) this.solvedIds.add(id);
+    }
     this.data = data;
     this.route = data.status;
     // Late data must not turn an earlier time sample into an automatic pause.
@@ -51,6 +58,10 @@ export class PlaybackSession {
   }
 
   reset(): void { this.previous = null; }
+
+  available(breakpoint: Breakpoint): boolean {
+    return !this.consumed.has(breakpoint.id) && !this.solvedIds.has(breakpoint.exercise.id);
+  }
 
   sample(sample: Sample): Breakpoint | null {
     if (this.route !== 'ready' || !this.data || this.active || !sample.playing || !sample.visible ||
@@ -65,13 +76,13 @@ export class PlaybackSession {
     const delta = sample.time - previous.time;
     // A stalled/background callback or an unannounced jump establishes a new baseline.
     if (elapsed < 0 || elapsed > 1.5 || delta < 0 || delta > elapsed * Math.max(sample.rate, previous.rate) + 0.5) return null;
-    const breakpoint = this.data.breakpoints.find(b => !this.consumed.has(b.id) &&
+    const breakpoint = this.data.breakpoints.find(b => this.available(b) &&
       previous.time < b.pauseAtS && b.pauseAtS <= sample.time && sample.time < b.revealAtS);
     return breakpoint && this.open(breakpoint, sample.time, true) ? breakpoint : null;
   }
 
   open(breakpoint: Breakpoint, time: number, ownsPause: boolean): Ticket | null {
-    if (this.active || this.data?.status !== 'ready' || this.consumed.has(breakpoint.id) ||
+    if (this.active || this.data?.status !== 'ready' || !this.available(breakpoint) ||
         !this.data.breakpoints.some(b => b.id === breakpoint.id)) return null;
     this.consumed.add(breakpoint.id);
     this.attempt++;
@@ -104,6 +115,7 @@ export class PlaybackSession {
     }
     active.result = reply.data;
     if (reply.data.outcome === 'passed' && mode === 'submit') {
+      this.solvedIds.add(active.breakpoint.exercise.id);
       active.state = 'passed';
       return active.ownsPause ? 'resume' : 'stay';
     }

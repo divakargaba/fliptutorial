@@ -9,6 +9,8 @@ const failed = JSON.parse(readFileSync(new URL('../../../contracts/submission-re
 
 export const watchUrl = 'https://www.youtube.com/watch?v=samplevid01';
 export const pauseAtS = 1.2;
+export const secondPauseAtS = 3.0;
+export const secondTitle = 'Try a second exponent';
 export const correctCode = 'def raise_to_power(base, exponent):\n    return base ** exponent';
 type Submission = { exerciseId: string; revision: string; mode: 'run' | 'submit'; code: string };
 type App = {
@@ -20,12 +22,21 @@ type App = {
   rejectResume(reject: boolean): Promise<void>;
 };
 
-export const test = base.extend<{ app: App }>({
-  app: async ({ viewport }, use) => {
+export const test = base.extend<{ app: App; breakpointCount: 1 | 2 }>({
+  breakpointCount: [1, { option: true }],
+  app: async ({ viewport, breakpointCount }, use) => {
     const requests: Submission[] = [];
     const pending: Array<() => void> = [];
     const releasePending = () => pending.splice(0).forEach(fn => fn());
     const app = { requests, hold: false, unavailable: false } as App;
+    const api = new URL(process.env.WXT_API_BASE_URL || 'http://127.0.0.1:8000');
+    if (api.hostname !== '127.0.0.1' || api.protocol !== 'http:') throw new Error('The test API must use HTTP loopback.');
+    const [original] = practice.breakpoints;
+    const first = { ...original!, pauseAtS, revealAtS: breakpointCount === 2 ? 2.6 : 10 };
+    const breakpoints = breakpointCount === 1 ? [first] : [first, {
+      ...first, id: 'second-breakpoint', pauseAtS: secondPauseAtS, revealAtS: 10,
+      exercise: { ...first.exercise, id: 'samplevid01-second', title: secondTitle },
+    }];
     const server = createServer(async (req, res) => {
       const json = (status: number, body: unknown) => {
         if (!res.destroyed) res.writeHead(status, { 'Content-Type': 'application/json' }).end(JSON.stringify(body));
@@ -33,7 +44,7 @@ export const test = base.extend<{ app: App }>({
       if (req.method === 'GET' && req.url?.startsWith('/v1/videos/')) {
         const id = req.url.split('/')[3];
         json(200, id === practice.videoId ? {
-          ...practice, breakpoints: practice.breakpoints.map(b => ({ ...b, pauseAtS, revealAtS: 10 })),
+          ...practice, breakpoints,
         } : { schemaVersion: 1, videoId: id, revision: null, status: 'unsupported', breakpoints: [] });
       } else if (req.method === 'POST' && req.url === '/v1/submissions') {
         let body = '';
@@ -53,7 +64,7 @@ export const test = base.extend<{ app: App }>({
       } else json(404, {});
     });
     // Fail if a developer's backend already owns this port; never send fixtures to it.
-    await new Promise<void>((resolve, reject) => { server.once('error', reject); server.listen(8000, '127.0.0.1', resolve); });
+    await new Promise<void>((resolve, reject) => { server.once('error', reject); server.listen(Number(api.port || 80), '127.0.0.1', resolve); });
     let context;
     try {
       context = await chromium.launchPersistentContext('', {
@@ -63,7 +74,7 @@ export const test = base.extend<{ app: App }>({
       const page = context.pages()[0] ?? await context.newPage();
       app.release = async () => {
         if (!pending.length) return;
-        const downloaded = context.waitForEvent('requestfinished', request => request.url() === 'http://127.0.0.1:8000/v1/submissions');
+        const downloaded = context.waitForEvent('requestfinished', request => request.url() === `${api.origin}/v1/submissions`);
         releasePending();
         await downloaded;
         // Let the worker message and the content renderer run after the fetch finishes.
@@ -91,7 +102,7 @@ export const test = base.extend<{ app: App }>({
       await context.route('https://www.youtube.com/**', route => route.fulfill({ contentType: 'text/html', body: html }));
       app.page = page;
       await page.goto(watchUrl);
-      await expect(page.getByRole('button', { name: 'Breakpoint · 1 exercise' })).toBeVisible();
+      await expect(page.getByRole('button', { name: `Breakpoint · ${breakpointCount} exercise${breakpointCount === 1 ? '' : 's'}` })).toBeVisible();
       await use(app);
     } finally {
       releasePending();
