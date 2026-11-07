@@ -1,0 +1,441 @@
+{
+  "schemaVersion": 1,
+  "videoId": "rfscVS0vtbw",
+  "source": "YouTube English captions (uploader-provided track), fetched 2026-11-07",
+  "windowStartS": 9680.0,
+  "windowEndS": 10033.0,
+  "cues": [
+    {
+      "id": "c09677320",
+      "start_s": 9677.32,
+      "end_s": 9684.32,
+      "text": "is more powerful. In this tutorial, I'm going to show you guys how to build an"
+    },
+    {
+      "id": "c09684320",
+      "start_s": 9684.32,
+      "end_s": 9689.32,
+      "text": "exponent function. Now an exponent function is basically going to allow us to take a"
+    },
+    {
+      "id": "c09689320",
+      "start_s": 9689.32,
+      "end_s": 9694.32,
+      "text": "certain number and raise it to a specific power. So in Python, there's actually a"
+    },
+    {
+      "id": "c09694320",
+      "start_s": 9694.32,
+      "end_s": 9699.32,
+      "text": "really easy way to do this. I can come down here and I can print, we can say like"
+    },
+    {
+      "id": "c09699320",
+      "start_s": 9699.32,
+      "end_s": 9705.32,
+      "text": "two, and we can just do two multiplication signs. And I can say three. And this is"
+    },
+    {
+      "id": "c09705320",
+      "start_s": 9705.32,
+      "end_s": 9711.32,
+      "text": "basically just going to be two raised to the third power. So you can see here, I can"
+    },
+    {
+      "id": "c09711320",
+      "start_s": 9711.32,
+      "end_s": 9715.32,
+      "text": "just print this out and we get eight, because that's too cute. So it's really"
+    },
+    {
+      "id": "c09715320",
+      "start_s": 9715.32,
+      "end_s": 9720.32,
+      "text": "easy to do exponents in Python. But I want to show you guys how we can use"
+    },
+    {
+      "id": "c09720320",
+      "start_s": 9720.32,
+      "end_s": 9725.32,
+      "text": "something like a for loop in order to create a function like this of our own."
+    },
+    {
+      "id": "c09725320",
+      "start_s": 9725.32,
+      "end_s": 9730.32,
+      "text": "So we'll actually create an exponent function that will basically do this and"
+    },
+    {
+      "id": "c09730320",
+      "start_s": 9730.32,
+      "end_s": 9735.32,
+      "text": "we'll use for loops to do it. So let's create a function. So I'm just going to say"
+    },
+    {
+      "id": "c09735320",
+      "start_s": 9735.32,
+      "end_s": 9739.32,
+      "text": "def. And now we need to give this function a name. So why don't we call it"
+    },
+    {
+      "id": "c09739320",
+      "start_s": 9739.32,
+      "end_s": 9745.32,
+      "text": "raise to power. And inside of here, I'm going to accept two parameters. The first"
+    },
+    {
+      "id": "c09745320",
+      "start_s": 9745.32,
+      "end_s": 9750.32,
+      "text": "parameter is going to be the base number. And then the second parameter is going to"
+    },
+    {
+      "id": "c09750320",
+      "start_s": 9750.32,
+      "end_s": 9755.32,
+      "text": "be the power number. So we're going to take the base number and raise it to the"
+    },
+    {
+      "id": "c09755320",
+      "start_s": 9755.32,
+      "end_s": 9762.32,
+      "text": "power number. So over here, we can just make a colon. Now, inside of this function,"
+    },
+    {
+      "id": "c09762320",
+      "start_s": 9762.32,
+      "end_s": 9766.32,
+      "text": "we need to start writing some code. Here's the thing. Inside the function, we don't"
+    },
+    {
+      "id": "c09766320",
+      "start_s": 9766.32,
+      "end_s": 9772.32,
+      "text": "necessarily know the value of this pound. Right. For example, if we knew that we"
+    },
+    {
+      "id": "c09772320",
+      "start_s": 9772.32,
+      "end_s": 9777.32,
+      "text": "were just trying to like square this number or cube this number, I could just"
+    },
+    {
+      "id": "c09777320",
+      "start_s": 9777.32,
+      "end_s": 9784.32,
+      "text": "return like base num times base num, right? That would square the number or I could"
+    },
+    {
+      "id": "c09784320",
+      "start_s": 9784.32,
+      "end_s": 9788.32,
+      "text": "cube the number base num. So right. So this would be like the number cubed. The"
+    },
+    {
+      "id": "c09788320",
+      "start_s": 9788.32,
+      "end_s": 9792.32,
+      "text": "problem is though, we don't know like right off the bat what this value is going to"
+    },
+    {
+      "id": "c09792320",
+      "start_s": 9792.32,
+      "end_s": 9797.32,
+      "text": "be. Right. This could change like the user can decide that. So in order to write this"
+    },
+    {
+      "id": "c09797320",
+      "start_s": 9797.32,
+      "end_s": 9801.32,
+      "text": "function, we're actually going to need to use a for loop. And I'm going to show you"
+    },
+    {
+      "id": "c09801320",
+      "start_s": 9801.32,
+      "end_s": 9805.32,
+      "text": "guys how we can use a for loop to basically figure this out. So the first thing I"
+    },
+    {
+      "id": "c09805320",
+      "start_s": 9805.32,
+      "end_s": 9809.32,
+      "text": "want to do is create a variable. And I'm just going to call it result. And we're"
+    },
+    {
+      "id": "c09809320",
+      "start_s": 9809.32,
+      "end_s": 9814.32,
+      "text": "just going to set result equal to one. So we're going to start this off at one. Now"
+    },
+    {
+      "id": "c09814320",
+      "start_s": 9814.32,
+      "end_s": 9821.32,
+      "text": "I want to create a for loop. So I'm basically just going to say four. And over here,"
+    },
+    {
+      "id": "c09821320",
+      "start_s": 9821.32,
+      "end_s": 9827.32,
+      "text": "I basically want to specify like a index. So I'm going to say index in, and now I"
+    },
+    {
+      "id": "c09827320",
+      "start_s": 9827.32,
+      "end_s": 9832.32,
+      "text": "want to specify a range and a range will basically range us through a collection"
+    },
+    {
+      "id": "c09832320",
+      "start_s": 9832.32,
+      "end_s": 9838.32,
+      "text": "of numbers. So basically, I want to multiply the base num by itself as many"
+    },
+    {
+      "id": "c09838320",
+      "start_s": 9838.32,
+      "end_s": 9845.32,
+      "text": "times as the power num specifies. Right. So over here, I can just make this a range"
+    },
+    {
+      "id": "c09845320",
+      "start_s": 9845.32,
+      "end_s": 9852.32,
+      "text": "of power num. Right. And so we'll basically loop through this for loop as many times"
+    },
+    {
+      "id": "c09852320",
+      "start_s": 9852.32,
+      "end_s": 9857.32,
+      "text": "as pound them. So if pound them is two, we'll loop through it twice. If pound them"
+    },
+    {
+      "id": "c09857320",
+      "start_s": 9857.32,
+      "end_s": 9860.32,
+      "text": "is four, we'll loop through it four times. And every time through the loop will"
+    },
+    {
+      "id": "c09860320",
+      "start_s": 9860.32,
+      "end_s": 9864.32,
+      "text": "multiply base num by itself. Or actually, you'll see we're going to multiply it by"
+    },
+    {
+      "id": "c09864320",
+      "start_s": 9864.32,
+      "end_s": 9870.32,
+      "text": "this result. So down here inside of this for loop, I can basically say result is"
+    },
+    {
+      "id": "c09870320",
+      "start_s": 9870.32,
+      "end_s": 9877.32,
+      "text": "equal to result times base num. This should actually give us everything we need to"
+    },
+    {
+      "id": "c09877320",
+      "start_s": 9877.32,
+      "end_s": 9883.32,
+      "text": "take this number to the specific power. So the actual like result, you know, of"
+    },
+    {
+      "id": "c09883320",
+      "start_s": 9883.32,
+      "end_s": 9888.32,
+      "text": "doing the math is going to get stored inside of this result variable. So the"
+    },
+    {
+      "id": "c09888320",
+      "start_s": 9888.32,
+      "end_s": 9893.32,
+      "text": "first time through the loop, we're just multiplying base num by one. Right. And"
+    },
+    {
+      "id": "c09893320",
+      "start_s": 9893.32,
+      "end_s": 9898.32,
+      "text": "so now result is going to become the same value as base num. The second time"
+    },
+    {
+      "id": "c09898320",
+      "start_s": 9898.32,
+      "end_s": 9902.32,
+      "text": "through the loop. So this would be if we were squaring the number, we're basically"
+    },
+    {
+      "id": "c09902320",
+      "start_s": 9902.32,
+      "end_s": 9906.32,
+      "text": "multiplying result by base num again. So it's essentially just base num times"
+    },
+    {
+      "id": "c09906320",
+      "start_s": 9906.32,
+      "end_s": 9910.32,
+      "text": "base num. The third time through the loop, we're multiplying result times base num."
+    },
+    {
+      "id": "c09910320",
+      "start_s": 9910.32,
+      "end_s": 9914.32,
+      "text": "So we're essentially just like cubing the number. So that's essentially what this"
+    },
+    {
+      "id": "c09914320",
+      "start_s": 9914.32,
+      "end_s": 9919.32,
+      "text": "for loop is doing for us. So the last thing I want to do is right here below"
+    },
+    {
+      "id": "c09919320",
+      "start_s": 9919.32,
+      "end_s": 9924.32,
+      "text": "this for loop, I'm just going to return the result. So we'll be able to return"
+    },
+    {
+      "id": "c09924320",
+      "start_s": 9924.32,
+      "end_s": 9928.32,
+      "text": "whatever the result of raising the number to the power was. All right. So let's"
+    },
+    {
+      "id": "c09928320",
+      "start_s": 9928.32,
+      "end_s": 9932.32,
+      "text": "come down after this function. And we're just going to call it. So I'm just going"
+    },
+    {
+      "id": "c09932320",
+      "start_s": 9932.32,
+      "end_s": 9937.32,
+      "text": "to say, actually, we'll print out the answer. So I'm going to say raise to power."
+    },
+    {
+      "id": "c09937320",
+      "start_s": 9937.32,
+      "end_s": 9941.32,
+      "text": "And inside of these parentheses, remember, we can pass two numbers. So let's"
+    },
+    {
+      "id": "c09941320",
+      "start_s": 9941.32,
+      "end_s": 9946.32,
+      "text": "raise three to the second power. So we're just going to square three. And we'll see"
+    },
+    {
+      "id": "c09946320",
+      "start_s": 9946.32,
+      "end_s": 9951.32,
+      "text": "how this works. So throw on the program. And you can see down here in the console"
+    },
+    {
+      "id": "c09951320",
+      "start_s": 9951.32,
+      "end_s": 9956.32,
+      "text": "we're getting nine. Let's try something a little bit crazier. Let's try three to"
+    },
+    {
+      "id": "c09956320",
+      "start_s": 9956.32,
+      "end_s": 9961.32,
+      "text": "the fourth power. And we'll run this and get 81. So that's three to the fourth"
+    },
+    {
+      "id": "c09961320",
+      "start_s": 9961.32,
+      "end_s": 9966.32,
+      "text": "power. Let's try two to the third power. And we're getting eight. Yeah, so that makes"
+    },
+    {
+      "id": "c09966320",
+      "start_s": 9966.32,
+      "end_s": 9972.32,
+      "text": "sense. So our raise the power function is working just as expected. And I'll just"
+    },
+    {
+      "id": "c09972320",
+      "start_s": 9972.32,
+      "end_s": 9976.32,
+      "text": "walk you guys through it one more time. So inside of this function, we're taking"
+    },
+    {
+      "id": "c09976320",
+      "start_s": 9976.32,
+      "end_s": 9980.32,
+      "text": "in two pieces of input, we're taking in a base number, and we're taking in a"
+    },
+    {
+      "id": "c09980320",
+      "start_s": 9980.32,
+      "end_s": 9984.32,
+      "text": "power number. So that's like, the base number is going to be taken to the power"
+    },
+    {
+      "id": "c09984320",
+      "start_s": 9984.32,
+      "end_s": 9989.32,
+      "text": "number. I'm defining a variable here called result. And result is where we're going"
+    },
+    {
+      "id": "c09989320",
+      "start_s": 9989.32,
+      "end_s": 9995.32,
+      "text": "to store the actual result of doing the math. Now we specify this for loop. And"
+    },
+    {
+      "id": "c09995320",
+      "start_s": 9995.32,
+      "end_s": 10000.32,
+      "text": "I'm basically saying that I want to loop through this range of numbers. When I put"
+    },
+    {
+      "id": "c10000320",
+      "start_s": 10000.32,
+      "end_s": 10004.32,
+      "text": "pound on here, it's basically going to range from zero all the way up to but not"
+    },
+    {
+      "id": "c10004320",
+      "start_s": 10004.32,
+      "end_s": 10009.32,
+      "text": "including the power number. So we'll basically loop through power number of"
+    },
+    {
+      "id": "c10009320",
+      "start_s": 10009.32,
+      "end_s": 10012.32,
+      "text": "times, if that makes sense. And then every time through the loop, we're just"
+    },
+    {
+      "id": "c10012320",
+      "start_s": 10012.32,
+      "end_s": 10017.32,
+      "text": "multiplying result by base num. And then we're just returning results. So that's"
+    },
+    {
+      "id": "c10017320",
+      "start_s": 10017.32,
+      "end_s": 10021.32,
+      "text": "the basics of building a power function. And obviously, like if you're just trying"
+    },
+    {
+      "id": "c10021320",
+      "start_s": 10021.32,
+      "end_s": 10025.32,
+      "text": "to take a number to a power and Python, it's really easy. But this kind of shows you"
+    },
+    {
+      "id": "c10025320",
+      "start_s": 10025.32,
+      "end_s": 10029.32,
+      "text": "like the internal workings, right? For a function like that to work, we would have"
+    },
+    {
+      "id": "c10029320",
+      "start_s": 10029.32,
+      "end_s": 10037.32,
+      "text": "to actually type something out just like this. And this tutorial, I want to talk"
+    }
+  ]
+}

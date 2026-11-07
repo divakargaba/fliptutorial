@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "videos": [
+    {
+      "videoId": "rfscVS0vtbw",
+      "title": "Learn Python - Full Course for Beginners [Tutorial]",
+      "channel": "freeCodeCamp.org",
+      "url": "https://www.youtube.com/watch?v=rfscVS0vtbw",
+      "language": "python",
+      "transcriptPath": "transcripts/rfscVS0vtbw.json",
+      "scanWindows": [
+        {
+          "id": "exponent-function",
+          "label": "Exponent Function",
+          "startS": 9680,
+          "endS": 10033
+        }
+      ],
+      "fallbackWindows": [
+        {
+          "id": "basic-calculator",
+          "label": "Building a Basic Calculator",
+          "startS": 3157,
+          "endS": 3507
+        }
+      ]
+    }
+  ]
+}

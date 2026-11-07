@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "videoId": "rfscVS0vtbw",
+  "reviewNote": "Human-reviewed overlay merged into the scan draft by app.prepare. Timing chosen from the transcript excerpt plus Gemini video analysis; see evidence.",
+  "breakpoints": [
+    {
+      "id": "exponent-breakpoint",
+      "windowId": "exponent-function",
+      "windowStartS": 9680,
+      "setupEndS": 9762.32,
+      "firstSpokenRevealS": 9805.32,
+      "firstVisualRevealS": 9808,
+      "revealAtS": 9805.32,
+      "pauseAtS": 9803.32,
+      "windowEndS": 10033,
+      "evidence": {
+        "setupCueId": "c09755320",
+        "spokenRevealCueId": "c09805320",
+        "transcript": "c09755320 (9755.32-9762.32): 'So over here, we can just make a colon.' ends the signature def raise_to_power(base_num, pow_num):. c09805320 (9805.32): '...create a variable. And I'm just going to call it result' is the first concrete solution step. Earlier mentions of 'use for loops' (c09725320, c09797320) are hints, not the solution. The '2 ** 3' demo at c09699320 shows the built-in operator, which the exercise forbids.",
+        "video": "gemini-flash-latest, clip 9740-9830 s with timestamp basis relative to clip start (normalized once by +9740): setup_end 9760 s (signature fully typed with colon), first_spoken_reveal 9805 s, first_visual_reveal 9808 s ('resu' of 'result = 1' appears on line 2). A temporary 'return base_num * base_num * base_num' is typed and erased before the reveal; it is not the general solution. Cross-check with a second model was unavailable (free-tier quota / 503).",
+        "pauseRule": "pauseAtS = revealAtS - 2.0; windowStartS <= setupEndS <= pauseAtS <= revealAtS - 1.0; revealAtS <= windowEndS."
+      },
+      "exercise": {
+        "id": "rfscVS0vtbw-exponent",
+        "title": "Raise a number to a power",
+        "statement": "Write raise_to_power(base_num, pow_num) that returns base_num raised to the power pow_num. base_num is an integer and pow_num is a nonnegative integer. Use a loop instead of the ** operator or pow().",
+        "language": "python",
+        "functionName": "raise_to_power",
+        "starterCode": "def raise_to_power(base_num, pow_num):\n    pass\n",
+        "conceptTags": ["loops"],
+        "examples": [
+          { "args": [3, 2], "expected": 9 },
+          { "args": [2, 3], "expected": 8 }
+        ],
+        "hiddenTests": [
+          { "args": [5, 0], "expected": 1 },
+          { "args": [0, 4], "expected": 0 },
+          { "args": [-2, 3], "expected": -8 },
+          { "args": [-3, 2], "expected": 9 },
+          { "args": [3, 4], "expected": 81 },
+          { "args": [7, 1], "expected": 7 }
+        ],
+        "referenceSolution": "def raise_to_power(base_num, pow_num):\n    result = 1\n    for index in range(pow_num):\n        result = result * base_num\n    return result\n",
+        "knownWrongSolution": "def raise_to_power(base_num, pow_num):\n    return base_num * pow_num\n"
+      }
+    }
+  ]
+}
