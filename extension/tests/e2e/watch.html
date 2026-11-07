@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>Breakpoint watch fixture</title>
+<style>
+html { font-size: 10px; color-scheme: dark; background: #0b0b0c; color: #eee; font-family: system-ui; }
+body { margin: 24px; } h1 { font-size: 20px; }
+main { display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 24px; }
+video { width: 100%; background: #17171b; aspect-ratio: 16/9; }
+#below { min-height: 40px; } #secondary-inner { width: 420px; }
+button { padding: 10px; } canvas { display: none; }
+@media(max-width:1100px) { main { display: block; } #secondary-inner { width: 300px; } #movie_player { width: 480px; } #below { width: 420px; } }
+</style>
+<h1>Learn Python · controlled watch fixture</h1>
+<ytd-watch-flexy><main><div><div id="movie_player"><video class="html5-main-video" muted playsinline controls></video></div>
+<button id="start">Play fixture</button><div id="below"></div></div><aside id="secondary-inner"></aside></main></ytd-watch-flexy>
+<canvas width="640" height="360"></canvas>
+<script>
+// Real media clock and browser play/pause events, without network media.
+const canvas = document.querySelector('canvas');
+const context = canvas.getContext('2d');
+const video = document.querySelector('video');
+setInterval(() => {
+  context.fillStyle = '#17171b'; context.fillRect(0, 0, 640, 360);
+  context.fillStyle = '#93c5fd'; context.font = '24px monospace';
+  context.fillText('Python tutorial fixture', 32, 80);
+  context.fillText('Time: ' + video.currentTime.toFixed(2), 32, 140);
+}, 40);
+video.srcObject = canvas.captureStream(25);
+document.querySelector('#start').onclick = () => video.play();
+window.pageHotkeys = 0;
+document.addEventListener('keydown', () => window.pageHotkeys++);
+window.navigateFixture = id => {
+  history.pushState({}, '', '/watch?v=' + id);
+  document.dispatchEvent(new Event('yt-navigate-finish'));
+};
+</script></html>
