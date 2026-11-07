@@ -61,9 +61,21 @@ export async function requestApi(raw: unknown, base: string, fetcher: typeof fet
 export async function sendRequest<T>(message: WorkerMessage, schema: z.ZodType<T>, send: (message: WorkerMessage) => Promise<unknown>): Promise<WorkerReply<T>> {
   // Also bound the content-side wait if the worker is restarted while handling a message.
   let timer: ReturnType<typeof setTimeout> | undefined;
+  const sendWhenReady = async () => {
+    for (let attempt = 0; ; attempt++) {
+      try { return await send(message); }
+      catch (error) {
+        // Early lookups can race a cold MV3 listener. Only retry this idempotent
+        // read, at most twice, within the original content-side deadline.
+        if (message.type !== 'lookup' || attempt >= 2 || !(error instanceof Error) ||
+            !error.message.includes('Receiving end does not exist')) throw error;
+        await new Promise(resolve => setTimeout(resolve, attempt === 0 ? 100 : 300));
+      }
+    }
+  };
   try {
     const reply = await Promise.race([
-      send(message), new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('TIMEOUT')), message.type === 'lookup' ? 3500 : 15500); }),
+      sendWhenReady(), new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('TIMEOUT')), message.type === 'lookup' ? 3500 : 15500); }),
     ]);
     const parsed = z.discriminatedUnion('ok', [
       z.object({ ok: z.literal(true), data: schema }), z.object({ ok: z.literal(false), error: ApiErrorSchema }),

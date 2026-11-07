@@ -68,8 +68,8 @@ Work top to bottom. Mark State in this table when shipped or blocked (only your 
 | U2 | @reyanshBadhwar26 | CodeMirror 6 Python editor inside the shadow root (labelled, Tab-out, stops YouTube hotkeys space/j/k/l/f, destroyed on teardown); results list with `aria-live`; Skip reachable during grading; Resume video button. | U1 | Done; integrated in built MV3 and verified by U4 |
 | U3 | @reyanshBadhwar26 | `src/drafts.ts` (chrome.storage.local, debounced, flush on close) wired into the panel. | U1 | Done; integrated in built MV3 and verified by U4 |
 | U4 | @reyanshBadhwar26 | Playwright E2E per PRD §8: persistent Chromium with the built MV3 extension, intercepted `www.youtube.com/watch` fixture page with a controllable video, local test API; badge → pause → Run fail → Submit pass → resume, skip during grading, reload draft recovery; screenshots editing/failed/passed at 1440×900 and 1024×768. | E4, U2, U3 | Done; 14 built-MV3 + 12 preview checks pass; both viewport screenshot sets captured |
-| U5 | @reyanshBadhwar26 | Real-YouTube checks in desktop Chrome on `rfscVS0vtbw` (built MV3 + local backend + live Judge0): keyboard-only flow (open, edit, Tab out, Run, Submit, Skip, close; space/j/k/l/f don't reach YouTube while editing), theater mode layout, tab change around the pause, seek across the breakpoint (no pause after a jump; badge reopens it; rewind re-arms), and ad behaviour if a pre-roll plays. Automate what you can with headed Chromium; anything only a person can verify, post the exact 2-minute steps for Reyansh to click through. Record results in Measured results. Fix any bug found. | U4, D4 | Todo |
-| U6 | @reyanshBadhwar26 | Badge speed: cold first launch measured 2.46 s after player ready (target ≤ 2 s; warm 1.44 s). Find the cold-start cost (lookup timing, worker wake-up, mount/CSS) and fix it; show ≤ 2 s on 3 cold launches in Measured results. For U5/U6 you may edit `extension/entrypoints/`, `src/api.ts`, `src/playback.ts` (normally Abdullah2's) and `backend/app/main.py` if needed; keep `npm run typecheck`, `npm test`, `npm run build`, `npm run test:e2e` and backend pytest green. | U4, D4 | Todo |
+| U5 | @reyanshBadhwar26 | Real-YouTube checks in desktop Chrome on `rfscVS0vtbw` (built MV3 + local backend + live Judge0): keyboard-only flow (open, edit, Tab out, Run, Submit, Skip, close; space/j/k/l/f don't reach YouTube while editing), theater mode layout, tab change around the pause, seek across the breakpoint (no pause after a jump; badge reopens it; rewind re-arms), and ad behaviour if a pre-roll plays. Automate what you can with headed Chromium; anything only a person can verify, post the exact 2-minute steps for Reyansh to click through. Record results in Measured results. Fix any bug found. | U4, D4 | Done: automated checks and manual handoff delivered; hidden-tab/live-ad/desktop confirmation still pending |
+| U6 | @reyanshBadhwar26 | Badge speed: cold first launch measured 2.46 s after player ready (target ≤ 2 s; warm 1.44 s). Find the cold-start cost (lookup timing, worker wake-up, mount/CSS) and fix it; show ≤ 2 s on 3 cold launches in Measured results. For U5/U6 you may edit `extension/entrypoints/`, `src/api.ts`, `src/playback.ts` (normally Abdullah2's) and `backend/app/main.py` if needed; keep `npm run typecheck`, `npm test`, `npm run build`, `npm run test:e2e` and backend pytest green. | U4, D4 | Done: 0.581 / 0.592 / 0.135 s on three consecutive cold profiles; see Measured results |
 
 ## P1 assignments (nice-to-have, PRD §1)
 
@@ -91,7 +91,40 @@ Work top to bottom. Mark State in this table when shipped or blocked (only your 
 
 | Check | Result |
 | --- | --- |
-| Badge visible after player ready (target ≤ 2 s) | 2.46 s (cold first launch), 1.46 s, 1.44 s — first run missed the target |
+| Badge visible after player ready (target ≤ 2 s) | U6 final: **0.581 / 0.592 / 0.135 s** on consecutive cold profiles. Prior D4: 2.46 s (cold first launch), 1.46 s, 1.44 s; first run missed the target before the fix |
 | Full grade round trip (target ≤ 8 s) | Submit click → video playing: 4.97 s, 4.20 s, 3.78 s (8/8 cases, live Judge0). Run with wrong code → failed result: 2.69 s, 1.43 s, 1.99 s |
 | Real YouTube walkthroughs (need 3 clean) | 3/3 clean on 2026-11-07: `rfscVS0vtbw&t=9790s`, 1440×900, at 1×, 2× and 1×. Paused at 9803.341 / 9803.338 / 9803.333 s (window 9803.32–9803.82, before the 9805.32 reveal). A wrong Run kept the video paused; Submit resumed the same video and closed the panel; unsupported video `jNQXAC9IVRw` showed no badge. No pre-roll ad played, so ad behaviour is covered only by the U4 fixture |
 | Second video `nLRL_NcnK-4` (P1) | Harvard CS50P on freeCodeCamp, Lecture 1 `grade.py` (window 8100–8400 s, ASR captions; the video has no uploader track). Live scan with `gemini-flash-latest` returned 0 candidates here and also on the known-good `rfscVS0vtbw` window, so `GEMINI_MODEL=gemini-2.5-flash` was used for the scan. Setup ends 8212.0 s, spoken reveal 8216.679 s (`c08216679`), visual reveal 8217.0 s (Gemini video review), pause 8214.679 s. `get_grade(score)`: 2 visible, 9 hidden boundary cases; the `>` instead of `>=` solution fails. 3/3 clean on 2026-11-07 (headed Chromium, fresh profile each, built MV3 at `f176c23`, local backend, live Judge0, `&t=8195s`, 1440×900) at 1×, 2× and 1×: badge 0.05 / 0.59 / 0.72 s after `readyState ≥ 1`; paused at 8214.704 / 8214.706 / 8214.695 s; wrong Run → Wrong answer in 2.35 / 1.95 / 1.83 s, video still paused; Submit → Solved 5.00 / 5.66 / 5.47 s (11 cases), → video playing 6.60 / 7.32 / 7.12 s (includes the 1.6 s solved hold); panel closed, badge shows 1 of 1 solved. Unsupported `jNQXAC9IVRw` showed no badge. No pre-roll ad played. Tried first: freeCodeCamp *Python for Beginners* `eWRfhZUzrAc` (Recursion, RPS nested-if): 0 candidates, since the instructor demonstrates instead of setting a separable task |
+| U6 cold badge, after UI redesign + P3 integration | **0.581 s, 0.592 s, 0.135 s** on three consecutive fresh headed Chromium profiles, built MV3, real `rfscVS0vtbw`, local FastAPI. All meet <=2 s. Readiness = first media `readyState >= 2`; badge = actionable ready state with its rectangle inside the viewport, sampled every 10 ms. Browser caches/storage and the worker are cold; backend stays running. Earlier unmodified-build rehearsals were 2.878 / 3.165 / 3.291 s; an intermediate integrated build had a worker connection failure on launch 3, before the final bounded retry fix. |
+| U5 real YouTube, integrated redesigned UI | Seek across to 9804.4 s did not pause. Rewind re-armed and paused at **9803.342 s**, inside 9803.32–9803.82 and before reveal. Keyboard Tab into/out of editor, space/j/k/l/f isolation, wrong Run staying paused, passing Submit/resume, and theater relocation below the player with draft preserved passed against live Judge0. Keyboard badge open / Close / Skip passed in fresh real-video profiles. Submit -> panel closed + video playing took **8.48 s**, including the new 1.6 s solved hold and exit animation: over the 8 s target in this run. No live ad appeared in the validated run. |
+| U5 desktop verification limits / handoff | This desktop kept both controlled Chromium pages `visible`, even after disabling Playwright focus emulation, so **real hidden-tab crossing remains unverified**. Live ads and hand-driven Chrome/captions/native-control inspection remain manual. Exact two-minute steps and opt-in replay commands: `extension/tests/e2e/README.md`. Deterministic ad, seek/visibility unit, theater, hydration and keyboard checks remain green; no document visibility or media methods are replaced in the real-video runner. |
+
+U6 startup diagnosis: the initial lookup took roughly 65–89 ms, while WXT's cold
+stylesheet fetch held shadow mounting for about 2.15 s. YouTube also exposes a
+temporary body-level player before the normal panel anchors exist. The content
+script now starts at `document_end`, bundles styles inline through WXT's supported
+`cssInjectionMode: 'manual'` + shadow UI `css` option, and shows an in-flow badge
+after that temporary player. Automatic pause and panel opening stay suspended
+until the normal watch layout provides an anchor. Shadow mounting fell to roughly
+13–35 ms. Cold MV3 missing-listener failures get at most two lookup retries (100 /
+300 ms) inside the original 3.5 s content deadline; grading is never retried.
+The theater fix rechecks and moves the existing shadow host after initial player
+observation expires, preserving the editor/draft and the lead's design.
+
+U5/U6 validation: extension `npm ci`, typecheck, 31 Vitest tests, production build,
+35/35 full Playwright checks and 6/6 focused final anchor checks passed. Editing,
+failure and solved screenshots were refreshed at 1440x900 and 1024x768, with
+finite animations disabled in captures so controls are visible. Backend pytest:
+85 passed, 4 skipped. The real-video runner is opt-in and excluded from default
+provider-free checks.
+
+Final follow-up after rebasing onto P1 + P2 (`de2921d`): the real-video runner
+accepts the three-challenge badge. Exponent seek/rewind paused at **9803.351 s**;
+each editor hotkey individually preserved paused state, media time and non-fullscreen
+state; keyboard Run/Submit and theater placement passed. Submit -> panel closed +
+playing was **7.845 s** (under 8 s), with the earlier 8.48 s miss retained above.
+Backend pytest on the rebased catalog: **85 passed, 4 skipped**. A prior tab-probe
+attempt failed its focus assertion; restoring Playwright's default focus setting
+after the probe fixed the harness, and the final run passed. Actual hidden-tab
+crossing remains unverified; no ad appeared in the final run. No new checks are
+pending beyond the explicit manual handoff.

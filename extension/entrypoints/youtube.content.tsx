@@ -1,5 +1,5 @@
-import './styles/youtube.css';
-import '../src/ui/theme.css';
+import shellCss from './styles/youtube.css?inline';
+import themeCss from '../src/ui/theme.css?inline';
 import { createRoot, type Root } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import { browser } from 'wxt/browser';
@@ -15,8 +15,16 @@ import { PracticePanel, SOLVED_HOLD_MS, type PracticePanelProps } from '../src/u
 export default defineContentScript({
   matches: ['https://www.youtube.com/*'],
   allFrames: false,
-  cssInjectionMode: 'ui',
+  // Start lookup and player observation as soon as the DOM exists. YouTube's
+  // document_idle can lag playable media by several seconds on a fresh profile.
+  runAt: 'document_end',
+  // Bundle shadow styles with the UI to avoid a cold extension-resource fetch.
+  // WXT still owns isolation, mounting and cleanup; no styles reach YouTube.
+  cssInjectionMode: 'manual',
   main(ctx) {
+    const debug = new URL(location.href).searchParams.has('breakpoint-debug');
+    const trace = (stage: string) => { if (debug) performance.mark(`breakpoint:${stage}`); };
+    trace('start');
     const session = new PlaybackSession();
     let player: HTMLVideoElement | null = null;
     let oldPlayer: HTMLVideoElement | null = null;
@@ -54,9 +62,26 @@ export default defineContentScript({
       if (!theater && secondary && secondary.getBoundingClientRect().width >= 360) return secondary;
       const below = document.querySelector('#below');
       if (below && below.getBoundingClientRect().width > 0) return below;
+      // YouTube hydrates #below and the right column after media is playable.
+      // Its primary column already provides a safe in-flow slot after the player.
+      const primary = document.querySelector('#primary-inner');
+      if (primary && primary.getBoundingClientRect().width > 0 && primary.contains(currentPlayer())) return primary;
+      const initialPlayer = document.querySelector('#player');
+      if (initialPlayer?.parentElement === document.body && initialPlayer.contains(currentPlayer())) return initialPlayer;
       return null;
     };
-    const mountable = () => !!ui?.shadowHost.isConnected && !uiFailed && !!findAnchor();
+    const placeUi = (target: Element, host: Element) => {
+      if (target.id === 'player') target.after(host);
+      else if (target.id === 'primary-inner') target.append(host);
+      else target.prepend(host);
+    };
+    // The transient body-level player is sufficient for a badge, but wait for
+    // the watch layout before offering a panel or claiming an automatic pause.
+    const mountable = () => {
+      if (!ui?.shadowHost.isConnected || uiFailed) return false;
+      const target = findAnchor();
+      return !!target && target.id !== 'player' && ui.shadowHost.parentElement === target;
+    };
     const focusBadge = () => ui?.shadow.querySelector<HTMLElement>('[data-breakpoint-badge] .bp-badge')?.focus({ preventScroll: true });
     const focusPanel = () => {
       const panel = ui?.shadow.querySelector<HTMLElement>('[data-breakpoint-panel]');
@@ -91,7 +116,7 @@ export default defineContentScript({
       const visiblePanel = panel ?? leavingPanel;
       try {
         flushSync(() => ui!.mounted!.render(<div className="breakpoint-shell" data-theme={theme()}
-          data-placement={anchor?.id === 'below' ? 'below' : 'side'}>
+          data-placement={anchor?.id === 'secondary-inner' || anchor?.id === 'secondary' ? 'side' : 'below'}>
           {session.route !== 'unsupported' && <div data-breakpoint-badge>
             <Badge state={state} total={breakpoints.length} remaining={remaining.length} solved={solved}
               active={!!active} nextAtS={remaining[0]?.pauseAtS ?? null} onOpen={openFromBadge} />
@@ -121,21 +146,23 @@ export default defineContentScript({
       if (!nextAnchor || mounting || uiFailed || !session.videoId) return;
       if (ui) {
         if (anchor !== nextAnchor || !ui.shadowHost.isConnected) {
-          session.reset(); nextAnchor.prepend(ui.shadowHost); anchor = nextAnchor;
+          session.reset(); placeUi(nextAnchor, ui.shadowHost); anchor = nextAnchor; render();
         }
         return;
       }
       const generation = session.generation;
       mounting = true;
+      trace('mount-start');
       try {
         const created = await createShadowRootUi(ctx, {
-          name: 'breakpoint-practice', position: 'inline', anchor: nextAnchor, append: 'first', isolateEvents: true,
+          name: 'breakpoint-practice', position: 'inline', anchor: nextAnchor, append: placeUi, isolateEvents: true,
+          css: `${shellCss}\n${themeCss}`,
           onMount: container => createRoot(container, { onUncaughtError: failMount }),
           onRemove: root => root?.unmount(),
         });
         if (generation !== session.generation || !isCurrent()) { created.remove(); return; }
         ui = created; anchor = nextAnchor;
-        ui.mount(); render();
+        ui.mount(); render(); trace('mounted');
       } catch { if (generation === session.generation) failMount(); }
       finally { if (generation === session.generation) mounting = false; }
     }
@@ -146,7 +173,10 @@ export default defineContentScript({
       const sequence = ++lookupSequence;
       if (!videoId) return;
       if (!refresh) { session.route = 'loading'; render(); }
+      trace('lookup-start');
       const reply = await sendRequest({ type: 'lookup', videoId }, PracticeResponseSchema, send);
+      trace('lookup-end');
+      trace(reply.ok ? 'lookup-valid' : `lookup-error:${reply.error.error.code}`);
       const solvedIds = reply.ok && reply.data.status === 'ready'
         ? await listSolved(videoId, reply.data.revision).catch(() => new Set<string>())
         : new Set<string>();
@@ -355,7 +385,9 @@ export default defineContentScript({
       if (observer) findPlayer();
       const ad = isAd();
       if (ad !== lastAd) { lastAd = ad; session.interrupt(); render(); }
-      if (ui && !ui.shadowHost.isConnected) { session.reset(); void ensureUi(); }
+      // Theater changes the anchor without necessarily resizing the window or
+      // replacing the player, including after the initial observer expires.
+      void ensureUi();
     }, 250);
     ctx.onInvalidated(() => { stopPlayer(); observer?.disconnect(); ui?.remove(); session.navigate(null); });
     routeChanged();
