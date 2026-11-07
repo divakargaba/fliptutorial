@@ -18,6 +18,9 @@ type App = {
   requests: Submission[];
   hold: boolean;
   unavailable: boolean;
+  failure: { status: number; code: string; retryable: boolean } | null;
+  revision: string;
+  lookupCount: number;
   release(): Promise<void>;
   rejectResume(reject: boolean): Promise<void>;
 };
@@ -28,7 +31,7 @@ export const test = base.extend<{ app: App; breakpointCount: 1 | 2 }>({
     const requests: Submission[] = [];
     const pending: Array<() => void> = [];
     const releasePending = () => pending.splice(0).forEach(fn => fn());
-    const app = { requests, hold: false, unavailable: false } as App;
+    const app = { requests, hold: false, unavailable: false, failure: null, revision: practice.revision!, lookupCount: 0 } as App;
     const api = new URL(process.env.WXT_API_BASE_URL || 'http://127.0.0.1:8000');
     if (api.hostname !== '127.0.0.1' || api.protocol !== 'http:') throw new Error('The test API must use HTTP loopback.');
     const [original] = practice.breakpoints;
@@ -42,9 +45,12 @@ export const test = base.extend<{ app: App; breakpointCount: 1 | 2 }>({
         if (!res.destroyed) res.writeHead(status, { 'Content-Type': 'application/json' }).end(JSON.stringify(body));
       };
       if (req.method === 'GET' && req.url?.startsWith('/v1/videos/')) {
+        app.lookupCount++;
         const id = req.url.split('/')[3];
         json(200, id === practice.videoId ? {
-          ...practice, breakpoints,
+          ...practice, revision: app.revision, breakpoints: breakpoints.map(b => app.revision === practice.revision ? b : {
+            ...b, exercise: { ...b.exercise, title: 'Updated exponent challenge' },
+          }),
         } : { schemaVersion: 1, videoId: id, revision: null, status: 'unsupported', breakpoints: [] });
       } else if (req.method === 'POST' && req.url === '/v1/submissions') {
         let body = '';
@@ -52,7 +58,9 @@ export const test = base.extend<{ app: App; breakpointCount: 1 | 2 }>({
         const submission = JSON.parse(body) as Submission;
         requests.push(submission);
         const respond = () => {
-          if (app.unavailable) {
+          if (app.failure) {
+            json(app.failure.status, { error: { code: app.failure.code, message: `Fixture ${app.failure.code}.`, retryable: app.failure.retryable }, requestId: 'fixture-failure' });
+          } else if (app.unavailable) {
             json(503, { error: { code: 'GRADER_UNAVAILABLE', message: 'Fixture grader unavailable.', retryable: true }, requestId: 'fixture-request' });
           } else if (submission.code === correctCode) {
             const results = [{ kind: 'visible', index: 0, passed: true, args: [2, 3], expected: 8, actual: 8, diagnostic: null },

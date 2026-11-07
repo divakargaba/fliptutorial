@@ -39,6 +39,37 @@ npm run test:e2e -- --project mv3-desktop --project mv3-narrow
 These deterministic checks do not replace the real YouTube and live Judge0
 walkthroughs owned by the integration lane in `PLAN.md`.
 
+## Release failure matrix and contrast regression
+
+`release.spec.ts` runs against the built MV3 worker at both viewport sizes:
+
+```sh
+npm run test:e2e -- --project mv3-desktop --project mv3-narrow --grep "draft survives|panel meets"
+```
+
+The local API returns real HTTP errors for `GRADER_UNAVAILABLE` (503),
+`GRADER_TIMEOUT` (504), `BUSY` (429), `STALE_EXERCISE` (409) and
+`INVALID_CODE` (422). The network timeout case withholds the HTTP response until
+the production worker's 15-second fetch deadline; timers and worker replies are
+not replaced. Every case checks the exact multiline draft, re-enabled grading
+controls, unchanged paused media time, Tab from the editor to Skip, Enter to
+resume, and draft recovery from Chrome storage after reload. The stale case
+also changes the catalog revision/title, observes another lookup and verifies
+the next request uses the new revision with the original code.
+
+The theme tests use `panel-audit.ts` to inspect rendered text in the actual shadow
+root, including syntax highlighting, examples and results. It composites CSS
+background colors and applies WCAG AA text thresholds (4.5:1 for normal text,
+3:1 for large text), checks control names/tab eligibility and result announcements,
+and verifies keyboard entry/exit plus the visible two-pixel Skip focus outline.
+Editing, wrong-answer, API-error and solved states run in both YouTube themes.
+JSON reports and screenshots are saved in `test-results/`; reviewed release
+evidence is copied to `assets/ui-checks/release/`.
+
+This focused regression audit is not a full WCAG conformance certification or an
+axe run. It does not assess every assistive technology, forced colors, zoom,
+or every possible submitted program. Manual desktop checks remain in M1.
+
 ## Opt-in real YouTube rehearsal
 
 Start the real backend on port 8000, then from `extension/`:
