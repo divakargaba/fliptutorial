@@ -59,7 +59,9 @@ Generated-with or AI footers, and never name the agent or tool in commits or pos
 Do not provision paid resources or reveal secrets. If blocked, describe the
 exact required action and stop. If nothing is actionable, finish without posting.
 EOF
-  "${cmd[@]}" "$prompt"
+  # claude's --allowedTools is variadic and would swallow a trailing prompt, so use stdin.
+  if [[ "$agent" == claude ]]; then printf '%s\n' "$prompt" | "${cmd[@]}"
+  else "${cmd[@]}" "$prompt"; fi
 }
 
 posts=$(tools/board unread)
