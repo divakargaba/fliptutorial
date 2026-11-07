@@ -129,7 +129,7 @@ test('bounded runner uses current scoped Codex flags and stops on agent failure'
   const args = f.read().agentArgs;
   assert.deepEqual(args.slice(0,5), ['exec','--sandbox','workspace-write','-c','sandbox_workspace_write.network_access=true']);
   assert.match(args.at(-1), /coding agent for Mico \(@/);
-  assert.match(args.at(-1), /During PREP/);
+  assert.match(args.at(-1), /in any phase including PREP/);
   assert.ok(!args.includes('--full-auto'));
   f.update({ failAgent:true });
   assert.notEqual(f.run('autopilot', ['--once','codex']).status, 0);

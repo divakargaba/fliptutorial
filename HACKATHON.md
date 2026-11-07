@@ -2,14 +2,14 @@
 
 Phase: **PREP**
 
-Only the lead moves this to BUILD after recording the actual prompt and plan.
+Only the lead moves this to BUILD. Instructions from the lead (@divakargaba), on the board or directly, are authorized work in any phase.
 The template is tooling and a runnable starter; it is not the submitted product.
 
 ## Event
 
 - Name: TBD
 - Start / submission deadline / timezone: TBD
-- Team lead: @micobenissa
+- Team lead: @divakargaba
 - Teammate GitHub logins and roles: fill AGENTS.md
 - Judging criteria / required sponsor APIs: TBD
 - Approved total spend and resource owners: TBD — no paid provisioning is authorized yet

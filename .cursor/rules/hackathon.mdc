@@ -5,5 +5,5 @@ alwaysApply: true
 
 Read AGENTS.md, HACKATHON.md and PLAN.md before acting.
 Run tools/board unread at task start. Follow the ownership table and report useful
-handoffs and completions on the board. During PREP, do readiness work only.
+handoffs and completions on the board. During PREP, do readiness work and anything the lead (@divakargaba) asks for.
 Commit and post as your human only: no Co-Authored-By, "Generated with" footers or agent/tool names.

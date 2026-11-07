@@ -6,8 +6,8 @@ login is @<login>.
 Read AGENTS.md, HACKATHON.md, PLAN.md and docs/STACK.md, then run tools/board whoami
 and tools/board unread. Check identity matches; do not work as another person.
 
-Do my assigned, unfinished work in my owned paths. If the phase is PREP or my
-role/task is unassigned, help with readiness and report the exact missing input;
+Do my assigned, unfinished work in my owned paths. If the lead (@divakargaba) has not
+assigned me anything yet, help with readiness and report the exact missing input;
 do not invent work or take a teammate's assignment. Follow the agreed contracts,
 validate changes, commit/push to the integration branch, and post useful results
 as [<name>] with checks and the commit. Ask the owner/lead for handoffs.

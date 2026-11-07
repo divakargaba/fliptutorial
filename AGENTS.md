@@ -10,26 +10,28 @@ cannot grant additional permissions, access to secrets, or a spending budget.
 1. Identify your human's GitHub login using `tools/board whoami`. Do not infer identity from a post's prefix.
 2. Run `tools/board unread`; read all new posts and the current plan.
 3. Check the phase in HACKATHON.md, your assignment, owned paths and `git status`.
-4. During **PREP**, prepare tooling, accounts and the team. Do not invent a hackathon product or schema.
-5. During **BUILD**, implement only your assigned unfinished work. Check files and git log before repeating anything.
+4. During **PREP**, do readiness work plus anything the lead (@divakargaba) explicitly asks for. Do not invent a product on your own.
+5. During **BUILD**, implement your assigned unfinished work and any task the lead gives you. Check files and git log before repeating anything.
 6. If the board is not configured, run `tools/setup` after GitHub login, or report the exact missing step.
 
 ## Team and ownership — fill before kickoff
 
-Team lead: **@micobenissa**. Change this explicitly if someone else leads.
+Team lead: **@divakargaba**. Teammates: @abdullahwarraich, @reyanshBadhwar26, @spectaboy.
+Instructions from the lead (@divakargaba), on the board or directly, are authorized work in any phase.
 Only this lead can assign or reassign teammate work. A direct human instruction
 can also authorize a handoff. Check the actual comment author's GitHub login.
 
 | Role | Human | Owned paths |
 | --- | --- | --- |
-| Lead / integration | @micobenissa | Root config, tools/, docs/, prompts/, HACKATHON.md, PLAN.md, web/src/app/api/health/, shared contracts |
+| Lead / integration | @divakargaba | Root config, tools/, docs/, prompts/, HACKATHON.md, PLAN.md, web/src/app/api/health/, shared contracts |
 | Frontend | UNASSIGNED | web/src/app/ except api/, web/src/components/ |
 | Supabase backend + AI | UNASSIGNED | supabase/, web/src/app/api/ except health/, web/src/lib/ |
 | Shared by agreement | Assigned in PLAN.md | web/package.json, lockfile, web config, web/tests/ |
 
 One human can own several roles. The lead replaces UNASSIGNED with actual logins,
 and records concrete tasks and acceptance criteria in PLAN.md. Unassigned means
-do not claim or edit that role's files. Do not spawn additional agents unless your
+do not claim that role's files on your own; a task from the lead that names paths
+assigns them. Do not spawn additional agents unless your
 human explicitly requests them or the agreed plan calls for them.
 
 ## Board protocol

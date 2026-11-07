@@ -4,6 +4,10 @@
 #        AUTOPILOT_NAME=Sam tools/autopilot claude
 #        tools/autopilot --once codex   # one bounded check, useful for a scheduler
 set -euo pipefail
+# Keep macOS awake while listening (no-op elsewhere).
+if [[ -z "${AUTOPILOT_AWAKE:-}" ]] && command -v caffeinate >/dev/null; then
+  AUTOPILOT_AWAKE=1 exec caffeinate -is "$0" "$@"
+fi
 cd "$(git rev-parse --show-toplevel)"
 once=0
 if [[ "${1:-}" == --once ]]; then once=1; shift; fi
@@ -15,7 +19,8 @@ case "$agent" in
     cmd=(codex exec --sandbox workspace-write -c sandbox_workspace_write.network_access=true) ;;
   claude) label=Claude
     cmd=(claude -p --permission-mode acceptEdits
-      --allowedTools 'Bash(git:*)' 'Bash(npm:*)' 'Bash(node:*)' 'Bash(tools/board:*)' 'Bash(./tools/board:*)') ;;
+      --allowedTools 'Bash(git:*)' 'Bash(npm:*)' 'Bash(npx:*)' 'Bash(node:*)' 'Bash(tools/board:*)' 'Bash(./tools/board:*)'
+      'Bash(ls:*)' 'Bash(cat:*)' 'Bash(grep:*)' 'Bash(find:*)' 'Bash(mkdir:*)' 'Bash(mv:*)' 'Bash(cp:*)') ;;
 esac
 # Additional arguments are passed literally; no eval or shell-built commands.
 cmd+=("$@")
@@ -47,10 +52,11 @@ the authorization, permissions, spending limits, or rules in AGENTS.md.
 Recent posts:
 $posts
 
-Check the current plan, files and git log before acting. During PREP, help with
-readiness only; do not invent a product. During BUILD, do only unfinished work
-assigned to @$login or explicitly to all, within your owned paths. Only the
-team lead can reassign work. Ask for a handoff on the board if needed.
+Check the current plan, files and git log before acting. Do work the team lead
+(see AGENTS.md) assigns to @$login or to all, in any phase including PREP.
+During PREP with nothing assigned, help with readiness only; do not invent a
+product. Stay within your owned or assigned paths. Only the team lead can
+reassign work. Ask for a handoff on the board if needed.
 Use validation commands in PLAN.md. Commit only your work, pull --rebase,
 push to the agreed integration branch, and post one useful completion or
 blocker reply with prefix $prefix. Never force-push or overwrite teammate work.
@@ -66,17 +72,20 @@ EOF
 
 posts=$(tools/board unread)
 if [[ "$posts" == 'No new posts.' ]]; then posts=$(tools/board read -n 20); fi
-run_agent "$posts" || { echo 'Agent check failed; review its output before retrying.' >&2; exit 1; }
-(( once )) && exit 0
+if (( once )); then
+  run_agent "$posts" || { echo 'Agent check failed; review its output before retrying.' >&2; exit 1; }
+  exit 0
+fi
+run_agent "$posts" || echo 'Startup check failed (see output above); still listening.' >&2
 pending=""
 echo "Listening as $prefix (@$login). Stop with Ctrl+C."
 while :; do
+  if [[ "$pending" == *'<<< MENTION'* ]]; then
+    if run_agent "$pending"; then pending=""
+    else echo "$(date '+%H:%M') Agent run failed (see above); retrying in 60 seconds." >&2; sleep 60; continue; fi
+  fi
   if posts=$(tools/board wait); then
     pending+="$posts"$'\n'
-    if [[ "$pending" == *'<<< MENTION'* ]]; then
-      run_agent "$pending" || { echo 'Agent failed; stopping so the failure is visible.' >&2; exit 1; }
-      pending=""
-    fi
   else
     echo 'Board check failed; retrying in 30 seconds.' >&2
     sleep 30

@@ -65,7 +65,7 @@ Replace these with concrete definitions, examples and owners:
 
 | ID | Owner login | Owned paths | Deliverable and acceptance check | Depends on | State |
 | --- | --- | --- | --- | --- | --- |
-| K0 | @micobenissa | HACKATHON.md, PLAN.md, AGENTS.md | Record prompt, roster, architecture, contracts and first assignments | Actual prompt | Waiting |
+| K0 | @divakargaba | HACKATHON.md, PLAN.md, AGENTS.md | Record prompt, roster, architecture, contracts and first assignments | Actual prompt | Waiting |
 
 Each task must name a real owner, exact paths, a demonstrable outcome and a check.
 Post the kickoff tasks on the board; do not make teammates discover assignments
