@@ -10,7 +10,7 @@ import { flushDraft, loadDraft, saveDraft } from '../src/drafts';
 import { listSolved, markSolved } from '../src/progress';
 import { PlaybackSession, watchVideoId, type Ticket } from '../src/playback';
 import { Badge } from '../src/ui/Badge';
-import { PracticePanel } from '../src/ui/PracticePanel';
+import { PracticePanel, SOLVED_HOLD_MS, type PracticePanelProps } from '../src/ui/PracticePanel';
 
 export default defineContentScript({
   matches: ['https://www.youtube.com/*'],
@@ -33,6 +33,14 @@ export default defineContentScript({
     let lastAd = false;
     let lookupSequence = 0;
     let lastHref = '';
+    // A passed attempt lingers on its solved moment briefly before playback resumes.
+    let holdTimer: ReturnType<typeof setTimeout> | undefined;
+    // The last rendered panel, kept mounted for its exit animation after the attempt ends.
+    let shownPanel: PracticePanelProps | null = null;
+    let leavingPanel: PracticePanelProps | null = null;
+    let leavingTimer: ReturnType<typeof setTimeout> | undefined;
+    const noop = () => {};
+    const theme = () => document.documentElement.hasAttribute('dark') ? 'dark' : 'light';
 
     const currentPlayer = () => document.querySelector<HTMLVideoElement>('#movie_player video.html5-main-video')
       ?? document.querySelector<HTMLVideoElement>('#movie_player video');
@@ -49,7 +57,7 @@ export default defineContentScript({
       return null;
     };
     const mountable = () => !!ui?.shadowHost.isConnected && !uiFailed && !!findAnchor();
-    const focusBadge = () => ui?.shadow.querySelector<HTMLButtonElement>('[data-breakpoint-badge] button')?.focus();
+    const focusBadge = () => ui?.shadow.querySelector<HTMLElement>('[data-breakpoint-badge] .bp-badge')?.focus({ preventScroll: true });
     const focusPanel = () => {
       const panel = ui?.shadow.querySelector<HTMLElement>('[data-breakpoint-panel]');
       (panel?.querySelector<HTMLElement>('h2[tabindex]') ?? panel)?.focus();
@@ -59,19 +67,37 @@ export default defineContentScript({
       if (!ui?.mounted || !isCurrent() || uiFailed) return;
       const active = session.active;
       const state = bindExpired || session.route === 'unavailable' ? 'unavailable' : session.route === 'loading' ? 'loading' : 'ready';
-      const count = session.data?.breakpoints.filter(b => session.available(b)).length ?? 0;
+      const breakpoints = session.data?.breakpoints ?? [];
+      const remaining = breakpoints.filter(b => session.available(b));
+      const solved = breakpoints.filter(b => session.solvedIds.has(b.exercise.id)).length;
+      let panel: PracticePanelProps | null = null;
+      if (active && session.videoId) {
+        panel = {
+          videoId: session.videoId, revision: active.revision, breakpoint: active.breakpoint,
+          attempt: active.state, result: active.result, error: active.error, canResume: active.canResume,
+          index: Math.max(0, breakpoints.findIndex(b => b.id === active.breakpoint.id)), total: breakpoints.length,
+          holdMs: SOLVED_HOLD_MS,
+          onRun: code => void grade('run', code), onSubmit: code => void grade('submit', code),
+          onSkip: skip, onClose: skip, onResume: resumeNow,
+        };
+        clearTimeout(leavingTimer); leavingPanel = null;
+      } else if (shownPanel) {
+        // Keep the finished panel mounted, inert, for its exit animation.
+        leavingPanel = { ...shownPanel, leaving: true, onRun: noop, onSubmit: noop, onSkip: noop, onResume: noop, onClose: noop };
+        clearTimeout(leavingTimer);
+        leavingTimer = setTimeout(() => { leavingPanel = null; render(); }, 220);
+      }
+      shownPanel = panel;
+      const visiblePanel = panel ?? leavingPanel;
       try {
-        flushSync(() => ui!.mounted!.render(<div className="breakpoint-shell">
+        flushSync(() => ui!.mounted!.render(<div className="breakpoint-shell" data-theme={theme()}
+          data-placement={anchor?.id === 'below' ? 'below' : 'side'}>
           {session.route !== 'unsupported' && <div data-breakpoint-badge>
-            <Badge count={count} state={state} onOpen={openFromBadge} />
-            {state === 'unavailable' && <button type="button" className="bp-button" onClick={openFromBadge}>Retry practice</button>}
+            <Badge state={state} total={breakpoints.length} remaining={remaining.length} solved={solved}
+              active={!!active} nextAtS={remaining[0]?.pauseAtS ?? null} onOpen={openFromBadge} />
           </div>}
-          {active && session.videoId && <div data-breakpoint-panel tabIndex={-1}>
-            <PracticePanel key={`${session.generation}/${active.breakpoint.exercise.id}`}
-            videoId={session.videoId} revision={active.revision} breakpoint={active.breakpoint}
-            attempt={active.state} result={active.result} error={active.error} canResume={active.canResume}
-            onRun={code => void grade('run', code)} onSubmit={code => void grade('submit', code)}
-            onSkip={skip} onClose={skip} onResume={() => void resume(session.ticket())} />
+          {visiblePanel && <div data-breakpoint-panel tabIndex={-1} style={{ width: '100%' }}>
+            <PracticePanel key={`${session.generation}/${visiblePanel.breakpoint.exercise.id}`} {...visiblePanel} />
           </div>}
         </div>));
       } catch { failMount(); }
@@ -179,7 +205,10 @@ export default defineContentScript({
         if (mode === 'submit' && active.state === 'passed') {
           await markSolved(videoId, active.breakpoint.exercise.id, active.revision).catch(() => {});
         }
-        if (action === 'resume') await resume(ticket);
+        if (action === 'resume') {
+          clearTimeout(holdTimer);
+          holdTimer = setTimeout(() => { holdTimer = undefined; void resume(ticket); }, SOLVED_HOLD_MS);
+        }
       }
     }
 
@@ -201,7 +230,13 @@ export default defineContentScript({
       }
     }
 
+    function resumeNow() {
+      clearTimeout(holdTimer); holdTimer = undefined;
+      void resume(session.ticket());
+    }
+
     function skip() {
+      clearTimeout(holdTimer); holdTimer = undefined;
       const ticket = session.skip();
       if (ticket) { render(); void resume(ticket); }
     }
@@ -302,6 +337,8 @@ export default defineContentScript({
       stopPlayer(); observer?.disconnect(); observer = undefined;
       player = null; playerReady = false;
       ui?.remove(); ui = undefined; mounting = false; anchor = null; uiFailed = false; bindExpired = false;
+      clearTimeout(holdTimer); holdTimer = undefined;
+      clearTimeout(leavingTimer); leavingPanel = null; shownPanel = null;
       session.navigate(id);
       if (!id) return;
       observePlayer(); void lookup();

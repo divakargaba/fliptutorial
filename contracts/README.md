@@ -41,5 +41,6 @@ Full product spec: `docs/PRD.md`.
   onClose(): void;
 }
 ```
-Also `Badge` (`extension/src/ui/Badge.tsx`): `{ count: number; state: "loading"|"ready"|"unavailable"; onOpen(): void }`.
+Optional panel props: `index`, `total` ("Challenge 2 of 3"), `leaving` (exit animation), `holdMs` (solved moment before auto-resume; caller waits `SOLVED_HOLD_MS`).
+Also `Badge` (`extension/src/ui/Badge.tsx`): `{ state: "loading"|"ready"|"unavailable"; total; remaining; solved; active: boolean; nextAtS: number|null; onOpen(): void }`. Always one `<button>`; non-actionable states use `aria-disabled`.
 Drafts: `extension/src/drafts.ts` (UI owner) exports `loadDraft(key)`, `saveDraft(key, code)` (debounced), `flushDraft(key)`; key = `${videoId}/${exerciseId}/${revision}`.

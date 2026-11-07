@@ -27,6 +27,8 @@ const style = document.createElement('style');
 style.textContent = css;
 shadow.append(style);
 const mount = document.createElement('div');
+mount.className = 'breakpoint-shell';
+mount.dataset.theme = new URLSearchParams(location.search).get('theme') ?? 'dark';
 shadow.append(mount);
 
 function Preview() {
@@ -51,7 +53,8 @@ function Preview() {
       if (passed && mode === 'submit') setCanResume(true);
     }, 250);
   };
-  return <><Badge count={1} state="ready" onOpen={() => setOpen(true)} />
+  return <><Badge state="ready" total={1} remaining={open ? 0 : 1} solved={0} active={open} nextAtS={fixture.breakpoints[0].pauseAtS}
+    onOpen={() => setOpen(true)} />
     <div style={{ height: 12 }} />
     {open && <PracticePanel videoId={fixture.videoId} revision={new URLSearchParams(location.search).get('revision') ?? fixture.revision}
       breakpoint={fixture.breakpoints[0]} attempt={attempt} result={result} error={error} canResume={canResume}

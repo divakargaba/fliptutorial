@@ -6,7 +6,7 @@ test('built extension pauses once, Run fails, Submit passes and resumes', async 
   await automaticPause(page);
   const panel = page.locator('.bp-panel');
   expect(await panel.evaluate(el => getComputedStyle(el).fontSize)).toBe('14px');
-  expect(await page.locator('.bp-body').evaluate(el => getComputedStyle(el).padding)).toBe('16px');
+  expect(await page.locator('.bp-body').evaluate(el => getComputedStyle(el).paddingLeft)).toBe('16px');
   expect(await panel.evaluate(el => getComputedStyle(el).borderTopWidth)).toBe('1px');
   const parent = await page.locator('breakpoint-practice').evaluate(el => el.parentElement?.id);
   expect(parent).toBe(info.project.name.includes('narrow') ? 'below' : 'secondary-inner');
@@ -33,7 +33,7 @@ test('built extension pauses once, Run fails, Submit passes and resumes', async 
   await expectPlaying(page);
   expect(app.requests.map(request => request.mode)).toEqual(['run', 'run', 'submit']);
   expect(app.requests[2]).toEqual({ mode: 'submit', exerciseId: 'samplevid01-exponent', revision: 'demo-1', code: correctCode });
-  await expect(page.getByRole('button', { name: 'Breakpoint · 0 exercises' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Breakpoint · 1 of 1 solved' })).toBeVisible();
 });
 
 test('passed state remains reachable when browser refuses resume', async ({ app }, info) => {
@@ -42,11 +42,10 @@ test('passed state remains reachable when browser refuses resume', async ({ app 
   await app.rejectResume(true);
   await page.getByRole('textbox', { name: 'Python code' }).fill(correctCode);
   await page.getByRole('button', { name: 'Submit', exact: true }).click();
-  await expect(page.getByText('Exercise complete', { exact: false })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Solved' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Resume video' })).toBeVisible();
   expect(await page.locator('video').evaluate(video => video.paused)).toBe(true);
-  await page.locator('.bp-results').evaluate(el => el.scrollIntoView({ block: 'end' }));
-  await page.locator('.bp-footer').scrollIntoViewIfNeeded();
+  await page.locator('.bp-panel').scrollIntoViewIfNeeded();
   await page.screenshot({ path: info.outputPath('passed.png') });
   await app.rejectResume(false);
   await page.getByRole('button', { name: 'Resume video' }).click();
@@ -72,14 +71,14 @@ test('Skip during pending grading ignores its late response', async ({ app }) =>
 test('badge opens practice and Chrome storage restores draft after reload', async ({ app }) => {
   const { page } = app;
   await page.locator('#start').click();
-  await page.getByRole('button', { name: 'Breakpoint · 1 exercise' }).click();
+  await page.getByRole('button', { name: /^Breakpoint · 1 challenge/ }).click();
   const editor = page.getByRole('textbox', { name: 'Python code' });
   await editor.fill('# recovered from chrome.storage.local');
   await page.getByRole('button', { name: 'Close practice' }).click();
   await expectPlaying(page);
   await page.reload();
-  await expect(page.getByRole('button', { name: 'Breakpoint · 1 exercise' })).toBeVisible();
-  await page.getByRole('button', { name: 'Breakpoint · 1 exercise' }).click();
+  await expect(page.getByRole('button', { name: /^Breakpoint · 1 challenge/ })).toBeVisible();
+  await page.getByRole('button', { name: /^Breakpoint · 1 challenge/ }).click();
   await expect(editor).toContainText('# recovered from chrome.storage.local');
 });
 
@@ -107,7 +106,7 @@ test('ad crossing does not pause; practice stays available from badge', async ({
   await page.locator('#movie_player').evaluate(el => el.classList.remove('ad-showing'));
   await expect.poll(() => page.locator('video').evaluate(video => video.currentTime)).toBeGreaterThan(2.2);
   await expectPlaying(page);
-  await page.getByRole('button', { name: 'Breakpoint · 1 exercise' }).click();
+  await page.getByRole('button', { name: /^Breakpoint · 1 challenge/ }).click();
   await expect(page.locator('.bp-panel')).toBeVisible();
   await page.getByRole('button', { name: 'Skip and watch' }).click();
   await expectPlaying(page);
@@ -153,7 +152,7 @@ test.describe('multiple breakpoints', () => {
     expect(app.requests.map(({ exerciseId }) => exerciseId)).toEqual(['samplevid01-second']);
 
     await page.reload();
-    await expect(page.getByRole('button', { name: 'Breakpoint · 1 exercise' })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Breakpoint · 1 challenge/ })).toBeVisible();
     await automaticPause(page);
     await skip.click();
     await expect.poll(() => video.evaluate(v => v.currentTime)).toBeGreaterThan(secondPauseAtS + 0.5);

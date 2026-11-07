@@ -1,14 +1,50 @@
 import { useEffect, useRef } from 'react';
-import { basicSetup, EditorView } from 'codemirror';
+import { basicSetup } from 'codemirror';
+import { EditorView, keymap } from '@codemirror/view';
+import { Prec } from '@codemirror/state';
+import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
+import { tags as t } from '@lezer/highlight';
 import { python } from '@codemirror/lang-python';
 
-export function PythonEditor({ initialCode, onChange }: {
+// Colours come from CSS variables so the editor follows YouTube's light/dark theme.
+const highlight = HighlightStyle.define([
+  { tag: [t.keyword, t.controlKeyword, t.definitionKeyword, t.moduleKeyword, t.operatorKeyword], color: 'var(--bp-syn-keyword)' },
+  { tag: [t.function(t.definition(t.variableName)), t.function(t.variableName)], color: 'var(--bp-syn-function)' },
+  { tag: [t.string, t.special(t.string)], color: 'var(--bp-syn-string)' },
+  { tag: [t.number, t.bool, t.null, t.atom], color: 'var(--bp-syn-number)' },
+  { tag: [t.comment, t.lineComment], color: 'var(--bp-syn-comment)', fontStyle: 'italic' },
+  { tag: [t.standard(t.variableName), t.self], color: 'var(--bp-syn-builtin)' },
+  { tag: [t.variableName, t.definition(t.variableName), t.propertyName], color: 'var(--bp-text)' },
+  { tag: [t.operator, t.punctuation, t.bracket], color: 'var(--bp-text-2)' },
+]);
+
+const theme = EditorView.theme({
+  '&': { color: 'var(--bp-text)', backgroundColor: 'transparent', fontSize: '13px', height: '100%' },
+  '.cm-scroller': { fontFamily: 'var(--bp-mono)', lineHeight: '20px', minHeight: '176px', maxHeight: '300px', overflow: 'auto' },
+  '.cm-content': { padding: '10px 0', caretColor: 'var(--bp-text)' },
+  '.cm-gutters': { backgroundColor: 'transparent', color: 'var(--bp-text-3)', border: 'none', paddingLeft: '4px' },
+  '.cm-lineNumbers .cm-gutterElement': { padding: '0 10px 0 6px', minWidth: '28px' },
+  '.cm-foldGutter': { display: 'none' },
+  '.cm-activeLine': { backgroundColor: 'var(--bp-active-line)' },
+  '.cm-activeLineGutter': { backgroundColor: 'transparent', color: 'var(--bp-text-2)' },
+  '&.cm-focused': { outline: 'none' },
+  '.cm-cursor': { borderLeftColor: 'var(--bp-text)', borderLeftWidth: '2px' },
+  '.cm-selectionBackground, &.cm-focused .cm-selectionBackground, ::selection': { backgroundColor: 'var(--bp-selection) !important' },
+  '.cm-matchingBracket': { backgroundColor: 'var(--bp-selection)', outline: 'none' },
+  '.cm-tooltip': { backgroundColor: 'var(--bp-raised)', border: '1px solid var(--bp-line)', color: 'var(--bp-text)', borderRadius: '8px' },
+  '.cm-tooltip-autocomplete > ul > li[aria-selected]': { backgroundColor: 'var(--bp-selection)', color: 'var(--bp-text)' },
+});
+
+export function PythonEditor({ initialCode, onChange, onRun, onSubmit, describedBy }: {
   initialCode: string;
   onChange(code: string): void;
+  onRun(): void;
+  onSubmit(): void;
+  describedBy?: string;
 }) {
   const host = useRef<HTMLDivElement>(null);
-  const changed = useRef(onChange);
-  changed.current = onChange;
+  const handlers = useRef({ onChange, onRun, onSubmit });
+  handlers.current = { onChange, onRun, onSubmit };
   useEffect(() => {
     const parent = host.current!;
     const root = parent.getRootNode();
@@ -16,27 +52,21 @@ export function PythonEditor({ initialCode, onChange }: {
       parent,
       root: root instanceof ShadowRoot ? root : document,
       doc: initialCode,
-      extensions: [basicSetup, python(),
-        EditorView.contentAttributes.of({ 'aria-label': 'Python code', 'aria-describedby': 'bp-editor-help', spellcheck: 'false' }),
-        EditorView.updateListener.of(update => {
-          if (update.docChanged) changed.current(update.state.doc.toString());
+      extensions: [
+        Prec.highest(keymap.of([
+          { key: 'Mod-Enter', run: () => { handlers.current.onRun(); return true; } },
+          { key: 'Mod-Shift-Enter', run: () => { handlers.current.onSubmit(); return true; } },
+        ])),
+        basicSetup, python(), syntaxHighlighting(highlight), theme,
+        EditorView.contentAttributes.of({
+          'aria-label': 'Python code', spellcheck: 'false', ...(describedBy ? { 'aria-describedby': describedBy } : {}),
         }),
-        EditorView.theme({
-          '&': { color: '#F4F4F5', backgroundColor: '#0E0E10', fontSize: '13px' },
-          '.cm-scroller': { fontFamily: 'ui-monospace, SFMono-Regular, Consolas, monospace', minHeight: '240px', maxHeight: '280px', overflow: 'auto' },
-          '.cm-content': { padding: '12px 0', caretColor: '#93C5FD' },
-          // basicSetup's fallback syntax palette targets a light canvas.
-          '.cm-line span': { color: '#C4B5FD' },
-          '.cm-gutters': { backgroundColor: '#0E0E10', color: '#A1A1AA', border: 'none' },
-          '.cm-activeLine, .cm-activeLineGutter': { backgroundColor: '#1B1B20' },
-          '&.cm-focused': { outline: '2px solid #93C5FD', outlineOffset: '-2px' },
-          '.cm-cursor': { borderLeftColor: '#93C5FD' },
-          '.cm-selectionBackground, &.cm-focused .cm-selectionBackground': { backgroundColor: '#29405D' },
-          '.cm-tooltip': { backgroundColor: '#121214', border: '1px solid #2B2B30', color: '#F4F4F5' },
-        }, { dark: true }),
+        EditorView.updateListener.of(update => {
+          if (update.docChanged) handlers.current.onChange(update.state.doc.toString());
+        }),
       ],
     });
-    // Bubble-phase isolation preserves CodeMirror's handlers and native Tab escape.
+    // Bubble-phase isolation keeps YouTube hotkeys (space, j, k, l, f) out while preserving Tab escape.
     const isolate = (event: Event) => event.stopPropagation();
     for (const type of ['keydown', 'keyup', 'keypress']) parent.addEventListener(type, isolate);
     return () => {

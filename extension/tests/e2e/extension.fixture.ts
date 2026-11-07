@@ -102,7 +102,7 @@ export const test = base.extend<{ app: App; breakpointCount: 1 | 2 }>({
       await context.route('https://www.youtube.com/**', route => route.fulfill({ contentType: 'text/html', body: html }));
       app.page = page;
       await page.goto(watchUrl);
-      await expect(page.getByRole('button', { name: `Breakpoint · ${breakpointCount} exercise${breakpointCount === 1 ? '' : 's'}` })).toBeVisible();
+      await expect(page.getByRole('button', { name: new RegExp(`^Breakpoint · ${breakpointCount} challenge${breakpointCount === 1 ? '' : 's'}`) })).toBeVisible();
       await use(app);
     } finally {
       releasePending();

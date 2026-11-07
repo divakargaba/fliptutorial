@@ -8,7 +8,7 @@ test('shadow theme, keyboard isolation, grading and resume controls', async ({ p
   await expect(page.getByRole('heading', { name: 'Raise a number to a power' })).toBeFocused();
   const panel = page.locator('.bp-panel');
   expect(await panel.evaluate(el => getComputedStyle(el).fontSize)).toBe('14px');
-  expect(await page.locator('.bp-body').evaluate(el => getComputedStyle(el).padding)).toBe('16px');
+  expect(await page.locator('.bp-body').evaluate(el => getComputedStyle(el).paddingLeft)).toBe('16px');
   expect(await panel.evaluate(el => getComputedStyle(el).borderTopWidth)).toBe('1px');
   await page.screenshot({ path: info.outputPath('editing.png') });
   await editor.fill('jklf ');
@@ -20,18 +20,19 @@ test('shadow theme, keyboard isolation, grading and resume controls', async ({ p
   await editor.fill('def raise_to_power(base, exponent):\n    return base * exponent');
   await page.getByRole('button', { name: 'Run', exact: true }).click();
   await expect(page.getByText('wrong answer', { exact: false })).toBeVisible();
-  await expect(page.getByText('Expected: 8 · Actual: 6')).toBeVisible();
+  await expect(page.locator('.bp-case-detail')).toContainText('Expected8');
+  await expect(page.locator('.bp-case-detail')).toContainText('Output6');
   await page.locator('.bp-results').scrollIntoViewIfNeeded();
   await page.screenshot({ path: info.outputPath('failed.png') });
   await editor.fill('def raise_to_power(base, exponent):\n    return base ** exponent');
   await page.getByRole('button', { name: 'Run', exact: true }).click();
-  await expect(page.getByText('Examples passed — Submit to finish', { exact: false })).toBeVisible();
+  await expect(page.getByText('Examples passed', { exact: false })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Resume video' })).toHaveCount(0);
   await page.getByRole('button', { name: 'Submit', exact: true }).click();
-  await expect(page.getByText('Exercise complete', { exact: false })).toBeVisible();
-  await page.locator('.bp-results').scrollIntoViewIfNeeded();
-  const footer = await page.locator('.bp-footer').boundingBox();
-  expect(footer!.y + footer!.height).toBeLessThanOrEqual(page.viewportSize()!.height);
+  await expect(page.getByRole('heading', { name: 'Solved' })).toBeVisible();
+  const resume = await page.getByRole('button', { name: 'Resume video' }).boundingBox();
+  expect(resume!.y + resume!.height).toBeLessThanOrEqual(page.viewportSize()!.height);
+  await page.waitForTimeout(900); // let the solved animation settle for the screenshot
   await page.screenshot({ path: info.outputPath('passed.png') });
   await page.getByRole('button', { name: 'Resume video' }).click();
   await expect(panel).toHaveCount(0);
@@ -41,8 +42,8 @@ test('flushes on close, reloads drafts and isolates revisions', async ({ page })
   const editor = page.getByRole('textbox', { name: 'Python code' });
   await editor.fill('# my draft');
   await page.getByRole('button', { name: 'Close practice' }).click();
-  await expect(page.getByRole('button', { name: 'Breakpoint · 1 exercise' })).toBeFocused();
-  await page.getByRole('button', { name: 'Breakpoint · 1 exercise' }).click();
+  await expect(page.getByRole('button', { name: /^Breakpoint · 1 challenge/ })).toBeFocused();
+  await page.getByRole('button', { name: /^Breakpoint · 1 challenge/ }).click();
   await expect(editor).toContainText('# my draft');
   await page.reload();
   await expect(editor).toContainText('# my draft');
