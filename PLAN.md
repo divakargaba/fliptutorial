@@ -83,7 +83,7 @@ Work top to bottom. Mark State in this table when shipped or blocked (only your 
 
 | ID | Owner | Deliverable and acceptance check | State |
 | --- | --- | --- | --- |
-| R1 | @divakargaba | **Docs + CI for Breakpoint.** Replace the template `README.md` with Breakpoint: what it is, macOS and Windows setup (backend venv + `.env`, `npm ci && npm run build`, Load unpacked), demo links with timestamps for all 4 breakpoints, test commands, troubleshooting. Fill HACKATHON.md "Product decision". Change `.github/workflows/check.yml` to run backend pytest (Python 3.12) and extension typecheck/Vitest/build plus the preview Playwright suite (no provider keys); keep it green on GitHub. Add a five-minute demo script to PLAN.md (what to click, what to say, fallback). | Todo |
+| R1 | @divakargaba | **Docs + CI for Breakpoint.** Replace the template `README.md` with Breakpoint: what it is, macOS and Windows setup (backend venv + `.env`, `npm ci && npm run build`, Load unpacked), demo links with timestamps for all 4 breakpoints, test commands, troubleshooting. Fill HACKATHON.md "Product decision". Change `.github/workflows/check.yml` to run backend pytest (Python 3.12) and extension typecheck/Vitest/build plus the preview Playwright suite (no provider keys); keep it green on GitHub. Add a five-minute demo script to PLAN.md (what to click, what to say, fallback). | Done |
 | R2 | @abdullahwarraichh | **Backup demo recording (PRD §9.2–3).** Use your D5 harness with Playwright `recordVideo` at 1440×900 to record one clean take on real YouTube: badge → auto-pause at the exponent challenge → wrong Run → correct Submit → Solved → resume. Also record a short take of the calculator one. Commit the `.webm` files to `demo/` (Git LFS not needed if < 25 MB each) and link them in PLAN.md. | Todo |
 | R3 | @reyanshBadhwar26 | **Failure matrix + accessibility (PRD §6–7).** Add MV3 E2E cases with screenshots for every grader/API failure the UI must handle: `GRADER_UNAVAILABLE`, `GRADER_TIMEOUT`, `BUSY`, `STALE_EXERCISE` (draft kept, exercise reloads), `INVALID_CODE`, network timeout. Each must keep the draft, keep playback paused and leave Skip reachable. Run an automated contrast/a11y check (e.g. axe-core in Playwright) on the panel in dark and light themes; fix anything below WCAG AA in `src/ui/`. | Todo |
 | M1 | @abdullahwarv2 | Manual desktop-Chrome checks (assigned on the board): tab switch before a pause, ads, keyboard-only, light theme. | Todo |
@@ -138,3 +138,29 @@ attempt failed its focus assertion; restoring Playwright's default focus setting
 after the probe fixed the harness, and the final run passed. Actual hidden-tab
 crossing remains unverified; no ad appeared in the final run. No new checks are
 pending beyond the explicit manual handoff.
+
+## Five-minute demo script
+
+**Before the demo:** backend running on 127.0.0.1:8000, built extension loaded
+unpacked in Chrome, a fresh Chrome profile (no prior solved state). Verify
+`curl http://127.0.0.1:8000/health` returns `{"status":"ok"}`.
+
+| Time | Action | What to say |
+|------|--------|-------------|
+| 0:00 | Open Chrome. Show the extension is loaded at `chrome://extensions`. | "Breakpoint is a Chrome extension that adds coding practice to YouTube tutorials. It works with real freeCodeCamp videos." |
+| 0:20 | Navigate to `youtube.com/watch?v=rfscVS0vtbw&t=3330s` (calculator chapter). Point at the badge that appears near the player. | "The badge shows three challenges on this video. The video plays normally until it reaches a breakpoint." |
+| 0:40 | Let the video play to 55:38. It pauses automatically and the practice panel opens. | "Right before the instructor shows how to add two numbers, the video pauses and this panel opens. The learner hasn't seen the answer yet." |
+| 1:00 | Read the problem statement aloud. Expand the example. Type a wrong solution: `return num1 - num2`. Click **Run**. | "You get a code editor right here. Let me try a wrong answer first — Run checks it against the visible examples." |
+| 1:20 | Show the failed result. Fix the code to `return num1 + num2`. Click **Submit**. | "It failed. Let me fix it and Submit, which runs all the hidden tests too." |
+| 1:50 | Watch the Solved banner appear and the video auto-resume. | "Passed — the video picks up exactly where it paused. Now the learner can watch the instructor's approach and compare." |
+| 2:10 | Click **Skip and watch** on the cube breakpoint when it pauses (or let it play to 1:35:42). | "If a learner wants to skip a challenge, they click Skip and the video continues. The badge updates." |
+| 2:30 | Navigate to `youtube.com/watch?v=nLRL_NcnK-4&t=8209s` (CS50P grade exercise). Wait for the pause. | "It also works on other freeCodeCamp videos. This is Harvard's CS50P on the same channel — a different exercise." |
+| 2:50 | Type the correct solution, Submit, watch it pass and resume. | "Same flow: write code, submit, video resumes." |
+| 3:20 | Go back to `rfscVS0vtbw&t=9797s` for the exponent challenge. Show the badge says "1 challenge left." Solve it. | "Back on the first video. The badge tracks progress — one challenge left. Let me solve it." |
+| 3:50 | After solving, show badge says "All challenges solved." Reload the page — badge still shows solved. | "All solved. Progress is saved in Chrome's local storage, so it persists across reloads." |
+| 4:10 | Open an unsupported video (any non-prepared YouTube video). Show no badge appears. | "On videos without prepared exercises, nothing happens. The extension is invisible." |
+| 4:30 | Wrap up. | "Everything runs locally — a FastAPI backend, Judge0 for grading, no database or cloud. The exercises are reviewed and published from real transcripts using a Gemini-powered prep pipeline." |
+
+**Fallback:** if Judge0 is slow or down, show the Run/Submit flow with a timeout
+error, demonstrate that the draft is preserved, and click Skip to continue. If
+the video has a pre-roll ad, wait for it — the extension does not pause during ads.

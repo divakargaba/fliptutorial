@@ -1,156 +1,132 @@
-# Hackathon Agent Template
+# Breakpoint
 
-A ready-to-run Next.js starter and a shared GitHub message board for your
-team's coding agents. **Next.js + TypeScript + Tailwind + Supabase + Vercel**, focused on one
-working five-minute demo. Prepare it before the event; paste the prompt at kickoff.
+A Chrome extension that adds coding practice directly to YouTube programming
+tutorials. Before the instructor reveals a solution, the video pauses and a
+practice panel opens. Write your answer, run examples, submit — a correct
+submission resumes playback so you can compare your approach with the instructor's.
 
-## 1. Before the hackathon
+**Stack:** Chrome extension (WXT + React + Tailwind + CodeMirror) with a local
+FastAPI backend that grades Python through Judge0 CE.
 
-Use **Use this template → Create a new repository** on
-[micobenissa/hackathon-agent-template](https://github.com/micobenissa/hackathon-agent-template).
-Create a separate event repo, invite teammates, and have each person clone it.
-Templates copy files, not issues, secrets or collaborator access.
+## Demo breakpoints
 
-Install Node 24, Git and [GitHub CLI](https://cli.github.com). On Windows run the
-`tools/` commands from **Git Bash**, included with Git for Windows, not the WSL
-`bash.exe` shim. Install and sign in to the coding agent you choose.
+The extension ships with four exercises across two freeCodeCamp videos:
 
-```sh
-git clone https://github.com/YOUR-TEAM/YOUR-EVENT.git
-cd YOUR-EVENT
-gh auth login
-tools/setup
-tools/board whoami
-npm run setup
-npm run dev
-```
+| # | Video | Exercise | Pause at | Link |
+|---|-------|----------|----------|------|
+| 1 | Learn Python – Full Course for Beginners (`rfscVS0vtbw`) | Add two numbers | 55:38 | [youtube.com/watch?v=rfscVS0vtbw&t=3330s](https://www.youtube.com/watch?v=rfscVS0vtbw&t=3330s) |
+| 2 | Learn Python – Full Course for Beginners (`rfscVS0vtbw`) | Cube a number | 1:35:42 | [youtube.com/watch?v=rfscVS0vtbw&t=5742s](https://www.youtube.com/watch?v=rfscVS0vtbw&t=5742s) |
+| 3 | Learn Python – Full Course for Beginners (`rfscVS0vtbw`) | Raise a number to a power | 2:43:17 | [youtube.com/watch?v=rfscVS0vtbw&t=9797s](https://www.youtube.com/watch?v=rfscVS0vtbw&t=9797s) |
+| 4 | CS50P – Full University Course (`nLRL_NcnK-4`) | Turn a score into a letter grade | 2:16:49 | [youtube.com/watch?v=nLRL_NcnK-4&t=8209s](https://www.youtube.com/watch?v=nLRL_NcnK-4&t=8209s) |
 
-`npm run setup` also creates the ignored **root `.env.local`** without overwriting
-existing values. Fill the needed slots from [.env.example](.env.example): Supabase
-app/management access, one LLM key, Vercel deployment access and optional AWS/GitHub credentials.
-Run `npm run env:check` for a redacted presence check, then restart the app.
-See [docs/CREDENTIALS.md](docs/CREDENTIALS.md) for which keys enable each capability.
-Teammates use their own provider accounts and local env copies.
+Start a few seconds before the pause time so the extension can arm the breakpoint.
 
-```sh
-npm run env:check
-npm run with-env -- aws sts get-caller-identity
-npm run supabase -- projects list
-```
+## Prerequisites
 
-The Supabase command installs its pinned CLI on first use. Install AWS CLI v2
-before using its command. The helper loads the local file for that
-process only; it does not print credentials or authenticate separate MCP connectors.
-`npm run demo` starts the Next.js app with UI and API routes together.
+- **Node.js 24** and npm
+- **Python 3.12**
+- **Desktop Chrome**
+- Internet access (for YouTube and the Judge0 CE grading API)
 
-Vercel is the deployment default for both UI and API routes. Import the event repo,
-fill its token/project/team IDs, then follow [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
-The guide fixes the `web` root, outside-root source access, Node 24, app env sync,
-Preview/Production commands and the exact checks an agent performs before handoff.
+## Setup
+
+### Backend (FastAPI)
+
+#### macOS / Linux
 
 ```sh
-npm run vercel:check
-npm run vercel:configure
-npm run vercel:env -- preview
-npm run deploy:preview
+cd backend
+python3.12 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+cp .env.example .env   # fill in keys if needed (Judge0 CE works without auth)
 ```
 
-The lead runs setup first: it creates/finds the Message Board, pins it when allowed,
-and writes `.board-issue`. Commit that number if changed. Teammates run the same
-setup; it reuses the board. Use `tools/setup --issue N` if you have an existing one.
+#### Windows (PowerShell)
 
-Fill the team table in AGENTS.md and the readiness checklist in HACKATHON.md. Give
-each person a separate clone. Set Git identity with `git config user.name` and
-`git config user.email` before making commits. Check event rules permit prebuilt code.
+```powershell
+cd backend
+py -3.12 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+Copy-Item .env.example .env   # fill in keys if needed
+```
 
-## 2. When the prompt drops
-
-Paste [prompts/kickoff.md](prompts/kickoff.md) plus the real prompt into the lead's
-agent. Each teammate pastes [prompts/teammate.md](prompts/teammate.md) into theirs.
-The lead records the demo goal, contracts, exact ownership and first tasks, then
-tags the team on the board. Agents wait for assignments rather than inventing a product.
-
-## 3. Keep agents listening
-
-Choose **one** per clone:
+### Extension
 
 ```sh
-AUTOPILOT_NAME=Mico tools/autopilot codex
-# or
-AUTOPILOT_NAME=Sam tools/autopilot claude
+cd extension
+npm ci
+npx playwright install chromium   # needed for E2E tests
+npm run build
 ```
 
-These use your installed agent CLI and credentials. They catch up, run one task
-at a time, then wait for your login or `@all`. Leave the terminal/computer running;
-Ctrl+C stops it. A failed agent run or dirty tracked files stop the runner visibly.
-No permissions are bypassed. Codex uses workspace-write with network access;
-Claude uses acceptEdits and a small shell allowlist. Review the scripts before use.
+## Run
 
-For the **desktop app**, paste [prompts/monitor.md](prompts/monitor.md) and ask it to
-schedule checks in the repo's chat. Do not run the CLI watcher as well. The app and
-computer must stay running for local work. To do a single CLI check, use
-`tools/autopilot --once codex` (or `claude`).
+### 1. Start the backend
 
-Claude hooks surface unread posts at session start and each prompt. Codex reads
-AGENTS.md; Cursor has an always-on rule pointing to it. Hooks/rules do not provide
-an idle wake-up mechanism by themselves.
-
-## Board commands
+#### macOS / Linux
 
 ```sh
-tools/board post "[Mico] @all Board test. Reply once from another agent."
-tools/board unread
-tools/board read -n 20
-tools/board wait --interval 30 --timeout 120
+cd backend
+.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --env-file .env
 ```
 
-`@all` is a marker our script recognizes, not a real GitHub team notification.
-Posts must start with `[Name]` (the human, never the agent/tool). Use the actual GitHub login for handoffs.
-`read` does not mark read; `unread` advances the cursor. `wait` ignores this clone's
-own posts and returns other posts, marking mentions. State is private to `.git/board/`.
-`BOARD_CONSUMER` selects an independent cursor; the CLI runner and hooks use their
-own. `BOARD_REPO`, `BOARD_ISSUE` and `BOARD_INTERVAL` override defaults.
+#### Windows (PowerShell)
 
-## The starter
+```powershell
+cd backend
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --env-file .env
+```
 
-- **Next.js + React + TypeScript + Tailwind**, including a working app-server check.
-- **Supabase client** ready for the event's Postgres database.
-- **Next.js Route Handlers** for the selected LLM; add Supabase Auth or Storage only if needed.
-- **Vercel hosting**, scoped project/configuration checks and runtime-only env sync.
-- **One local env file**, automatic non-overwriting setup, redacted checks and an agent-tool loader.
-- **Vitest + React Testing Library**, **Playwright** browser smoke and GitHub Actions checks.
-- [Exact stack](docs/STACK.md), [credentials](docs/CREDENTIALS.md),
-  [deployment runbook](docs/DEPLOYMENT.md) and [testing plan](docs/TESTING.md)
-  are written for both humans and agents.
+Verify: `curl http://127.0.0.1:8000/health` should return `{"status":"ok"}`.
+
+### 2. Load the extension
+
+1. Open `chrome://extensions` in Chrome.
+2. Enable **Developer mode** (toggle in the top right).
+3. Click **Load unpacked** and select `extension/.output/chrome-mv3`.
+4. Open one of the demo links above and watch the video — it pauses automatically
+   at the breakpoint.
+
+For development iteration, use `npm run dev` in `extension/` and reload the
+extension after changes.
+
+## Tests
+
+### Backend
 
 ```sh
-npm run check
-cd web && npx playwright install chromium && cd ..
-npm run test:e2e
+# macOS / Linux
+cd backend && .venv/bin/python -m pytest -q
+
+# Windows
+cd backend && .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-The app starts without cloud credentials. Only the Supabase URL and publishable
-key have `NEXT_PUBLIC_` names. Other credentials stay in server/tool processes.
-No cloud project, product schema or LLM endpoint is created before the prompt.
-The UI reports Supabase configuration, not a verified database connection.
-At kickoff, verify the first real query and AI call, then rehearse the demo in PLAN.md.
+Default tests run without provider keys. A live Judge0 smoke test is skipped
+unless `JUDGE0_BASE_URL` is set in the environment.
+
+### Extension
+
+```sh
+cd extension
+npm run typecheck      # TypeScript check
+npm test               # Vitest unit tests
+npm run build          # production build
+npm run test:e2e       # Playwright E2E (preview + built MV3)
+```
 
 ## Troubleshooting
 
-- **gh not found / not logged in:** install GitHub CLI, restart Git Bash, run `gh auth login`.
-- **Wrong account:** check `tools/board whoami` and `gh auth status`; switch accounts yourself.
-- **Board missing:** the lead runs `tools/setup`; pull the committed `.board-issue`.
-- **Own posts wake the agent:** ensure each teammate has a separate clone and one watcher.
-- **Runner/state lock remains after a crash:** confirm the old process stopped before removing
-  the specific stale `.git/board/*.lock` directory named by the error. Never delete a live lock.
-- **Push conflict:** pull/rebase; resolve only your files or ask the owner. Never force-push.
-- **No new messages:** normal polling stays quiet. An idle agent needs the watcher or app schedule.
-
-## Provenance and current references
-
-This coordination flow is based on the supplied
-[Hackathon Agent Board guide](https://marvelous-relative-5de.notion.site/hack)
-and the board/runner tested with the team in `divakargaba/agenttest`.
-The template contains no game code, board history, credentials or teammate assignments.
-Codex runner flags follow the [official non-interactive documentation](https://learn.chatgpt.com/docs/non-interactive-mode);
-Claude hooks follow its [official hooks reference](https://code.claude.com/docs/en/hooks).
+- **Badge doesn't appear:** make sure the backend is running on port 8000 and
+  the extension is loaded from `extension/.output/chrome-mv3`. Refresh the
+  YouTube tab after loading.
+- **Grading hangs:** Judge0 CE (`ce.judge0.com`) is a free shared service; it
+  may be slow or rate-limited. The extension times out after 15 s and lets you
+  retry or skip.
+- **Extension build fails:** ensure you're on Node 24 (`node -v`) and ran
+  `npm ci` in `extension/`.
+- **Python version mismatch:** the backend requires Python 3.12. Check with
+  `python3.12 --version` (macOS/Linux) or `py -3.12 --version` (Windows).
+- **Port conflict:** if port 8000 is in use, stop the other process or change
+  the uvicorn `--port` flag and set `WXT_API_BASE_URL` to the new origin before
+  building the extension.
