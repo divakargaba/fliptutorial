@@ -10,5 +10,9 @@ export default defineConfig({
     permissions: ['storage'],
     host_permissions: ['http://127.0.0.1/*'],
   },
-  vite: () => ({ plugins: [tailwindcss()] }),
+  vite: () => ({
+    plugins: [tailwindcss()],
+    // Chrome rejects literal Unicode noncharacters in extension scripts. CodeMirror uses U+FFFF as a sentinel.
+    build: { rolldownOptions: { output: { charset: 'ascii' } } },
+  }),
 });
