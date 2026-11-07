@@ -7,9 +7,10 @@ Breakpoint is a Chrome extension (WXT + React + Tailwind + CodeMirror) plus a lo
 FastAPI backend that grades Python through Judge0. It is **not** the Next.js /
 Supabase / Vercel starter in `web/`; leave `web/` untouched.
 
-Demo target: one working Python exercise on freeCodeCamp *Learn Python – Full Course
-for Beginners* (`rfscVS0vtbw`), Exponent Function chapter (`9680–10033` s).
-Fallback window: Building a Basic Calculator (`52:37–58:27`).
+Demo target: three working Python exercises on freeCodeCamp *Learn Python – Full Course
+for Beginners* (`rfscVS0vtbw`): Add two numbers (calculator chapter, 3338 s), Cube a
+number (return statement chapter, 5748 s), and Raise a number to a power (exponent
+chapter, 9803 s).
 
 ## Machine prerequisites (each human)
 
@@ -75,7 +76,7 @@ Work top to bottom. Mark State in this table when shipped or blocked (only your 
 | ID | Owner | Deliverable and acceptance check | State |
 | --- | --- | --- | --- |
 | P1 | @abdullahwarraichh | **Second reviewed video.** Pick another freeCodeCamp Python beginner tutorial with captions, add it to `seeds.json` + transcript excerpt, run `scan → verify → publish` with live Gemini, ship `content/approved/<videoId>.json` with one exercise that meets the same timing and test rules as `rfscVS0vtbw`. Run a real-YouTube walkthrough like D4 and record times. Needs `GEMINI_API_KEY` in your `backend/.env`; if missing, ask @divakargaba. | Done — CS50P `nLRL_NcnK-4` grade exercise (revision `nLRL_NcnK-4-0f3ae41a2cf4b7e5`), live `gemini-2.5-flash` scan → verify → publish; 3/3 clean real-YouTube walkthroughs, see Measured results |
-| P2 | @divakargaba | **More challenges on `rfscVS0vtbw`.** Add 2 more breakpoints to the existing video using the prep pipeline: Building a Basic Calculator (`3157–3507` s) and one more earlier chapter with a clean, separable task. Same rules: safe pause before the first reveal, ≥1 visible example, ≥3 hidden cases, reference + known-wrong solution verified. Coordinate edits to `seeds.json` with @abdullahwarraichh (pull --rebase). Backend must serve all breakpoints sorted and non-overlapping. | Todo |
+| P2 | @divakargaba | **More challenges on `rfscVS0vtbw`.** Add 2 more breakpoints to the existing video using the prep pipeline: Building a Basic Calculator (`3157–3507` s) and one more earlier chapter with a clean, separable task. Same rules: safe pause before the first reveal, ≥1 visible example, ≥3 hidden cases, reference + known-wrong solution verified. Coordinate edits to `seeds.json` with @abdullahwarraichh (pull --rebase). Backend must serve all breakpoints sorted and non-overlapping. | Done — 3 breakpoints: calculator (3338 s), cube (5748 s), exponent (9803.32 s); verify + publish green; revision `rfscVS0vtbw-613a9bb880e97b69` |
 | P3 | @abdullahwarv2 | **Local solved record + multi-breakpoint hardening.** New `extension/src/progress.ts`: `chrome.storage.local` record of solved exercises keyed `videoId/exerciseId/revision` (`markSolved`, `getSolved`, `listSolved`), with Vitest tests. Harden `src/playback.ts` for 2+ breakpoints per video (sequential pauses, skip one then hit the next, seek between them, consumed vs solved) with Vitest + a 2-breakpoint E2E fixture. **Do not edit `extension/src/ui/`** (Divakar is redesigning it) and keep `youtube.content.tsx` changes minimal: expose `solvedIds: Set<string>` for the UI to read; post the API when ready. | Done |
 
 ## Handoffs (who to @mention)

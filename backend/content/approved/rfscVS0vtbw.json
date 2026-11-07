@@ -3,6 +3,153 @@
   "videoId": "rfscVS0vtbw",
   "breakpoints": [
     {
+      "id": "calculator-breakpoint",
+      "windowStartS": 3157,
+      "setupEndS": 3240,
+      "firstSpokenRevealS": 3340,
+      "firstVisualRevealS": 3345,
+      "revealAtS": 3340,
+      "pauseAtS": 3338,
+      "windowEndS": 3507,
+      "exercise": {
+        "id": "rfscVS0vtbw-calculator",
+        "title": "Add two numbers",
+        "statement": "Write add_numbers(a, b) that returns the sum of two integers a and b.",
+        "language": "python",
+        "functionName": "add_numbers",
+        "starterCode": "def add_numbers(a, b):\n    pass\n",
+        "conceptTags": [
+          "arithmetic",
+          "functions"
+        ],
+        "examples": [
+          {
+            "args": [
+              5,
+              3
+            ],
+            "expected": 8
+          },
+          {
+            "args": [
+              10,
+              20
+            ],
+            "expected": 30
+          }
+        ],
+        "hiddenTests": [
+          {
+            "args": [
+              0,
+              0
+            ],
+            "expected": 0
+          },
+          {
+            "args": [
+              -5,
+              5
+            ],
+            "expected": 0
+          },
+          {
+            "args": [
+              -3,
+              -7
+            ],
+            "expected": -10
+          },
+          {
+            "args": [
+              100,
+              200
+            ],
+            "expected": 300
+          },
+          {
+            "args": [
+              1,
+              -1
+            ],
+            "expected": 0
+          }
+        ],
+        "referenceSolution": "def add_numbers(a, b):\n    return a + b\n",
+        "knownWrongSolution": "def add_numbers(a, b):\n    return a * b\n"
+      }
+    },
+    {
+      "id": "cube-breakpoint",
+      "windowStartS": 5647,
+      "setupEndS": 5720,
+      "firstSpokenRevealS": 5750,
+      "firstVisualRevealS": 5755,
+      "revealAtS": 5750,
+      "pauseAtS": 5748,
+      "windowEndS": 6010,
+      "exercise": {
+        "id": "rfscVS0vtbw-cube",
+        "title": "Cube a number",
+        "statement": "Write cube(num) that returns the cube of the integer num (num raised to the third power).",
+        "language": "python",
+        "functionName": "cube",
+        "starterCode": "def cube(num):\n    pass\n",
+        "conceptTags": [
+          "functions",
+          "arithmetic"
+        ],
+        "examples": [
+          {
+            "args": [
+              3
+            ],
+            "expected": 27
+          },
+          {
+            "args": [
+              2
+            ],
+            "expected": 8
+          }
+        ],
+        "hiddenTests": [
+          {
+            "args": [
+              0
+            ],
+            "expected": 0
+          },
+          {
+            "args": [
+              1
+            ],
+            "expected": 1
+          },
+          {
+            "args": [
+              -2
+            ],
+            "expected": -8
+          },
+          {
+            "args": [
+              5
+            ],
+            "expected": 125
+          },
+          {
+            "args": [
+              -3
+            ],
+            "expected": -27
+          }
+        ],
+        "referenceSolution": "def cube(num):\n    return num * num * num\n",
+        "knownWrongSolution": "def cube(num):\n    return num * num\n"
+      }
+    },
+    {
       "id": "exponent-breakpoint",
       "windowStartS": 9680,
       "setupEndS": 9762.32,
@@ -86,6 +233,6 @@
       }
     }
   ],
-  "revision": "rfscVS0vtbw-b1327bb5997acd01",
-  "approvedDigest": "b1327bb5997acd01"
+  "revision": "rfscVS0vtbw-613a9bb880e97b69",
+  "approvedDigest": "613a9bb880e97b69"
 }

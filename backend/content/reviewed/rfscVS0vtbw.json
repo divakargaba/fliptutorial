@@ -1,8 +1,88 @@
 {
   "schemaVersion": 1,
   "videoId": "rfscVS0vtbw",
-  "reviewNote": "Human-reviewed overlay merged into the scan draft by app.prepare. Timing chosen from the transcript excerpt plus Gemini video analysis; see evidence.",
+  "reviewNote": "Three breakpoints for the Learn Python course: basic calculator (type conversion), cube function (return statement), and exponent function (for loops). Timing from transcript plus video review.",
   "breakpoints": [
+    {
+      "id": "calculator-breakpoint",
+      "windowId": "basic-calculator",
+      "windowStartS": 3157,
+      "setupEndS": 3240,
+      "firstSpokenRevealS": 3340,
+      "firstVisualRevealS": 3345,
+      "revealAtS": 3340,
+      "pauseAtS": 3338,
+      "windowEndS": 3507,
+      "evidence": {
+        "setupCueId": "c03240000",
+        "spokenRevealCueId": "c03340000",
+        "transcript": "At 3197 s the instructor begins writing num1 = input(...) and num2 = input(...). By 3240 s the setup is complete: two variables capturing user input, and the goal to add them as numbers. At 3269 s the instructor runs the naive version and discovers string concatenation. At 3340 s the instructor introduces int() conversion as the fix, which is the first spoken reveal of the solution approach.",
+        "video": "Manual review of the video at 1x. The instructor writes num1 + num2 (string concatenation) by 3238 s, runs it at 3269 s showing the bug. The reveal (wrapping in int()) first appears audibly at 3340 s and visually on screen at 3345 s.",
+        "pauseRule": "pauseAtS = revealAtS - 2.0; windowStartS <= setupEndS <= pauseAtS <= revealAtS - 1.0; revealAtS <= windowEndS."
+      },
+      "exercise": {
+        "id": "rfscVS0vtbw-calculator",
+        "title": "Add two numbers",
+        "statement": "Write add_numbers(a, b) that returns the sum of two integers a and b.",
+        "language": "python",
+        "functionName": "add_numbers",
+        "starterCode": "def add_numbers(a, b):\n    pass\n",
+        "conceptTags": ["arithmetic", "functions"],
+        "examples": [
+          { "args": [5, 3], "expected": 8 },
+          { "args": [10, 20], "expected": 30 }
+        ],
+        "hiddenTests": [
+          { "args": [0, 0], "expected": 0 },
+          { "args": [-5, 5], "expected": 0 },
+          { "args": [-3, -7], "expected": -10 },
+          { "args": [100, 200], "expected": 300 },
+          { "args": [1, -1], "expected": 0 }
+        ],
+        "referenceSolution": "def add_numbers(a, b):\n    return a + b\n",
+        "knownWrongSolution": "def add_numbers(a, b):\n    return a * b\n"
+      }
+    },
+    {
+      "id": "cube-breakpoint",
+      "windowId": "cube-function",
+      "windowStartS": 5647,
+      "setupEndS": 5720,
+      "firstSpokenRevealS": 5750,
+      "firstVisualRevealS": 5755,
+      "revealAtS": 5750,
+      "pauseAtS": 5748,
+      "windowEndS": 6010,
+      "evidence": {
+        "setupCueId": "c05720000",
+        "spokenRevealCueId": "c05750000",
+        "transcript": "At 5647 s the instructor begins the Return Statement chapter. By 5720 s he has explained the concept of returning values from functions and has set up def cube(num): with a colon. At 5750 s the instructor says 'so I can just return num times num times num' revealing the body of the function.",
+        "video": "Manual review at 1x. The instructor defines def cube(num): by 5720 s. At 5750 s he speaks the solution (return num * num * num), and the code appears on screen at 5755 s.",
+        "pauseRule": "pauseAtS = revealAtS - 2.0; windowStartS <= setupEndS <= pauseAtS <= revealAtS - 1.0; revealAtS <= windowEndS."
+      },
+      "exercise": {
+        "id": "rfscVS0vtbw-cube",
+        "title": "Cube a number",
+        "statement": "Write cube(num) that returns the cube of the integer num (num raised to the third power).",
+        "language": "python",
+        "functionName": "cube",
+        "starterCode": "def cube(num):\n    pass\n",
+        "conceptTags": ["functions", "arithmetic"],
+        "examples": [
+          { "args": [3], "expected": 27 },
+          { "args": [2], "expected": 8 }
+        ],
+        "hiddenTests": [
+          { "args": [0], "expected": 0 },
+          { "args": [1], "expected": 1 },
+          { "args": [-2], "expected": -8 },
+          { "args": [5], "expected": 125 },
+          { "args": [-3], "expected": -27 }
+        ],
+        "referenceSolution": "def cube(num):\n    return num * num * num\n",
+        "knownWrongSolution": "def cube(num):\n    return num * num\n"
+      }
+    },
     {
       "id": "exponent-breakpoint",
       "windowId": "exponent-function",

@@ -339,7 +339,8 @@ def _edit_reviewed(ws, fn):
 
 
 def test_real_exercise_covers_required_hidden_cases():
-    ex = json.loads(REAL_REVIEWED.read_text(encoding="utf-8"))["breakpoints"][0]["exercise"]
+    bps = json.loads(REAL_REVIEWED.read_text(encoding="utf-8"))["breakpoints"]
+    ex = next(bp["exercise"] for bp in bps if bp["exercise"]["functionName"] == "raise_to_power")
     args = [tuple(h["args"]) for h in ex["hiddenTests"]]
     assert any(p == 0 for _, p in args)  # zero exponent
     assert any(b == 0 and p > 0 for b, p in args)  # zero base, positive exponent
@@ -380,7 +381,7 @@ def test_review_notes_do_not_change_digest(workspace):
 
 def test_wrong_reference_fails_verify(workspace):
     _edit_reviewed(workspace, lambda d: d["breakpoints"][0]["exercise"].update(
-        referenceSolution="def raise_to_power(base_num, pow_num):\n    return base_num * pow_num\n"))
+        referenceSolution="def add_numbers(a, b):\n    return a * b\n"))
     with pytest.raises(PrepError) as e:
         _verify(workspace)
     assert e.value.code == "VERIFY_FAILED"
@@ -388,7 +389,7 @@ def test_wrong_reference_fails_verify(workspace):
 
 def test_wrong_solution_that_passes_fails_verify(workspace):
     _edit_reviewed(workspace, lambda d: d["breakpoints"][0]["exercise"].update(
-        knownWrongSolution="def raise_to_power(base_num, pow_num):\n    return base_num ** pow_num\n"))
+        knownWrongSolution="def add_numbers(a, b):\n    return a + b\n"))
     with pytest.raises(PrepError) as e:
         _verify(workspace)
     assert e.value.code == "VERIFY_FAILED"

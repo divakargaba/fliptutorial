@@ -10,18 +10,22 @@
       "transcriptPath": "transcripts/rfscVS0vtbw.json",
       "scanWindows": [
         {
-          "id": "exponent-function",
-          "label": "Exponent Function",
-          "startS": 9680,
-          "endS": 10033
-        }
-      ],
-      "fallbackWindows": [
-        {
           "id": "basic-calculator",
           "label": "Building a Basic Calculator",
           "startS": 3157,
           "endS": 3507
+        },
+        {
+          "id": "cube-function",
+          "label": "Return Statement / Cube Function",
+          "startS": 5647,
+          "endS": 6010
+        },
+        {
+          "id": "exponent-function",
+          "label": "Exponent Function",
+          "startS": 9680,
+          "endS": 10033
         }
       ]
     },
