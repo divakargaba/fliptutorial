@@ -123,8 +123,12 @@ if (( once )); then
   run_agent "$posts" || { echo 'Agent check failed; review its output before retrying.' >&2; exit 1; }
   exit 0
 fi
-run_agent "$posts" || echo 'Startup check failed (see output above); still listening.' >&2
 pending=""
+if ! run_agent "$posts"; then
+  echo 'Startup check failed (see output above); retrying in 60 seconds.' >&2
+  pending="$posts"$'\n<<< MENTION (retry startup)\n'
+  sleep 60
+fi
 echo "Listening as $prefix (@$login). Stop with Ctrl+C."
 while :; do
   if [[ "$pending" == *'<<< MENTION'* ]]; then
