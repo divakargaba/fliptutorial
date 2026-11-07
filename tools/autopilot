@@ -59,7 +59,10 @@ product. Stay within your owned or assigned paths. Only the team lead can
 reassign work. Ask for a handoff on the board if needed.
 Use validation commands in PLAN.md. Commit only your work, pull --rebase,
 push to the agreed integration branch, and post one useful completion or
-blocker reply with prefix $prefix. Never force-push or overwrite teammate work.
+blocker reply with prefix $prefix. Work through all your unfinished assigned tasks
+in this run. @mention the exact login of anyone your work unblocks or whom you
+need something from; only mentioned agents wake up. If blocked, post what you
+need from whom and stop. Never force-push or overwrite teammate work.
 Commit as the existing git user only: no Co-Authored-By trailers, no
 Generated-with or AI footers, and never name the agent or tool in commits or posts.
 Do not provision paid resources or reveal secrets. If blocked, describe the
