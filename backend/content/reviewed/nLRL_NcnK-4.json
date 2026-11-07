@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "videoId": "nLRL_NcnK-4",
+  "reviewNote": "Human-reviewed overlay of the live gemini-2.5-flash scan draft (candidate setupEndCueId c08210399, spokenRevealCueId c08216679). Timing chosen from the ASR transcript excerpt plus Gemini video analysis; see evidence.",
+  "breakpoints": [
+    {
+      "id": "grade-breakpoint",
+      "windowId": "conditionals-grade",
+      "windowStartS": 8100,
+      "setupEndS": 8212.0,
+      "firstSpokenRevealS": 8216.679,
+      "firstVisualRevealS": 8217.0,
+      "revealAtS": 8216.679,
+      "pauseAtS": 8214.679,
+      "windowEndS": 8400,
+      "evidence": {
+        "setupCueId": "c08210399",
+        "spokenRevealCueId": "c08216679",
+        "transcript": "c08188320-c08208760 (8188.32-8210.40): 'now how could I go about assigning a grade to the student score ... between a 90 and 100 that's an A ... 80 and 89 it's a B ... 70 and 79 it's a C and so forth all the way down to F'. The input line score = int(input(...)) was typed earlier (c08168..). c08210399/c08212000 ('how might I express this, well I can use conditionals and I can ask a few questions') is a hint, not the solution. c08216679 (8216.68-8218.60) 'so let me express it like this, if the student score is greater than or equal to 90' starts the concrete conditional; the cue start is used as the conservative spoken reveal.",
+        "video": "gemini-flash-latest, clip 8180-8250 s, timestamps reported both clip-relative and absolute (absolute used; consistent with on-screen 136:56 = 8216 s): setup_end 8216 s (scale fully described), first_visual_reveal 8217.0 s ('if ' appears on line 3, then 'if score >= 90'), first_spoken_reveal 8217.5 s. The ASR cue start 8216.679 is earlier, so it sets revealAtS. gemini-2.5-flash rejected the YouTube clip request (HTTP 400), so no second-model cross-check.",
+        "pauseRule": "pauseAtS = revealAtS - 2.0; windowStartS <= setupEndS <= pauseAtS <= revealAtS - 1.0; revealAtS <= windowEndS."
+      },
+      "exercise": {
+        "id": "nLRL_NcnK-4-grade",
+        "title": "Turn a score into a letter grade",
+        "statement": "Write get_grade(score) that returns the letter grade for an integer score from 0 to 100: 90 to 100 is \"A\", 80 to 89 is \"B\", 70 to 79 is \"C\", 60 to 69 is \"D\", and anything below 60 is \"F\". Return the letter as a string instead of printing it.",
+        "language": "python",
+        "functionName": "get_grade",
+        "starterCode": "def get_grade(score):\n    pass\n",
+        "conceptTags": ["conditionals"],
+        "examples": [
+          { "args": [95], "expected": "A" },
+          { "args": [82], "expected": "B" }
+        ],
+        "hiddenTests": [
+          { "args": [100], "expected": "A" },
+          { "args": [90], "expected": "A" },
+          { "args": [89], "expected": "B" },
+          { "args": [80], "expected": "B" },
+          { "args": [70], "expected": "C" },
+          { "args": [69], "expected": "D" },
+          { "args": [60], "expected": "D" },
+          { "args": [59], "expected": "F" },
+          { "args": [0], "expected": "F" }
+        ],
+        "referenceSolution": "def get_grade(score):\n    if score >= 90:\n        return \"A\"\n    elif score >= 80:\n        return \"B\"\n    elif score >= 70:\n        return \"C\"\n    elif score >= 60:\n        return \"D\"\n    else:\n        return \"F\"\n",
+        "knownWrongSolution": "def get_grade(score):\n    if score > 90:\n        return \"A\"\n    elif score > 80:\n        return \"B\"\n    elif score > 70:\n        return \"C\"\n    elif score > 60:\n        return \"D\"\n    else:\n        return \"F\"\n"
+      }
+    }
+  ]
+}

@@ -1,0 +1,825 @@
+{
+  "schemaVersion": 1,
+  "videoId": "nLRL_NcnK-4",
+  "source": "YouTube English auto-generated (ASR) captions, fetched 2026-11-07; the video has no uploader track. Rolling ASR cue ends are clipped to the next cue's start so cues do not overlap.",
+  "windowStartS": 8100.0,
+  "windowEndS": 8400.0,
+  "cues": [
+    {
+      "id": "c08096320",
+      "start_s": 8096.32,
+      "end_s": 8098.76,
+      "text": "it makes you indent your code or it will"
+    },
+    {
+      "id": "c08098760",
+      "start_s": 8098.76,
+      "end_s": 8101.239,
+      "text": "not just work and I think did you have"
+    },
+    {
+      "id": "c08101239",
+      "start_s": 8101.239,
+      "end_s": 8104.4,
+      "text": "one other question uh yeah uh is the"
+    },
+    {
+      "id": "c08104400",
+      "start_s": 8104.4,
+      "end_s": 8105.48,
+      "text": "colon"
+    },
+    {
+      "id": "c08105480",
+      "start_s": 8105.48,
+      "end_s": 8109.0,
+      "text": "necessary is the colon necessary yes the"
+    },
+    {
+      "id": "c08109000",
+      "start_s": 8109.0,
+      "end_s": 8111.92,
+      "text": "colon 2 is necessary so with python what"
+    },
+    {
+      "id": "c08111920",
+      "start_s": 8111.92,
+      "end_s": 8114.159,
+      "text": "you see is what you get here and indeed"
+    },
+    {
+      "id": "c08114159",
+      "start_s": 8114.159,
+      "end_s": 8116.0,
+      "text": "it needs to be indented and the colon is"
+    },
+    {
+      "id": "c08116000",
+      "start_s": 8116.0,
+      "end_s": 8118.28,
+      "text": "necessary python does not use in the"
+    },
+    {
+      "id": "c08118280",
+      "start_s": 8118.28,
+      "end_s": 8121.0,
+      "text": "same way by Convention as C and C++ and"
+    },
+    {
+      "id": "c08121000",
+      "start_s": 8121.0,
+      "end_s": 8123.04,
+      "text": "Java curly braces to canote blocks"
+    },
+    {
+      "id": "c08123040",
+      "start_s": 8123.04,
+      "end_s": 8125.44,
+      "text": "instead it relies indeed on this"
+    },
+    {
+      "id": "c08125440",
+      "start_s": 8125.44,
+      "end_s": 8127.48,
+      "text": "indentation well let me propose that we"
+    },
+    {
+      "id": "c08127480",
+      "start_s": 8127.48,
+      "end_s": 8129.599,
+      "text": "introduce one other keyword here in"
+    },
+    {
+      "id": "c08129599",
+      "start_s": 8129.599,
+      "end_s": 8131.52,
+      "text": "Python to see exactly how we might"
+    },
+    {
+      "id": "c08131520",
+      "start_s": 8131.52,
+      "end_s": 8133.239,
+      "text": "combine additional thoughts and that's"
+    },
+    {
+      "id": "c08133239",
+      "start_s": 8133.239,
+      "end_s": 8134.84,
+      "text": "going to be literally the word and a"
+    },
+    {
+      "id": "c08134840",
+      "start_s": 8134.84,
+      "end_s": 8137.92,
+      "text": "conjunction of one or two or more"
+    },
+    {
+      "id": "c08137920",
+      "start_s": 8137.92,
+      "end_s": 8139.84,
+      "text": "questions that we might want to ask at"
+    },
+    {
+      "id": "c08139840",
+      "start_s": 8139.84,
+      "end_s": 8142.28,
+      "text": "once and let me propose here that we"
+    },
+    {
+      "id": "c08142280",
+      "start_s": 8142.28,
+      "end_s": 8144.719,
+      "text": "explore this kind of logic by way of"
+    },
+    {
+      "id": "c08144719",
+      "start_s": 8144.719,
+      "end_s": 8146.719,
+      "text": "another program Al together in VSS code"
+    },
+    {
+      "id": "c08146719",
+      "start_s": 8146.719,
+      "end_s": 8148.559,
+      "text": "whereby I'll go ahead now and create a"
+    },
+    {
+      "id": "c08148559",
+      "start_s": 8148.559,
+      "end_s": 8151.679,
+      "text": "new program say called grade. Pi let's"
+    },
+    {
+      "id": "c08151679",
+      "start_s": 8151.679,
+      "end_s": 8153.4,
+      "text": "consider exactly what grade a student"
+    },
+    {
+      "id": "c08153400",
+      "start_s": 8153.4,
+      "end_s": 8155.119,
+      "text": "should get based on their score on an"
+    },
+    {
+      "id": "c08155119",
+      "start_s": 8155.119,
+      "end_s": 8157.4,
+      "text": "exam or a test or a quiz or some other"
+    },
+    {
+      "id": "c08157400",
+      "start_s": 8157.4,
+      "end_s": 8159.0,
+      "text": "assignment like that I'm going to go"
+    },
+    {
+      "id": "c08159000",
+      "start_s": 8159.0,
+      "end_s": 8161.28,
+      "text": "ahead and run code of grade. py to give"
+    },
+    {
+      "id": "c08161280",
+      "start_s": 8161.28,
+      "end_s": 8163.0,
+      "text": "myself a new file and I'm going to go"
+    },
+    {
+      "id": "c08163000",
+      "start_s": 8163.0,
+      "end_s": 8164.52,
+      "text": "ahead and start by just getting the user"
+    },
+    {
+      "id": "c08164520",
+      "start_s": 8164.52,
+      "end_s": 8166.44,
+      "text": "score again on some assignment or test"
+    },
+    {
+      "id": "c08166440",
+      "start_s": 8166.44,
+      "end_s": 8168.119,
+      "text": "or the like and I'm going to store it in"
+    },
+    {
+      "id": "c08168119",
+      "start_s": 8168.119,
+      "end_s": 8170.88,
+      "text": "a variable called score equal the return"
+    },
+    {
+      "id": "c08170880",
+      "start_s": 8170.88,
+      "end_s": 8172.599,
+      "text": "value of the int function which is going"
+    },
+    {
+      "id": "c08172599",
+      "start_s": 8172.599,
+      "end_s": 8174.48,
+      "text": "to convert whatever the user's input is"
+    },
+    {
+      "id": "c08174480",
+      "start_s": 8174.48,
+      "end_s": 8176.8,
+      "text": "when prompted for this score so again"
+    },
+    {
+      "id": "c08176800",
+      "start_s": 8176.8,
+      "end_s": 8178.599,
+      "text": "the user should just Oblige by giving me"
+    },
+    {
+      "id": "c08178599",
+      "start_s": 8178.599,
+      "end_s": 8181.0,
+      "text": "a number like zero or one or two or or"
+    },
+    {
+      "id": "c08181000",
+      "start_s": 8181.0,
+      "end_s": 8182.92,
+      "text": "hopefully much higher than that like 997"
+    },
+    {
+      "id": "c08182920",
+      "start_s": 8182.92,
+      "end_s": 8186.0,
+      "text": "98 99 100 assuming the test or"
+    },
+    {
+      "id": "c08186000",
+      "start_s": 8186.0,
+      "end_s": 8188.32,
+      "text": "assessment is out of 100 percentage"
+    },
+    {
+      "id": "c08188320",
+      "start_s": 8188.32,
+      "end_s": 8189.96,
+      "text": "points now how could I go about"
+    },
+    {
+      "id": "c08189960",
+      "start_s": 8189.96,
+      "end_s": 8193.0,
+      "text": "assigning a grade to the student score"
+    },
+    {
+      "id": "c08193000",
+      "start_s": 8193.0,
+      "end_s": 8195.04,
+      "text": "well in the US it's very commonly the"
+    },
+    {
+      "id": "c08195040",
+      "start_s": 8195.04,
+      "end_s": 8196.8,
+      "text": "case that if you get between a 90 and"
+    },
+    {
+      "id": "c08196800",
+      "start_s": 8196.8,
+      "end_s": 8200.04,
+      "text": "100 that's an A and if it's between an"
+    },
+    {
+      "id": "c08200040",
+      "start_s": 8200.04,
+      "end_s": 8204.12,
+      "text": "80 and a 89 it's a b if it's 70 and 79"
+    },
+    {
+      "id": "c08204120",
+      "start_s": 8204.12,
+      "end_s": 8206.439,
+      "text": "it's a c and so forth all the way down"
+    },
+    {
+      "id": "c08206439",
+      "start_s": 8206.439,
+      "end_s": 8208.76,
+      "text": "to F which should be e but we'll see"
+    },
+    {
+      "id": "c08208760",
+      "start_s": 8208.76,
+      "end_s": 8210.399,
+      "text": "that there's a bit of a jump so how"
+    },
+    {
+      "id": "c08210399",
+      "start_s": 8210.399,
+      "end_s": 8212.0,
+      "text": "might I exess this well I can use"
+    },
+    {
+      "id": "c08212000",
+      "start_s": 8212.0,
+      "end_s": 8213.399,
+      "text": "conditionals and I can ask a few"
+    },
+    {
+      "id": "c08213399",
+      "start_s": 8213.399,
+      "end_s": 8214.76,
+      "text": "questions and then print out the"
+    },
+    {
+      "id": "c08214760",
+      "start_s": 8214.76,
+      "end_s": 8216.679,
+      "text": "student's grade accordingly so let me"
+    },
+    {
+      "id": "c08216679",
+      "start_s": 8216.679,
+      "end_s": 8218.599,
+      "text": "express it like this if the student"
+    },
+    {
+      "id": "c08218599",
+      "start_s": 8218.599,
+      "end_s": 8222.24,
+      "text": "score is greater than or equal to 90 and"
+    },
+    {
+      "id": "c08222240",
+      "start_s": 8222.24,
+      "end_s": 8224.24,
+      "text": "the student score is less than or equal"
+    },
+    {
+      "id": "c08224240",
+      "start_s": 8224.24,
+      "end_s": 8227.16,
+      "text": "to 100 so it's in that range let's go"
+    },
+    {
+      "id": "c08227160",
+      "start_s": 8227.16,
+      "end_s": 8228.96,
+      "text": "ahead and print out that their grade"
+    },
+    {
+      "id": "c08228960",
+      "start_s": 8228.96,
+      "end_s": 8231.719,
+      "text": "shall be in a because they're in the 90s"
+    },
+    {
+      "id": "c08231719",
+      "start_s": 8231.719,
+      "end_s": 8236.359,
+      "text": "above grades range L if the score is"
+    },
+    {
+      "id": "c08236359",
+      "start_s": 8236.359,
+      "end_s": 8238.88,
+      "text": "greater than or equal to 80 and the"
+    },
+    {
+      "id": "c08238880",
+      "start_s": 8238.88,
+      "end_s": 8241.359,
+      "text": "score is less than or equal to say"
+    },
+    {
+      "id": "c08241359",
+      "start_s": 8241.359,
+      "end_s": 8243.679,
+      "text": "89 but here I have some options"
+    },
+    {
+      "id": "c08243679",
+      "start_s": 8243.679,
+      "end_s": 8245.479,
+      "text": "logically I can actually express myself"
+    },
+    {
+      "id": "c08245479",
+      "start_s": 8245.479,
+      "end_s": 8247.08,
+      "text": "in any number of ways and maybe just to"
+    },
+    {
+      "id": "c08247080",
+      "start_s": 8247.08,
+      "end_s": 8248.359,
+      "text": "be a little cleaner I'm going to say in"
+    },
+    {
+      "id": "c08248359",
+      "start_s": 8248.359,
+      "end_s": 8251.8,
+      "text": "score is less than 90 so I'm using less"
+    },
+    {
+      "id": "c08251800",
+      "start_s": 8251.8,
+      "end_s": 8254.12,
+      "text": "than instead of less than or equal to so"
+    },
+    {
+      "id": "c08254120",
+      "start_s": 8254.12,
+      "end_s": 8255.88,
+      "text": "I'm making sure that their boundaries"
+    },
+    {
+      "id": "c08255880",
+      "start_s": 8255.88,
+      "end_s": 8257.679,
+      "text": "between these grades are correct then"
+    },
+    {
+      "id": "c08257679",
+      "start_s": 8257.679,
+      "end_s": 8258.88,
+      "text": "I'm going to go ahead and give the"
+    },
+    {
+      "id": "c08258880",
+      "start_s": 8258.88,
+      "end_s": 8263.0,
+      "text": "student a b if it's in the 80s L if"
+    },
+    {
+      "id": "c08263000",
+      "start_s": 8263.0,
+      "end_s": 8265.639,
+      "text": "score is greater than or equal to 70 and"
+    },
+    {
+      "id": "c08265639",
+      "start_s": 8265.639,
+      "end_s": 8267.719,
+      "text": "the score is less than 80 I'm going to"
+    },
+    {
+      "id": "c08267719",
+      "start_s": 8267.719,
+      "end_s": 8271.519,
+      "text": "go ahead and give them a c l if the"
+    },
+    {
+      "id": "c08271519",
+      "start_s": 8271.519,
+      "end_s": 8274.24,
+      "text": "score is greater than or equal to 60 and"
+    },
+    {
+      "id": "c08274240",
+      "start_s": 8274.24,
+      "end_s": 8276.359,
+      "text": "the score is less than 70 I'm going to"
+    },
+    {
+      "id": "c08276359",
+      "start_s": 8276.359,
+      "end_s": 8278.639,
+      "text": "go ahead and give them a d and here's"
+    },
+    {
+      "id": "c08278639",
+      "start_s": 8278.639,
+      "end_s": 8280.04,
+      "text": "where it's a little anomalous at least"
+    },
+    {
+      "id": "c08280040",
+      "start_s": 8280.04,
+      "end_s": 8282.399,
+      "text": "in some schools here else I'm going to"
+    },
+    {
+      "id": "c08282399",
+      "start_s": 8282.399,
+      "end_s": 8285.12,
+      "text": "go ahead and give them uh an F so we're"
+    },
+    {
+      "id": "c08285120",
+      "start_s": 8285.12,
+      "end_s": 8287.16,
+      "text": "skipping e Al together and we're going"
+    },
+    {
+      "id": "c08287160",
+      "start_s": 8287.16,
+      "end_s": 8289.76,
+      "text": "to give an f instead for the grade so"
+    },
+    {
+      "id": "c08289760",
+      "start_s": 8289.76,
+      "end_s": 8291.559,
+      "text": "that's the catchall and I think"
+    },
+    {
+      "id": "c08291559",
+      "start_s": 8291.559,
+      "end_s": 8293.719,
+      "text": "logically I've gotten this correct at"
+    },
+    {
+      "id": "c08293719",
+      "start_s": 8293.719,
+      "end_s": 8295.12,
+      "text": "least based on where I went to school"
+    },
+    {
+      "id": "c08295120",
+      "start_s": 8295.12,
+      "end_s": 8297.28,
+      "text": "growing up such that it's going to give"
+    },
+    {
+      "id": "c08297280",
+      "start_s": 8297.28,
+      "end_s": 8300.319,
+      "text": "an A or a b or a c or a d else it's"
+    },
+    {
+      "id": "c08300319",
+      "start_s": 8300.319,
+      "end_s": 8302.2,
+      "text": "going to ass assume that you got an F"
+    },
+    {
+      "id": "c08302200",
+      "start_s": 8302.2,
+      "end_s": 8303.84,
+      "text": "well let's try just a few of these here"
+    },
+    {
+      "id": "c08303840",
+      "start_s": 8303.84,
+      "end_s": 8306.639,
+      "text": "let's run python of grade. Pi my score"
+    },
+    {
+      "id": "c08306639",
+      "start_s": 8306.639,
+      "end_s": 8309.08,
+      "text": "is let's let's start strong 100 all"
+    },
+    {
+      "id": "c08309080",
+      "start_s": 8309.08,
+      "end_s": 8311.12,
+      "text": "right I got an A didn't do as well the"
+    },
+    {
+      "id": "c08311120",
+      "start_s": 8311.12,
+      "end_s": 8313.92,
+      "text": "next time maybe it's a 95 still an a"
+    },
+    {
+      "id": "c08313920",
+      "start_s": 8313.92,
+      "end_s": 8316.24,
+      "text": "starting to slip further so I got an 89"
+    },
+    {
+      "id": "c08316240",
+      "start_s": 8316.24,
+      "end_s": 8319.28,
+      "text": "the next time that's now say a b and"
+    },
+    {
+      "id": "c08319280",
+      "start_s": 8319.28,
+      "end_s": 8321.0,
+      "text": "let's say I really had a bad week and"
+    },
+    {
+      "id": "c08321000",
+      "start_s": 8321.0,
+      "end_s": 8324.16,
+      "text": "it's now like a 71 that's now A C or I"
+    },
+    {
+      "id": "c08324160",
+      "start_s": 8324.16,
+      "end_s": 8326.319,
+      "text": "didn't even submited at all that's a an"
+    },
+    {
+      "id": "c08326319",
+      "start_s": 8326.319,
+      "end_s": 8328.24,
+      "text": "F Al together all right so it seems to"
+    },
+    {
+      "id": "c08328240",
+      "start_s": 8328.24,
+      "end_s": 8330.04,
+      "text": "work that's not really an exhaustive"
+    },
+    {
+      "id": "c08330040",
+      "start_s": 8330.04,
+      "end_s": 8331.8,
+      "text": "test but at least based on some sampling"
+    },
+    {
+      "id": "c08331800",
+      "start_s": 8331.8,
+      "end_s": 8334.559,
+      "text": "there my code seems to work as I expect"
+    },
+    {
+      "id": "c08334559",
+      "start_s": 8334.559,
+      "end_s": 8335.96,
+      "text": "but let's see if we can't tighten this"
+    },
+    {
+      "id": "c08335960",
+      "start_s": 8335.96,
+      "end_s": 8337.88,
+      "text": "up it's not wrong it's correct and"
+    },
+    {
+      "id": "c08337880",
+      "start_s": 8337.88,
+      "end_s": 8339.04,
+      "text": "indeed according to my own"
+    },
+    {
+      "id": "c08339040",
+      "start_s": 8339.04,
+      "end_s": 8340.679,
+      "text": "specifications I dare say this code is"
+    },
+    {
+      "id": "c08340679",
+      "start_s": 8340.679,
+      "end_s": 8343.0,
+      "text": "correct but can we tighten it up can we"
+    },
+    {
+      "id": "c08343000",
+      "start_s": 8343.0,
+      "end_s": 8345.24,
+      "text": "reduce the probability of bugs now or"
+    },
+    {
+      "id": "c08345240",
+      "start_s": 8345.24,
+      "end_s": 8346.88,
+      "text": "down the line can we increase the"
+    },
+    {
+      "id": "c08346880",
+      "start_s": 8346.88,
+      "end_s": 8348.719,
+      "text": "readability of it and can we increase"
+    },
+    {
+      "id": "c08348719",
+      "start_s": 8348.719,
+      "end_s": 8350.28,
+      "text": "the efficiency of it can we get the"
+    },
+    {
+      "id": "c08350280",
+      "start_s": 8350.28,
+      "end_s": 8352.8,
+      "text": "computer to have to answer fewer"
+    },
+    {
+      "id": "c08352800",
+      "start_s": 8352.8,
+      "end_s": 8355.24,
+      "text": "questions and still get the same result"
+    },
+    {
+      "id": "c08355240",
+      "start_s": 8355.24,
+      "end_s": 8356.639,
+      "text": "well let's see what we might do let me"
+    },
+    {
+      "id": "c08356639",
+      "start_s": 8356.639,
+      "end_s": 8358.399,
+      "text": "just kind of switch things up if only to"
+    },
+    {
+      "id": "c08358399",
+      "start_s": 8358.399,
+      "end_s": 8359.719,
+      "text": "demonstrate that we can use these"
+    },
+    {
+      "id": "c08359719",
+      "start_s": 8359.719,
+      "end_s": 8362.519,
+      "text": "symbols in different ways is I could say"
+    },
+    {
+      "id": "c08362519",
+      "start_s": 8362.519,
+      "end_s": 8364.76,
+      "text": "as I've done if score is greater than or"
+    },
+    {
+      "id": "c08364760",
+      "start_s": 8364.76,
+      "end_s": 8367.08,
+      "text": "equal to 90 but I can actually do this I"
+    },
+    {
+      "id": "c08367080",
+      "start_s": 8367.08,
+      "end_s": 8368.96,
+      "text": "can flip it around instead of saying"
+    },
+    {
+      "id": "c08368960",
+      "start_s": 8368.96,
+      "end_s": 8372.479,
+      "text": "greater than or equal to let's say 90 is"
+    },
+    {
+      "id": "c08372479",
+      "start_s": 8372.479,
+      "end_s": 8375.559,
+      "text": "less than or equal to score and here"
+    },
+    {
+      "id": "c08375559",
+      "start_s": 8375.559,
+      "end_s": 8378.92,
+      "text": "let's say if 80 is less than or equal to"
+    },
+    {
+      "id": "c08378920",
+      "start_s": 8378.92,
+      "end_s": 8381.08,
+      "text": "score and here"
+    },
+    {
+      "id": "c08381080",
+      "start_s": 8381.08,
+      "end_s": 8383.96,
+      "text": "70 is less than or equal to score and"
+    },
+    {
+      "id": "c08383960",
+      "start_s": 8383.96,
+      "end_s": 8386.599,
+      "text": "then lastly 60 is less than or equal to"
+    },
+    {
+      "id": "c08386599",
+      "start_s": 8386.599,
+      "end_s": 8389.0,
+      "text": "score so it's the same thing logically"
+    },
+    {
+      "id": "c08389000",
+      "start_s": 8389.0,
+      "end_s": 8390.72,
+      "text": "I'm just kind of switching things around"
+    },
+    {
+      "id": "c08390720",
+      "start_s": 8390.72,
+      "end_s": 8392.08,
+      "text": "just like you could do on paper pencil"
+    },
+    {
+      "id": "c08392080",
+      "start_s": 8392.08,
+      "end_s": 8394.479,
+      "text": "if you really wanted but now notice this"
+    },
+    {
+      "id": "c08394479",
+      "start_s": 8394.479,
+      "end_s": 8396.12,
+      "text": "trick and this is not possible for those"
+    },
+    {
+      "id": "c08396120",
+      "start_s": 8396.12,
+      "end_s": 8398.08,
+      "text": "of you who have programmed in C or C++"
+    },
+    {
+      "id": "c08398080",
+      "start_s": 8398.08,
+      "end_s": 8403.8,
+      "text": "or Java or other languages notice what I"
+    }
+  ]
+}

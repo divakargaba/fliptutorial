@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "videoId": "nLRL_NcnK-4",
+  "breakpoints": [
+    {
+      "id": "grade-breakpoint",
+      "windowStartS": 8100,
+      "setupEndS": 8212.0,
+      "firstSpokenRevealS": 8216.679,
+      "firstVisualRevealS": 8217.0,
+      "revealAtS": 8216.679,
+      "pauseAtS": 8214.679,
+      "windowEndS": 8400,
+      "exercise": {
+        "id": "nLRL_NcnK-4-grade",
+        "title": "Turn a score into a letter grade",
+        "statement": "Write get_grade(score) that returns the letter grade for an integer score from 0 to 100: 90 to 100 is \"A\", 80 to 89 is \"B\", 70 to 79 is \"C\", 60 to 69 is \"D\", and anything below 60 is \"F\". Return the letter as a string instead of printing it.",
+        "language": "python",
+        "functionName": "get_grade",
+        "starterCode": "def get_grade(score):\n    pass\n",
+        "conceptTags": [
+          "conditionals"
+        ],
+        "examples": [
+          {
+            "args": [
+              95
+            ],
+            "expected": "A"
+          },
+          {
+            "args": [
+              82
+            ],
+            "expected": "B"
+          }
+        ],
+        "hiddenTests": [
+          {
+            "args": [
+              100
+            ],
+            "expected": "A"
+          },
+          {
+            "args": [
+              90
+            ],
+            "expected": "A"
+          },
+          {
+            "args": [
+              89
+            ],
+            "expected": "B"
+          },
+          {
+            "args": [
+              80
+            ],
+            "expected": "B"
+          },
+          {
+            "args": [
+              70
+            ],
+            "expected": "C"
+          },
+          {
+            "args": [
+              69
+            ],
+            "expected": "D"
+          },
+          {
+            "args": [
+              60
+            ],
+            "expected": "D"
+          },
+          {
+            "args": [
+              59
+            ],
+            "expected": "F"
+          },
+          {
+            "args": [
+              0
+            ],
+            "expected": "F"
+          }
+        ],
+        "referenceSolution": "def get_grade(score):\n    if score >= 90:\n        return \"A\"\n    elif score >= 80:\n        return \"B\"\n    elif score >= 70:\n        return \"C\"\n    elif score >= 60:\n        return \"D\"\n    else:\n        return \"F\"\n",
+        "knownWrongSolution": "def get_grade(score):\n    if score > 90:\n        return \"A\"\n    elif score > 80:\n        return \"B\"\n    elif score > 70:\n        return \"C\"\n    elif score > 60:\n        return \"D\"\n    else:\n        return \"F\"\n"
+      }
+    }
+  ],
+  "revision": "nLRL_NcnK-4-0f3ae41a2cf4b7e5",
+  "approvedDigest": "0f3ae41a2cf4b7e5"
+}

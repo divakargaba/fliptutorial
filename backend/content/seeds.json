@@ -24,6 +24,22 @@
           "endS": 3507
         }
       ]
+    },
+    {
+      "videoId": "nLRL_NcnK-4",
+      "title": "Harvard CS50’s Introduction to Programming with Python – Full University Course",
+      "channel": "freeCodeCamp.org",
+      "url": "https://www.youtube.com/watch?v=nLRL_NcnK-4",
+      "language": "python",
+      "transcriptPath": "transcripts/nLRL_NcnK-4.json",
+      "scanWindows": [
+        {
+          "id": "conditionals-grade",
+          "label": "Lecture 1 - Conditionals (grade.py)",
+          "startS": 8100,
+          "endS": 8400
+        }
+      ]
     }
   ]
 }
