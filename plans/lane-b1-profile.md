@@ -62,3 +62,14 @@ pytest driven by `practice-events.fixture.json` + generated event streams: level
   call, the same question on repeat, and `lookup_refresher` returns the answer for grading. Generated title limit raised
   80 → 100 chars to match A2's validator. Activates once A2's branch is merged to main; no B1 change needed.
 - Waiting on: popup toggle UI (B2) calling the public endpoint.
+
+## Handoffs from the lead (2026-11-08)
+- [x] #29 concept answers: a wrong answer names the misconception behind the pick without revealing the answer
+  (Haiku + leak check + deterministic fallback); a correct answer uses the planner's stored explanation.
+- [x] #34 Test me in every gradable language: extension ExerciseSchema accepts every editor coding language;
+  backend default = every runner-gradable language (python/js/java/cpp today). Live C++ generate + grade.
+- [x] Theory = application (planner handoff): theory and language-neutral sections try a verified Python coding
+  exercise first; questions apply the idea to a new input (MC only with an mcReason, or on the last attempt);
+  private per-choice why-wrong notes + retry hint, served by /v2/answer without a model call. Eval rescore (run 3):
+  coding:concept 59:15 (was 45:29), precision 1.000 unchanged; the 15 left are C#/TypeScript/C/Go code.
+- [ ] Generic stdin/stdout runner for every other Judge0 language (approved, next).

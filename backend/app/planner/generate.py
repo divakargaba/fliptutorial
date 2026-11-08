@@ -14,7 +14,7 @@ import hashlib
 import json
 import logging
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable
 
 from pydantic import BaseModel, Field, ValidationError
@@ -23,7 +23,7 @@ from ..catalog import ApprovedExercise, Example, HiddenTest
 from ..testme import MAX_CODE_CHARS, MAX_STATEMENT, MAX_TITLE, GenOutput, _CheckFailed, _parse_case, check_output
 from ..transcripts import Clip, Transcript, clip
 from .classify import PauseSlot, Section
-from .vocab import QUESTION_STYLES, TIER_GUIDANCE, concept_ids, tier_floor_level
+from .vocab import QUESTION_STYLES, TIER_GUIDANCE, coding_languages, concept_ids, tier_floor_level
 
 logger = logging.getLogger("breakpoint.planner")
 
@@ -51,6 +51,11 @@ class PlannedExercise(ApprovedExercise):
 class ChoiceOut(BaseModel):
     id: str = Field(description='"a", "b", "c", "d" (or "e")')
     text: str
+    mistake: str = Field(default="", description=(
+        "wrong choice only: 3-7 words naming the misconception that leads to it; empty for the correct choice"))
+    whyWrong: str = Field(default="", description=(
+        "wrong choice only: 1-2 sentences on why it does not hold, never naming the correct choice or value; "
+        "empty for the correct choice"))
 
 
 class QuestionOut(BaseModel):
@@ -63,6 +68,11 @@ class QuestionOut(BaseModel):
     explanation: str = Field(description="why the answer is right, for feedback after answering")
     concepts: list[str]
     evidenceCueIds: list[str]
+    retryHint: str = Field(default="", description=(
+        "1 sentence telling a learner who answered wrong what to re-check, without revealing the answer"))
+    mcReason: str = Field(default="", description=(
+        "multiple_choice only: why the idea cannot be applied to a concrete input as short_answer or "
+        "predict_output; empty otherwise"))
 
 
 @dataclass
@@ -86,6 +96,10 @@ class PrivateQuestion:
     explanation: str
     concepts: list[str]
     level: str
+    # Private coaching (never public): {choiceId: {"mistake", "whyWrong"}} for wrong choices, and a
+    # question-level re-check hint. Lane A2's /v2/answer serves these without a model call.
+    choice_notes: dict[str, dict[str, str]] = field(default_factory=dict)
+    retry_hint: str = ""
 
     def public(self) -> dict:
         q: dict[str, Any] = {
@@ -97,12 +111,14 @@ class PrivateQuestion:
         return q
 
     def dump(self) -> dict:
-        return {**self.public(), "choices": self.choices, "answer": self.answer, "explanation": self.explanation}
+        return {**self.public(), "choices": self.choices, "answer": self.answer, "explanation": self.explanation,
+                "choiceNotes": self.choice_notes, "retryHint": self.retry_hint}
 
     @classmethod
     def load(cls, d: dict) -> "PrivateQuestion":
         return cls(d["id"], d["revision"], d["title"], d["style"], d["prompt"], d.get("choices", []),
-                   d["answer"], d.get("explanation", ""), d.get("concepts", []), d["level"])
+                   d["answer"], d.get("explanation", ""), d.get("concepts", []), d["level"],
+                   d.get("choiceNotes") or {}, d.get("retryHint", ""))
 
 
 def item_id(prefix: str, video_id: str, pause: PauseSlot, tier: str) -> str:
@@ -170,9 +186,40 @@ LANG_RULES: dict[str, LangRules] = {
 }
 
 
+LANGUAGE_NEUTRAL = ("pseudocode", "unknown")
+
+
+def coding_language_for(section: Section) -> str | None:
+    """The language a coding exercise for this section is written in, or None (concept question).
+
+    Code in a gradable language is practised in that language. Theory, and code shown only as
+    pseudocode or in no particular language, is practised by implementing the idea in Python.
+    Code in a language we cannot grade yet gets an application question instead.
+    """
+    if section.format == "off_topic":
+        return None
+    if section.language in coding_languages():
+        return section.language
+    if section.format == "theory" or section.language in LANGUAGE_NEUTRAL:
+        return "python"
+    return None
+
+
 def coding_prompt(c: Clip, section: Section, pause: PauseSlot, tier: str, feedback: str | None,
                   language: str = "python") -> str:
     retry = f"\nYour previous answer was rejected: {feedback}. Fix that.\n" if feedback else ""
+    theory = ""
+    if section.format == "theory" or section.language != language:
+        theory = (f"This part teaches the idea as theory, not as {language} code. Make the learner APPLY it: a small "
+                  f"{language} function that carries out one concrete step or the whole idea on a fresh input "
+                  "(e.g. one relaxation step of a shortest-path algorithm, one partition pass, evaluating a "
+                  "recurrence), using only the idea itself, no library that does it for them. Practise THIS idea, "
+                  "not an earlier step of the same topic. The statement says what to compute, never how: no "
+                  "formula, steps or hint that hands over the solution. Answer noExercise if the idea cannot be "
+                  "expressed as a function from inputs to a value, if it is a judgement about behaviour (when "
+                  "an algorithm fails, which approach is faster), or if practising it needs a structured input "
+                  "(a whole graph, table or list of steps) that a few scalar arguments cannot carry; those become "
+                  "a tracing question instead.\n")
     if pause.trigger == "question_posed":
         how = ("The instructor just posed this task to the viewer and has not answered yet. Ask the learner "
                "to solve the same task as a function.")
@@ -199,7 +246,7 @@ def coding_prompt(c: Clip, section: Section, pause: PauseSlot, tier: str, feedba
         "You write one short practice exercise for a learner watching a programming tutorial. The video "
         "is paused here; below is what the instructor said before the pause (nothing after it).\n"
         f"Video title: {c.title}\nSection: {section.title}\nIdea to practise: {pause.idea}\n{how}\n"
-        f"{TIER_GUIDANCE[tier]}\n"
+        f"{theory}{TIER_GUIDANCE[tier]}\n"
         "Rules:\n"
         f"{shape}"
         f"referenceSolution is correct; knownWrongSolution is {runnable} with a plausible logic mistake "
@@ -288,14 +335,18 @@ def question_prompt(c: Clip, section: Section, pause: PauseSlot, tier: str, feed
         f"Video title: {c.title}\nSection: {section.title} (format {section.format}, language {lang})\n"
         f"Idea to check: {pause.idea}\n{TIER_GUIDANCE[tier]}\n"
         "Rules:\n"
-        "- Test understanding of the idea, not recall of the instructor's words. Where it fits, apply it to "
-        "a small concrete or real-world case (trace a few steps, predict a result, pick the right approach).\n"
-        "- style multiple_choice (3-5 choices with ids a, b, c, d, e; exactly one correct; plausible "
-        "distractors based on common misconceptions), predict_output (show a short snippet in the prompt "
-        f"written in {lang}; answer is the exact output) or short_answer (one-sentence answer; answer is a "
-        "model answer).\n"
+        "- The learner must APPLY the idea, not recognise it. Give a NEW small concrete input the video did not "
+        "use and ask for the exact result of applying the idea to it (trace the steps, compute the value, give "
+        "the final state).\n"
+        f"- Prefer predict_output (a short snippet in {lang} in the prompt; answer is its exact output) or "
+        "short_answer (answer is the exact result plus at most one short sentence of working).\n"
+        "- multiple_choice is a last resort, only when the idea truly cannot be applied to a concrete input "
+        "(e.g. a pure definition); then say why in mcReason. It has 3-5 choices with ids a, b, c, d, e, exactly "
+        "one correct, and distractors that each come from a specific misconception. For every wrong choice fill "
+        "mistake (3-7 words) and whyWrong (1-2 sentences, never naming the correct choice or value).\n"
         "- Use only material taught before the pause. prompt <= 700 chars; title <= 80 chars.\n"
         "- explanation: 1-3 sentences on why the answer is right.\n"
+        "- retryHint: 1 sentence on what to re-check after a wrong answer, never revealing the answer.\n"
         f"- concepts from: {', '.join(concept_ids())}.\n"
         "- evidenceCueIds: cue ids (copied from the brackets) where the idea is taught.\n"
         "- status \"noQuestion\" if nothing checkable has been taught.\n"
@@ -303,12 +354,18 @@ def question_prompt(c: Clip, section: Section, pause: PauseSlot, tier: str, feed
     )
 
 
-def check_question(out: QuestionOut, c: Clip, qid: str, revision: str, level: str, fallback: list[str]) -> PrivateQuestion:
+def check_question(out: QuestionOut, c: Clip, qid: str, revision: str, level: str, fallback: list[str],
+                   allow_bare_mc: bool = False) -> PrivateQuestion:
+    """Validate a generated question. Multiple choice needs an mcReason (application is impossible)
+    unless ``allow_bare_mc`` (the last attempt, where MC is the fallback)."""
     if out.status.strip() != "ok":
         raise GenerationFailed("model found nothing to ask")
     style = out.style.strip()
     if style not in QUESTION_STYLES:
         raise _CheckFailed(f"style must be one of {', '.join(QUESTION_STYLES)}")
+    if style == "multiple_choice" and not out.mcReason.strip() and not allow_bare_mc:
+        raise _CheckFailed("make the learner apply the idea: use short_answer or predict_output on a new "
+                           "concrete input (multiple_choice only with an mcReason)")
     title, prompt, answer = out.title.strip(), out.prompt.strip(), out.answer.strip()
     if not title or len(title) > 80:
         raise _CheckFailed("title must be 1-80 chars")
@@ -317,6 +374,7 @@ def check_question(out: QuestionOut, c: Clip, qid: str, revision: str, level: st
     if not answer or len(answer) > 400:
         raise _CheckFailed("answer must be 1-400 chars")
     choices: list[dict] = []
+    notes: dict[str, dict[str, str]] = {}
     if style == "multiple_choice":
         ids = [ch.id.strip().lower() for ch in out.choices]
         texts = [ch.text.strip() for ch in out.choices]
@@ -328,6 +386,11 @@ def check_question(out: QuestionOut, c: Clip, qid: str, revision: str, level: st
             raise _CheckFailed("answer must be one of the choice ids")
         answer = answer.lower()
         choices = [{"id": i, "text": t} for i, t in zip(ids, texts)]
+        # Keep a wrong choice's note only when it is complete and short; A2 checks it for leaks when serving.
+        for i, ch in zip(ids, out.choices):
+            mistake, why = ch.mistake.strip(), ch.whyWrong.strip()
+            if i != answer and mistake and why and len(mistake) <= 80 and len(why) <= 400:
+                notes[i] = {"mistake": mistake, "whyWrong": why}
     cue_ids = {q.id for q in c.cues}
     if not out.evidenceCueIds or any(e not in cue_ids for e in out.evidenceCueIds):
         raise _CheckFailed("evidenceCueIds must be cue ids from the excerpt")
@@ -335,17 +398,18 @@ def check_question(out: QuestionOut, c: Clip, qid: str, revision: str, level: st
     concepts = [x for x in dict.fromkeys(out.concepts) if x in known] or fallback
     if not concepts:
         raise _CheckFailed("concepts must use the listed ids")
+    hint = out.retryHint.strip()
     return PrivateQuestion(qid, revision, title, style, prompt, choices, answer, out.explanation.strip()[:600],
-                           concepts, level)
+                           concepts, level, notes, hint if len(hint) <= 300 else "")
 
 
 async def generate_coding(
     model_call: ModelCall, verify: Verify, transcript: Transcript, video_id: str,
     section: Section, pause: PauseSlot, tier: str,
 ) -> PrivateExercise:
-    language = section.language
-    if language != "python" and language not in LANG_RULES:
-        raise GenerationFailed(f"no coding exercises for {language}")
+    language = coding_language_for(section)
+    if language is None or (language != "python" and language not in LANG_RULES):
+        raise GenerationFailed(f"no coding exercises for {section.language} ({section.format})")
     c = clip_before(transcript, pause)
     ex_id = item_id("pe", video_id, pause, tier)
     feedback: str | None = None
@@ -393,7 +457,8 @@ async def generate_question(
             except ValidationError as exc:
                 raise _CheckFailed("output did not match the schema") from exc
             revision = "r-" + hashlib.sha256(text.encode()).hexdigest()[:12]
-            return check_question(out, c, qid, revision, tier_floor_level(tier), [pause.concept])
+            return check_question(out, c, qid, revision, tier_floor_level(tier), [pause.concept],
+                                  allow_bare_mc=attempt == 2)
         except _CheckFailed as exc:
             logger.info("planner question %s attempt=%d rejected: %s", qid, attempt, exc)
             feedback = str(exc)

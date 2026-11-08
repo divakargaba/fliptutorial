@@ -135,7 +135,11 @@ def test_code_and_mixed_sections_prefer_coding_for_every_trigger(fmt, trigger):
     assert planned_kind(_section(fmt, "python"), _slot(trigger)) == "coding"
 
 
-@pytest.mark.parametrize("fmt,language", [("theory", "python"), ("code", "pseudocode"), ("code", "rust"),
-                                          ("mixed", "unknown")])
-def test_theory_and_unsupported_languages_stay_concept(fmt, language):
-    assert planned_kind(_section(fmt, language), _slot("concept_complete")) == "concept"
+@pytest.mark.parametrize("fmt,language", [("theory", "python"), ("code", "pseudocode"), ("mixed", "unknown")])
+def test_theory_and_language_neutral_sections_apply_the_idea_in_code(fmt, language):
+    # Theory = application: implement the idea (Python when no gradable language is shown).
+    assert planned_kind(_section(fmt, language), _slot("concept_complete")) == "coding"
+
+
+def test_ungradable_code_language_stays_concept():
+    assert planned_kind(_section("code", "rust"), _slot("concept_complete")) == "concept"
