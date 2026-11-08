@@ -5,6 +5,8 @@ import { HintsContext, type AnalysisState } from '../hints';
 import { flushDraft, loadDraft, saveDraft } from '../drafts';
 import { PythonEditor } from './PythonEditor';
 import { TestMeContext } from '../test-me';
+import type { FeedbackResult, LevelId } from '../v2/types';
+import { FeedbackCard, LevelChip, LevelUp } from './v2';
 import { formatCall, formatTimestamp, formatValue, functionName, richText } from './format';
 
 /** How long the solved moment stays on screen before the video resumes on its own. */
@@ -32,6 +34,12 @@ export type PracticePanelProps = {
   holdMs?: number;
   /** Efficiency review of the passing submission (content-script driven). */
   analysis?: AnalysisState | null;
+  /** Optional v2 presentation; caller keeps feedback paired with its submitted code. */
+  conceptLevels?: { concept: string; level: LevelId }[];
+  levelUp?: { concept: string; level: LevelId } | null;
+  feedback?: { result: FeedbackResult; submittedCode: string } | null;
+  /** v2 keeps success feedback visible until the learner explicitly resumes. */
+  manualResume?: boolean;
 };
 
 export function PracticePanel(props: PracticePanelProps) {
@@ -109,8 +117,10 @@ function Panel(props: PracticePanelProps & { draftKey: string }) {
     </header>
 
     {aiGenerated && <p className="bp-generated-label bp-generated-panel">AI-generated practice</p>}
+    {!!props.conceptLevels?.length && <div className="bp-v2 bp-v2-panel-levels">{props.conceptLevels.map(item => <LevelChip key={item.concept} {...item} />)}</div>}
+    {props.levelUp && <div className="bp-v2-panel-levels"><LevelUp {...props.levelUp} /></div>}
 
-    {solved ? <Solved heading={heading} result={result} canResume={props.canResume} ownsPause={props.ownsPause} analysis={props.analysis ?? null}
+    {solved ? <Solved heading={heading} result={result} canResume={props.canResume} ownsPause={props.ownsPause} manualResume={props.manualResume ?? false} analysis={props.analysis ?? null}
       resumeAtS={props.breakpoint.pauseAtS} holdMs={props.holdMs ?? SOLVED_HOLD_MS} onResume={props.onResume} /> : <>
       <div className="bp-body">
         <div className="bp-intro bp-stagger">
@@ -164,6 +174,7 @@ function Panel(props: PracticePanelProps & { draftKey: string }) {
         </button>
       </footer>
     </>}
+    {props.feedback && <div className="bp-v2-panel-feedback"><FeedbackCard feedback={props.feedback.result} code={props.feedback.submittedCode} /></div>}
   </section>;
 }
 
@@ -230,9 +241,10 @@ function Results({ attempt, lastMode, result, error, coach }: {
   return <div className="bp-results" aria-live="polite" aria-atomic="true">{body}</div>;
 }
 
-function Solved({ heading, result, canResume, ownsPause, resumeAtS, holdMs, onResume, analysis }: {
+function Solved({ heading, result, canResume, ownsPause, manualResume, resumeAtS, holdMs, onResume, analysis }: {
   heading: React.RefObject<HTMLHeadingElement | null>; result: SubmissionResponse | null; canResume: boolean;
   ownsPause: boolean;
+  manualResume: boolean;
   resumeAtS: number; holdMs: number; onResume(): void; analysis: AnalysisState | null;
 }) {
   const rows = result?.results ?? [];
@@ -256,6 +268,9 @@ function Solved({ heading, result, canResume, ownsPause, resumeAtS, holdMs, onRe
     {review && !review.optimal && <Efficiency review={review} />}
     {canResume ? <>
       <p className="bp-note">The browser didn’t resume playback.</p>
+      <button type="button" className="bp-button bp-primary bp-wide" onClick={onResume}><Play size={14} aria-hidden="true" />Resume video</button>
+    </> : manualResume && ownsPause ? <>
+      <p className="bp-note">Review your feedback, then continue when you’re ready.</p>
       <button type="button" className="bp-button bp-primary bp-wide" onClick={onResume}><Play size={14} aria-hidden="true" />Resume video</button>
     </> : !ownsPause ? <>
       <p className="bp-note">Video stayed paused where you left it</p>
