@@ -20,17 +20,16 @@
   "skills": [
     {
       "concept": "react-state",
-      "reason": "React is a top web framework, and TypeScript is now #1 on GitHub",
+      "reason": "One of the most-used web frameworks",
       "videoUrl": "https://www.youtube.com/watch?v=O6P86uwfdR0",
       "videoTitle": "Learn useState In 15 Minutes - React Hooks Explained (Web Dev Simplified)",
       "sourceIds": [
-        "so-2025",
-        "octoverse-2025"
+        "so-2025"
       ]
     },
     {
       "concept": "http-apis",
-      "reason": "Back-end API skills are rising; FastAPI jumped 5 points in 2025",
+      "reason": "FastAPI usage grew 5 points in a year",
       "videoUrl": "https://www.youtube.com/watch?v=GZvSYJDk-us",
       "videoTitle": "APIs for Beginners - How to use an API (freeCodeCamp)",
       "sourceIds": [
@@ -39,7 +38,7 @@
     },
     {
       "concept": "sql-joins",
-      "reason": "SQL is a top language at work, and joins answer most data questions",
+      "reason": "SQL is the 3rd most-used language",
       "videoUrl": "https://www.youtube.com/watch?v=HXV3zeQKqGY",
       "videoTitle": "SQL Tutorial - Full Database Course for Beginners (freeCodeCamp)",
       "sourceIds": [

@@ -14,7 +14,13 @@ from .engine import iso
 if TYPE_CHECKING:
     from .store import ProfileStore
 
-SEED_VERSION = 2  # bump when the seed plans change; existing local DBs reseed their seed-* events
+SEED_VERSION = 2
+
+# Contact links seeded test accounts chose to share (demo data; real accounts would set these themselves).
+SEED_CONTACTS: dict[str, dict[str, str]] = {
+    "test-ben": {"github": "https://github.com/ben-builds", "discord": "ben.builds"},
+    "test-cam": {"linkedin": "https://www.linkedin.com/in/cam-frontend", "github": "https://github.com/cam-ui"},
+}  # bump when the seed plans change; existing local DBs reseed their seed-* events
 
 # (concept, passes, exercise level, days since last pass, videos)
 Plan = list[tuple[str, int, str, float, list[str]]]

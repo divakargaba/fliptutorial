@@ -546,3 +546,11 @@ def test_award_for_a_failure_is_small_and_unknown_event_is_404(empty):
     missing = empty.get("/v2/profile/test-x/award/not-delivered-yet")
     assert missing.status_code == 404 and missing.json()["error"]["code"] == "EVENT_NOT_FOUND"
     assert empty.get("/v2/profile/nobody/award/f1").status_code == 404  # other accounts never see it
+
+
+def test_contacts_are_optional_and_private_accounts_hidden(seeded):
+    ben = seeded.get("/v2/profile/test-ben/contacts").json()
+    assert ben["accountId"] == "test-ben" and ben["github"].startswith("https://") and ben["discord"]
+    assert seeded.get("/v2/profile/test-dee/contacts").json() == {"accountId": "test-dee"}
+    assert seeded.get("/v2/profile/test-eli/contacts").status_code == 404
+    assert seeded.get("/v2/profile/nobody/contacts").status_code == 404

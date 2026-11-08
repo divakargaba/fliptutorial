@@ -120,11 +120,11 @@ test('v2 profile switches accounts, preserves settings and recovers an API failu
   await page.getByLabel('Viewing as').selectOption('test-ben');
   await expect(page.getByRole('heading', { name: 'Ben', exact: true, level: 1 })).toBeVisible();
   await page.getByRole('button', { name: 'Settings' }).click();
-  await page.getByLabel('Pause frequency').selectOption('many');
+  await page.getByRole('radio', { name: 'More' }).click();
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Ben', exact: true, level: 1 })).toBeVisible();
   await page.getByRole('button', { name: 'Settings' }).click();
-  await expect(page.getByLabel('Pause frequency')).toHaveValue('many');
+  await expect(page.getByRole('radio', { name: 'More' })).toHaveAttribute('aria-checked', 'true');
 });
 
 test('v2 Practice later stays under More and supports keyboard dismissal', async ({ page }) => {
@@ -176,11 +176,12 @@ for (const theme of ['dark', 'light']) test(`v2 ${theme} showcase captures every
 
 for (const theme of ['dark', 'light']) test(`v2 ${theme} text contrast meets 4.5 to 1`, async ({ page }) => {
   await page.goto(`/tests/showcase/v2.html?state=profile&theme=${theme}`);
+  // Profile rows: title (h3) and tertiary meta text on the group surface.
   const ratios = await page.locator('.bp-v2-card').first().evaluate(card => {
     const rgb = (value: string) => value.match(/[\d.]+/g)!.slice(0, 3).map(Number);
     const luminance = (color: number[]) => color.map(value => { const c = value / 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; }).reduce((sum, value, index) => sum + value * [0.2126, 0.7152, 0.0722][index]!, 0);
     const bg = luminance(rgb(getComputedStyle(card).backgroundColor));
-    return ['h2', 'small'].map(selector => {
+    return [card.querySelector('h2') ? 'h2' : 'h3', card.querySelector('small') ? 'small' : '.bp-pf-meta'].map(selector => {
       const fg = luminance(rgb(getComputedStyle(card.querySelector(selector)!).color));
       return (Math.max(bg, fg) + 0.05) / (Math.min(bg, fg) + 0.05);
     });

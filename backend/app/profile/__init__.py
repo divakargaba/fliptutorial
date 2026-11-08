@@ -142,6 +142,21 @@ def profile(account_id: str, now: str | None = Query(default=None)) -> JSONRespo
     return JSONResponse(build_profile(store, acct, when))
 
 
+@router.get("/profile/{account_id}/contacts")
+def contacts(account_id: str) -> JSONResponse:
+    """Optional contact links a public account chose to share: {accountId, linkedin?, discord?, github?}.
+    Kept off the frozen public-profile shape; 404 for unknown or private accounts."""
+    store = get_store()
+    acct = _account_or_404(store, account_id)
+    if isinstance(acct, JSONResponse):
+        return acct
+    if not acct["public"]:
+        return _error(404, "PRIVATE_ACCOUNT", f"account {account_id!r} has a private profile")
+    from .seed import SEED_CONTACTS
+
+    return JSONResponse({"accountId": account_id, **SEED_CONTACTS.get(account_id, {})})
+
+
 @router.get("/profile/{account_id}/public")
 def public_profile(account_id: str, now: str | None = Query(default=None)) -> JSONResponse:
     """Public profile view: returns 404 for unknown or private accounts."""
