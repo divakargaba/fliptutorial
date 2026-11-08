@@ -31,7 +31,7 @@ work, allowed tools, data use, sponsor requirements and submission format.
 - Smallest end-to-end user journey: Open the demo YouTube link, watch until the auto-pause, write Python in the panel, submit, see the result, and the video resumes.
 - One must-have user journey: Badge appears → video pauses at the breakpoint → learner writes code → Run shows failures → learner fixes code → Submit passes → video resumes from the paused frame → learner compares their solution with the instructor's.
 - Explicitly out of scope: Accounts, public portfolios, live preparation of arbitrary videos, non-Python runtimes, Chrome Web Store publishing, mobile, and database/cloud hosting.
-- Real data vs seeded/demo data: Exercises are reviewed and published from real freeCodeCamp transcripts using the Gemini-powered prep pipeline. Grading runs against live Judge0 CE. No simulated output.
+- Real data vs seeded/demo data: Exercises are reviewed and published from real freeCodeCamp transcripts using the Claude-powered (Anthropic API) prep pipeline. Grading runs against live Judge0 CE. No simulated output.
 
 ## Readiness before the event
 

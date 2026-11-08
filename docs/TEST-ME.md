@@ -7,7 +7,7 @@ owners are in `PLAN.md` → "Test me" feature; wire contract in `contracts/READM
 
 A **Test me** button next to the Breakpoint badge on any captioned Python tutorial,
 including videos we never prepared. Pressing it pauses the video. The backend takes
-the captions spoken up to that moment, has Gemini write one coding exercise about
+the captions spoken up to that moment, has Claude (Anthropic API) write one coding exercise about
 what was just taught, checks it, and serves it in the same practice panel. Grading
 reuses `POST /v1/submissions` and Judge0. Phase 1 is a coding exercise only; a short
 quiz is phase 2 (T8/T9) and starts only after T7 passes.
@@ -22,7 +22,7 @@ quiz is phase 2 (T8/T9) and starts only after T7 passes.
 3. Every generated screen says **"AI-generated practice"**.
 4. Captions are fetched and cached at runtime (`backend/app/transcripts.py`), built
    from the D1/P1 draft scripts.
-5. Uses the team Gemini key (`GEMINI_API_KEY` in `backend/.env`), capped at
+5. Uses an Anthropic key (`ANTHROPIC_API_KEY` in the gitignored `backend/.env`), capped at
    **10 sets per minute**, with a cache in front. Cache hits are free.
 6. Enters the demo only after **3 clean runs on a video we never prepared** (T7).
 
@@ -41,7 +41,7 @@ content script ──testMe{videoId,timestampS}──▶ background (20 s timeou
   │                     │                           ≥180 s, ≤900 s / 12k chars lookback
   │                     ▼
   │              testme.generate(clip, verify)   ── set cache (videoId + last cue id)
-  │                     │  rate limit 10/min → Gemini structured output
+  │                     │  rate limit 10/min → Claude structured output
   │                     │  → rule + concept checks → verify in Judge0 (grader, T3)
   │                     │  → one retry on a failed check if time remains
   │                     ▼
@@ -66,8 +66,8 @@ Errors (API error shape `{ error: { code, message, retryable }, requestId }`):
 | `NO_CAPTIONS` | 404 | no | No English caption track, or it is empty |
 | `NOT_PYTHON` | 422 | no | The tutorial so far is not Python code |
 | `TOO_EARLY` | 422 | no | Under 180 s of transcript before `timestampS` |
-| `GENERATOR_UNAVAILABLE` | 503 | yes | No key, Gemini/YouTube error, no valid exercise after retry, Judge0 check unavailable |
-| `GENERATOR_TIMEOUT` | 504 | yes | The whole generation (Gemini + Judge0 checks) exceeded its budget |
+| `GENERATOR_UNAVAILABLE` | 503 | yes | No key, Anthropic/YouTube error, no valid exercise after retry, Judge0 check unavailable |
+| `GENERATOR_TIMEOUT` | 504 | yes | The whole generation (model call + Judge0 checks) exceeded its budget |
 | `SET_EXPIRED` | 410 | no | `/v1/submissions` for a set past its TTL |
 | `BUSY` | 429 | yes | Over 10 new sets in the last 60 s (existing code) |
 
@@ -77,7 +77,7 @@ Module error codes map to these: `transcripts` raises `NO_CAPTIONS`, `TOO_EARLY`
 `GENERATOR_TIMEOUT` and `BUSY`.
 
 Time budget: the extension waits 20 s, so the backend budget is 18 s end to end
-(caption fetch ≈1–2 s cold, Gemini ≈3–8 s, Judge0 checks ≈2–5 s).
+(caption fetch ≈1–2 s cold, model call ≈3–10 s, Judge0 checks ≈2–5 s).
 
 ## Transcripts (`backend/app/transcripts.py`, T1)
 
@@ -97,7 +97,8 @@ Time budget: the extension waits 20 s, so the backend budget is 18 s end to end
 - Prompt: the clipped cues with ids, video title, and rules: one self-contained
   beginner Python function exercise using only concepts already taught in the clip;
   say `language` + evidence; return `notPython` / `noExercise` instead of inventing.
-- Structured output (Gemini `response_schema`): title, statement, functionName,
+- Structured output (Anthropic `output_config.format` JSON schema built from the
+  `GenOutput` Pydantic model by `strict_schema`): title, statement, functionName,
   starterCode, referenceSolution, knownWrongSolution, examples/hiddenTests as JSON
   strings (`argsJson`, `expectedJson`), conceptTags, conceptEvidenceCueIds.
 - Rule checks (no code is executed locally): Python only; identifier function name;
@@ -116,19 +117,17 @@ Time budget: the extension waits 20 s, so the backend budget is 18 s end to end
   requests for the same key share one generation. `get_set(setId)` returns the
   private set or `None` after expiry (→ `SET_EXPIRED`).
 - Rate limit: 10 new sets per rolling 60 s (cache hits don't count) → `BUSY`.
-- Model: `GEMINI_TESTME_MODEL`, default `gemini-2.5-flash`, temperature 0.2, thinking
-  budget `GEMINI_TESTME_THINKING` (default 1024; -1 leaves it to the model). With
-  thinking off, live runs gave wrong solutions with syntax errors, or ones that
-  passed every test. `gemini-2.5-flash` on the free tier is 5 req/min, 20 req/day;
-  cache hits are free, so 20/day covers T7's ~6-12 generations.
-- Live results 2026-11-08 (`eWRfhZUzrAc`, never prepared): Judge0-verified sets in
-  13.1 s and 18.4 s (2.5-flash). `gemini-flash-latest` latency varied from 3.1 s to
-  over 200 s with 503 "high demand" errors, so many requests end in
-  `GENERATOR_TIMEOUT`. This latency is the main risk for T7.
+- Model: `ANTHROPIC_TESTME_MODEL` (e.g. `claude-haiku-5-5` for speed), else
+  `ANTHROPIC_MODEL`, else `claude-sonnet-5-5`; max 4096 output tokens. The SDK's own
+  retries are off (`max_retries=0`, timeout = the 18 s budget) so the budget holds;
+  one manual retry on a fast 5xx/529 (overloaded). A `max_tokens` cut-off is
+  `GENERATOR_UNAVAILABLE`.
+- (Gemini history, before A1: `gemini-2.5-flash` gave Judge0-verified sets in 13.1 s
+  and 18.4 s on `eWRfhZUzrAc`; `gemini-flash-latest` hit 503s and timeouts.)
 - The output also names the wrong solution's mistake (`wrongMistake`) and a hidden
-  test it fails (`wrongFailsOnArgsJson`, which must match one of the hidden tests).
-- A provider 429 (quota) maps to `BUSY`. The team key's free tier allows **5
-  requests/min per model** on `gemini-2.5-flash`, which is below the 10 sets/min cap.
+  test it fails (`wrongFailsOnArgsJson`; only a hint, logged if it matches no hidden
+  test — the Judge0 verify step is the real check).
+- A provider 429 (rate limit) maps to `BUSY`.
 
 ## UI (T5 @abdullahwarv2, T6 @reyanshBadhwar26)
 
@@ -144,7 +143,7 @@ retryable codes offer "Try again".
   parsing, ids, overlap clipping, track choice, HTML fallback, `NO_CAPTIONS` (no
   track, non-English only, empty), retryable network/malformed errors not cached,
   TTLs, eviction, shared in-flight fetch, clip bounds, `TOO_EARLY`, invalid input.
-- T2 `backend/tests/test_testme.py` (stubbed Gemini + stubbed verify): valid set,
+- T2 `backend/tests/test_testme.py` (stubbed Anthropic client + stubbed verify): valid set,
   every rule and concept check, `NOT_PYTHON`, timeout, provider error, retry then
   success, verify failure, cache hit without a model call, TTL expiry, rate limit,
   hidden data absent from the public shape.

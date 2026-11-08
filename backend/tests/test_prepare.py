@@ -1,4 +1,4 @@
-"""Prep pipeline tests (PRD §8 prep rows). Gemini is always stubbed."""
+"""Prep pipeline tests (PRD §8 prep rows). The Anthropic model is always stubbed."""
 
 from __future__ import annotations
 
@@ -238,9 +238,64 @@ def test_provider_failure(workspace):
 
 def test_missing_key_is_provider_error(monkeypatch, tmp_path):
     monkeypatch.setattr(prepare, "BACKEND_DIR", tmp_path)
-    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     with pytest.raises(PrepError) as e:
-        prepare.gemini_detector()
+        prepare.anthropic_detector()
+    assert e.value.code == "PREP_PROVIDER_ERROR"
+
+
+def _fake_anthropic(monkeypatch, tmp_path, outcome, stop_reason="end_turn"):
+    import types as pytypes
+
+    import anthropic
+
+    calls = []
+
+    class Messages:
+        def create(self, **kw):
+            calls.append(kw)
+            if isinstance(outcome, BaseException):
+                raise outcome
+            block = pytypes.SimpleNamespace(type="text", text=outcome)
+            return pytypes.SimpleNamespace(content=[block], stop_reason=stop_reason)
+
+    monkeypatch.setattr(anthropic, "Anthropic", lambda **kw: pytypes.SimpleNamespace(messages=Messages()))
+    monkeypatch.setattr(prepare, "BACKEND_DIR", tmp_path)  # never read the real backend/.env
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-only")
+    return calls
+
+
+def test_anthropic_detector_structured_output(monkeypatch, tmp_path, workspace):
+    calls = _fake_anthropic(monkeypatch, tmp_path, json.dumps({"candidates": [_candidate()]}))
+    monkeypatch.setenv("ANTHROPIC_MODEL", "claude-sonnet-5-5")
+    out = run_scan(workspace, prepare.anthropic_detector())
+    [cand] = json.loads(out.read_text(encoding="utf-8"))["candidates"]
+    assert cand["status"] == "candidate"
+    kw = calls[0]
+    assert kw["model"] == "claude-sonnet-5-5"
+    fmt = kw["output_config"]["format"]
+    assert fmt["type"] == "json_schema"
+    item = fmt["schema"]["properties"]["candidates"]["items"]
+    assert item["additionalProperties"] is False
+    assert set(item["required"]) == set(prepare.ProviderCandidate.model_fields)
+
+
+def test_anthropic_detector_default_model(monkeypatch, tmp_path):
+    calls = _fake_anthropic(monkeypatch, tmp_path, '{"candidates": []}')
+    monkeypatch.delenv("ANTHROPIC_MODEL", raising=False)
+    prepare.anthropic_detector()("prompt")
+    assert calls[0]["model"] == "claude-sonnet-5-5"
+
+
+def test_anthropic_detector_errors_are_provider_errors(monkeypatch, tmp_path):
+    _fake_anthropic(monkeypatch, tmp_path, RuntimeError("network down test-only"))
+    with pytest.raises(PrepError) as e:
+        prepare.anthropic_detector()("prompt")
+    assert e.value.code == "PREP_PROVIDER_ERROR" and "test-only" not in e.value.message
+
+    _fake_anthropic(monkeypatch, tmp_path, '{"candidates": [', stop_reason="max_tokens")
+    with pytest.raises(PrepError) as e:
+        prepare.anthropic_detector()("prompt")
     assert e.value.code == "PREP_PROVIDER_ERROR"
 
 

@@ -1,4 +1,4 @@
-"""Offline tests for app.testme with a stubbed Gemini and a stubbed Judge0 verify."""
+"""Offline tests for app.testme with a stubbed Anthropic model and a stubbed Judge0 verify."""
 
 from __future__ import annotations
 
@@ -268,7 +268,7 @@ def test_verify_exception_propagates_for_endpoint_mapping():
 
 
 def test_provider_error_is_generator_unavailable():
-    model = StubModel(exc=TestMeError("GENERATOR_UNAVAILABLE", "Gemini call failed", True))
+    model = StubModel(exc=TestMeError("GENERATOR_UNAVAILABLE", "Anthropic call failed", True))
     with pytest.raises(TestMeError) as e:
         run(gen(model).generate(CLIP, ok_verify()))
     assert e.value.code == "GENERATOR_UNAVAILABLE"
@@ -281,67 +281,95 @@ def test_timeout():
     assert e.value.code == "GENERATOR_TIMEOUT" and e.value.retryable
 
 
-def test_provider_quota_is_busy(monkeypatch):
+def _fake_anthropic(monkeypatch, outcomes, stop_reason="end_turn"):
+    """Patch anthropic.AsyncAnthropic; each messages.create pops the next outcome
+    (an exception, or the text of a structured-output response)."""
     import types as pytypes
 
-    from app import testme
-
-    class QuotaError(Exception):
-        code = 429
-
-    class Models:
-        async def generate_content(self, **kw):
-            raise QuotaError("429 RESOURCE_EXHAUSTED")
-
-    class Client:
-        def __init__(self, api_key):
-            self.aio = pytypes.SimpleNamespace(models=Models())
-
-    import google.genai as real
-
-    monkeypatch.setattr(real, "Client", Client)
-    monkeypatch.setenv("GEMINI_API_KEY", "test-only")
-    with pytest.raises(TestMeError) as e:
-        run(testme.gemini_model_call("gemini-2.5-flash")("prompt"))
-    assert e.value.code == "BUSY" and e.value.retryable
-    assert "test-only" not in e.value.message
-
-
-def _fake_genai(monkeypatch, outcomes):
-    """Patch genai.Client; each generate_content pops the next outcome (exception or text)."""
-    import types as pytypes
+    import anthropic
 
     calls = []
 
-    class Models:
-        async def generate_content(self, **kw):
+    class Messages:
+        async def create(self, **kw):
             calls.append(kw)
             o = outcomes.pop(0)
             if isinstance(o, BaseException):
                 raise o
-            return pytypes.SimpleNamespace(text=o)
+            block = pytypes.SimpleNamespace(type="text", text=o)
+            return pytypes.SimpleNamespace(content=[block], stop_reason=stop_reason)
 
     class Client:
-        def __init__(self, api_key):
-            self.aio = pytypes.SimpleNamespace(models=Models())
+        def __init__(self, api_key, **kw):
+            assert kw.get("max_retries") == 0  # SDK retries would blow the budget
+            self.messages = Messages()
 
-    import google.genai as real
-
-    monkeypatch.setattr(real, "Client", Client)
-    monkeypatch.setenv("GEMINI_API_KEY", "test-only")
+    monkeypatch.setattr(anthropic, "AsyncAnthropic", Client)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-only")
     return calls
 
 
-class _Overloaded(Exception):
-    code = 503
+class _Status(Exception):
+    def __init__(self, status_code):
+        super().__init__(f"HTTP {status_code}")
+        self.status_code = status_code
+
+
+def test_structured_output_request(monkeypatch):
+    from app import testme
+
+    calls = _fake_anthropic(monkeypatch, ['{"ok": 1}'])
+    assert run(testme.anthropic_model_call("claude-haiku-5-5")("prompt")) == '{"ok": 1}'
+    kw = calls[0]
+    assert kw["model"] == "claude-haiku-5-5"
+    assert kw["messages"] == [{"role": "user", "content": "prompt"}]
+    fmt = kw["output_config"]["format"]
+    assert fmt["type"] == "json_schema"
+    schema = fmt["schema"]
+    assert schema["additionalProperties"] is False
+    assert set(schema["required"]) == set(testme.GenOutput.model_fields)
+    case = schema["properties"]["examples"]["items"]
+    assert case["required"] == ["argsJson", "expectedJson"] and case["additionalProperties"] is False
+    assert "$ref" not in str(schema)
+
+
+def test_model_env_resolution(monkeypatch):
+    from app import testme
+
+    monkeypatch.delenv("ANTHROPIC_TESTME_MODEL", raising=False)
+    monkeypatch.delenv("ANTHROPIC_MODEL", raising=False)
+    assert testme.resolve_model() == "claude-sonnet-5-5"
+    monkeypatch.setenv("ANTHROPIC_MODEL", "claude-sonnet-5-5")
+    assert testme.resolve_model() == "claude-sonnet-5-5"
+    monkeypatch.setenv("ANTHROPIC_TESTME_MODEL", "claude-haiku-5-5")
+    assert testme.resolve_model() == "claude-haiku-5-5"
+
+
+def test_provider_rate_limit_is_busy(monkeypatch):
+    from app import testme
+
+    _fake_anthropic(monkeypatch, [_Status(429)])
+    with pytest.raises(TestMeError) as e:
+        run(testme.anthropic_model_call("m")("prompt"))
+    assert e.value.code == "BUSY" and e.value.retryable
+    assert "test-only" not in e.value.message
+
+
+def test_truncated_output_is_unavailable(monkeypatch):
+    from app import testme
+
+    _fake_anthropic(monkeypatch, ['{"status": "o'], stop_reason="max_tokens")
+    with pytest.raises(TestMeError) as e:
+        run(testme.anthropic_model_call("m")("prompt"))
+    assert e.value.code == "GENERATOR_UNAVAILABLE"
 
 
 def test_server_error_retries_once_then_succeeds(monkeypatch):
     from app import testme
 
     monkeypatch.setattr(testme, "SERVER_RETRY_BACKOFF_S", 0)
-    calls = _fake_genai(monkeypatch, [_Overloaded("503 UNAVAILABLE"), '{"ok": 1}'])
-    assert run(testme.gemini_model_call("gemini-2.5-flash")("prompt")) == '{"ok": 1}'
+    calls = _fake_anthropic(monkeypatch, [_Status(529), '{"ok": 1}'])
+    assert run(testme.anthropic_model_call("m")("prompt")) == '{"ok": 1}'
     assert len(calls) == 2
 
 
@@ -349,20 +377,30 @@ def test_server_error_twice_is_unavailable(monkeypatch):
     from app import testme
 
     monkeypatch.setattr(testme, "SERVER_RETRY_BACKOFF_S", 0)
-    calls = _fake_genai(monkeypatch, [_Overloaded("503"), _Overloaded("503")])
+    calls = _fake_anthropic(monkeypatch, [_Status(529), _Status(500)])
     with pytest.raises(TestMeError) as e:
-        run(testme.gemini_model_call("gemini-2.5-flash")("prompt"))
+        run(testme.anthropic_model_call("m")("prompt"))
     assert e.value.code == "GENERATOR_UNAVAILABLE" and e.value.retryable
     assert len(calls) == 2
+
+
+def test_client_error_is_not_retried(monkeypatch):
+    from app import testme
+
+    calls = _fake_anthropic(monkeypatch, [_Status(400), '{"ok": 1}'])
+    with pytest.raises(TestMeError) as e:
+        run(testme.anthropic_model_call("m")("prompt"))
+    assert e.value.code == "GENERATOR_UNAVAILABLE"
+    assert len(calls) == 1
 
 
 def test_slow_server_error_is_not_retried(monkeypatch):
     from app import testme
 
     monkeypatch.setattr(testme, "SERVER_RETRY_MAX_ELAPSED_S", -1)
-    calls = _fake_genai(monkeypatch, [_Overloaded("503"), '{"ok": 1}'])
+    calls = _fake_anthropic(monkeypatch, [_Status(529), '{"ok": 1}'])
     with pytest.raises(TestMeError) as e:
-        run(testme.gemini_model_call("gemini-2.5-flash")("prompt"))
+        run(testme.anthropic_model_call("m")("prompt"))
     assert e.value.code == "GENERATOR_UNAVAILABLE"
     assert len(calls) == 1
 
@@ -370,9 +408,9 @@ def test_slow_server_error_is_not_retried(monkeypatch):
 def test_missing_key_is_unavailable(monkeypatch):
     from app import testme
 
-    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.setattr("dotenv.load_dotenv", lambda *a, **k: False)
-    call = testme.gemini_model_call("stub")
+    call = testme.anthropic_model_call("stub")
     with pytest.raises(TestMeError) as e:
         run(call("prompt"))
     assert e.value.code == "GENERATOR_UNAVAILABLE"

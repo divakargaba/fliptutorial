@@ -42,7 +42,7 @@ These opt-in checks cover generation pause/loading, setId grading, generated lab
 through failure and Solved, rejected-resume recovery, six API generation errors,
 explicit retries, cancellation/navigation/native playback during generation, and
 expired-set draft recovery through Chrome storage. They use a local fixture API,
-not FastAPI, captions, Gemini or Judge0. The normal suite skips these opt-in cases
+not FastAPI, captions, the Anthropic API or Judge0. The normal suite skips these opt-in cases
 and checks that the default build hides Test me. T7 owns live provider validation.
 
 The rejected-resume case injects a rejected `play()` only in the content script's

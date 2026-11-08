@@ -5,7 +5,7 @@
 
 1. cache lookup (videoId + last cue id + prompt version; 30 min TTL) — free;
 2. rate limit: 10 new sets per rolling 60 s, else ``BUSY``;
-3. Gemini structured output (or an injected ``model_call`` in tests);
+3. Anthropic structured output (or an injected ``model_call`` in tests);
 4. rule and concept checks (code is only ``compile()``d, never run here);
 5. ``verify(exercise)`` — the Judge0 check (T3): reference passes every case and
    the known-wrong solution fails at least one;
@@ -48,19 +48,15 @@ logger = logging.getLogger("breakpoint.testme")
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 PROMPT_VERSION = "tm1"
-# gemini-2.5-flash is the recommended default: it supports thinking (needed for
-# quality) and its free-tier quota (5/min, 20/day) covers T7's ~6-12 generations
-# since cache hits are free.  gemini-flash-latest has more headroom but returns
-# 503 under load and lacks thinking support.
-DEFAULT_MODEL = "gemini-2.5-flash"
-# Thinking budget for 2.5 models: with 0 the model ignored "wrong solution must be
-# valid Python" and "must fail a hidden test" in live runs.
-THINKING_BUDGET = int(os.environ.get("GEMINI_TESTME_THINKING", "1024"))
+# ANTHROPIC_TESTME_MODEL (e.g. claude-haiku-5-5 for speed) overrides
+# ANTHROPIC_MODEL; both fall back to DEFAULT_MODEL.
+DEFAULT_MODEL = "claude-sonnet-5-5"
+MAX_OUTPUT_TOKENS = 4096
 
 BUDGET_S = 18.0
 RETRY_MIN_REMAINING_S = 8.0
-# One retry on a Gemini 5xx ("high demand" 503), only when the failed call came
-# back fast enough that a second call can still fit in BUDGET_S.
+# One retry on an Anthropic 5xx (e.g. 529 overloaded), only when the failed call
+# came back fast enough that a second call can still fit in BUDGET_S.
 SERVER_RETRY_MAX_ELAPSED_S = 6.0
 SERVER_RETRY_BACKOFF_S = 0.5
 SET_TTL_S = 1800.0
@@ -98,7 +94,7 @@ class _CheckFailed(Exception):
 
 
 # ---------------------------------------------------------------------------
-# Structured output schema (plain types for Gemini)
+# Structured output schema (plain types; sent via strict_schema)
 # ---------------------------------------------------------------------------
 
 
@@ -170,62 +166,93 @@ def build_prompt(clip: Clip, feedback: str | None = None) -> str:
     )
 
 
+def strict_schema(model: type[BaseModel]) -> dict:
+    """Pydantic JSON schema with $refs inlined, every property required and no
+    extra properties: the shape Anthropic structured output expects."""
+    root = model.model_json_schema()
+    defs = root.pop("$defs", {})
+
+    def fix(node: Any) -> Any:
+        if isinstance(node, dict):
+            if "$ref" in node:
+                return fix(defs[node["$ref"].rsplit("/", 1)[-1]])
+            node = {
+                k: ({p: fix(s) for p, s in v.items()} if k == "properties" else fix(v))
+                for k, v in node.items()
+                if k not in ("title", "default")
+            }
+            if node.get("type") == "object":
+                node["required"] = list(node.get("properties", {}))
+                node["additionalProperties"] = False
+            return node
+        if isinstance(node, list):
+            return [fix(v) for v in node]
+        return node
+
+    return fix(root)
+
+
 def _is_server_error(exc: BaseException) -> bool:
-    code = getattr(exc, "code", None)
-    if isinstance(code, int) and 500 <= code < 600:
-        return True
-    return type(exc).__name__ == "ServerError"
+    status = getattr(exc, "status_code", None)
+    return isinstance(status, int) and 500 <= status < 600
 
 
-def gemini_model_call(model: str | None = None) -> ModelCall:
-    """Real model call via google-genai; key read from env / backend/.env only."""
+def resolve_model() -> str:
+    return os.environ.get("ANTHROPIC_TESTME_MODEL") or os.environ.get("ANTHROPIC_MODEL") or DEFAULT_MODEL
+
+
+def anthropic_model_call(model: str | None = None) -> ModelCall:
+    """Real model call via the Anthropic SDK; key read from env / backend/.env only."""
     try:
         from dotenv import load_dotenv
 
         load_dotenv(BACKEND_DIR / ".env")
     except ImportError:  # pragma: no cover
         pass
-    api_key = os.environ.get("GEMINI_API_KEY")
-    model_name = model or os.environ.get("GEMINI_TESTME_MODEL") or DEFAULT_MODEL
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    model_name = model or resolve_model()
+    schema = strict_schema(GenOutput)
+    client = None
 
     async def call(prompt: str) -> str:
+        nonlocal client
         if not api_key:
-            raise TestMeError("GENERATOR_UNAVAILABLE", "GEMINI_API_KEY is not set", True)
+            raise TestMeError("GENERATOR_UNAVAILABLE", "ANTHROPIC_API_KEY is not set", True)
         try:
-            from google import genai
-            from google.genai import types
+            import anthropic
 
-            client = genai.Client(api_key=api_key)
-            config: dict[str, Any] = dict(
-                response_mime_type="application/json",
-                response_schema=GenOutput,
-                temperature=0.2,
-            )
-            if THINKING_BUDGET >= 0:
-                config["thinking_config"] = types.ThinkingConfig(thinking_budget=THINKING_BUDGET)
-            gen_config = types.GenerateContentConfig(**config)
+            if client is None:
+                # The SDK's own retries would blow the 18 s budget; we retry once below.
+                client = anthropic.AsyncAnthropic(api_key=api_key, max_retries=0, timeout=BUDGET_S)
+
+            async def once():
+                return await client.messages.create(
+                    model=model_name,
+                    max_tokens=MAX_OUTPUT_TOKENS,
+                    messages=[{"role": "user", "content": prompt}],
+                    output_config={"format": {"type": "json_schema", "schema": schema}},
+                )
+
             t0 = time.monotonic()
             try:
-                resp = await client.aio.models.generate_content(
-                    model=model_name, contents=prompt, config=gen_config
-                )
+                resp = await once()
             except Exception as exc:
                 if not _is_server_error(exc) or time.monotonic() - t0 > SERVER_RETRY_MAX_ELAPSED_S:
                     raise
-                logger.info("testme gemini %s; retrying once", getattr(exc, "code", type(exc).__name__))
+                logger.info("testme anthropic %s; retrying once", getattr(exc, "status_code", type(exc).__name__))
                 await asyncio.sleep(SERVER_RETRY_BACKOFF_S)
-                resp = await client.aio.models.generate_content(
-                    model=model_name, contents=prompt, config=gen_config
-                )
-            text = resp.text
+                resp = await once()
+            text = "".join(getattr(b, "text", "") for b in resp.content if getattr(b, "type", "") == "text")
+            if getattr(resp, "stop_reason", None) == "max_tokens":
+                raise TestMeError("GENERATOR_UNAVAILABLE", "the model's answer was cut off", True)
         except TestMeError:
             raise
         except Exception as exc:
-            if getattr(exc, "code", None) == 429 or "RESOURCE_EXHAUSTED" in str(exc):
-                raise TestMeError("BUSY", "the exercise generator is at its quota; try again in a minute", True) from exc
-            raise TestMeError("GENERATOR_UNAVAILABLE", f"Gemini call failed: {type(exc).__name__}", True) from exc
+            if getattr(exc, "status_code", None) == 429:
+                raise TestMeError("BUSY", "the exercise generator is at its rate limit; try again in a minute", True) from exc
+            raise TestMeError("GENERATOR_UNAVAILABLE", f"Anthropic call failed: {type(exc).__name__}", True) from exc
         if not text:
-            raise TestMeError("GENERATOR_UNAVAILABLE", "Gemini returned an empty response", True)
+            raise TestMeError("GENERATOR_UNAVAILABLE", "Anthropic returned an empty response", True)
         return text
 
     return call
@@ -316,7 +343,7 @@ def check_output(out: GenOutput, clip: Clip, exercise_id: str) -> tuple[Approved
         fails_on = None
     if fails_on not in {json.dumps(a) for a, _ in hidden}:
         # Only a hint: the Judge0 verify step is what proves the wrong solution
-        # fails a test. Rejecting here forced a second Gemini call that pushed
+        # fails a test. Rejecting here forced a second model call that pushed
         # live requests past the time budget.
         logger.info("testme %s: wrongFailsOnArgsJson names no hidden test; relying on verify", exercise_id)
 
@@ -393,7 +420,7 @@ def set_id_for(video_id: str, last_cue_id: str) -> str:
 @dataclass
 class ExerciseGenerator:
     model_call: ModelCall | None = None
-    model_name: str = field(default_factory=lambda: os.environ.get("GEMINI_TESTME_MODEL") or DEFAULT_MODEL)
+    model_name: str = field(default_factory=resolve_model)
     budget_s: float = BUDGET_S
     retry_min_remaining_s: float = RETRY_MIN_REMAINING_S
     set_ttl_s: float = SET_TTL_S
@@ -464,7 +491,7 @@ class ExerciseGenerator:
             self._inflight.pop(set_id, None)
 
     async def _generate(self, clip: Clip, set_id: str, verify: Verify) -> GeneratedSet:
-        call = self.model_call or gemini_model_call(self.model_name)
+        call = self.model_call or anthropic_model_call(self.model_name)
         started = time.monotonic()
         feedback: str | None = None
         for attempt in (1, 2):

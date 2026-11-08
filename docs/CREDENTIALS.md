@@ -25,7 +25,8 @@ containing `#` or newlines. Do not create a second env file inside `web/`.
 | --- | --- | --- |
 | App database connection | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Connecting the event's Supabase project |
 | Privileged server DB access | `SUPABASE_SECRET_KEY` or legacy `SUPABASE_SERVICE_ROLE_KEY` | A server operation actually needs admin access; bypasses RLS |
-| One model provider | `LLM_PROVIDER`, `LLM_MODEL`, and the corresponding `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY` or `DEEPSEEK_API_KEY` | Implementing the demo's AI endpoint |
+| One model provider | `LLM_PROVIDER`, `LLM_MODEL`, and the corresponding `OPENAI_API_KEY`, `ANTHROPIC_API_KEY` or `DEEPSEEK_API_KEY` | Implementing the demo's AI endpoint |
+| Breakpoint backend LLM (prep scan + Test me) | `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` (default `claude-sonnet-5-5`), optional `ANTHROPIC_TESTME_MODEL` (e.g. `claude-haiku-5-5`), in the gitignored `backend/.env` | Running a live prep `scan` or Test-me generation |
 | Supabase management | `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF` | Agent needs management API / CLI access, migrations or deployment |
 | DB tooling | `SUPABASE_DB_PASSWORD`, optional `DATABASE_URL` | Linking/direct SQL tools require them |
 | AWS profile / SSO | `AWS_PROFILE`, `AWS_REGION` | Using an existing logged-in AWS CLI profile |

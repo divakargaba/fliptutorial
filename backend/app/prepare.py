@@ -8,7 +8,7 @@ Commands (run from backend/):
 
 Flow (PRD §3):
 
-* ``scan`` loads the seed's timestamped transcript, asks Gemini for challenge
+* ``scan`` loads the seed's timestamped transcript, asks Claude for challenge
   candidates per scan window (structured output, cue ids required), validates
   them, and writes ``content/drafts/{videoId}.scan.json``. Nothing here is
   served at runtime.
@@ -192,12 +192,12 @@ def cues_in(cues: list[Cue], start_s: float, end_s: float) -> list[Cue]:
 
 
 # ---------------------------------------------------------------------------
-# Gemini candidate detection
+# Candidate detection (Anthropic)
 # ---------------------------------------------------------------------------
 
 
 class ProviderCandidate(BaseModel):
-    """Structured-output schema sent to Gemini (plain types only)."""
+    """Structured-output schema sent to the model (plain types only)."""
 
     title: str
     task: str
@@ -239,41 +239,44 @@ def build_prompt(seed: dict, window: dict, cues: list[Cue]) -> str:
     )
 
 
-def gemini_detector() -> Detector:
-    """Real detector using the Google Gen AI SDK. Key read from env only."""
+DEFAULT_MODEL = "claude-sonnet-5-5"
+MAX_OUTPUT_TOKENS = 8192
+
+
+def anthropic_detector() -> Detector:
+    """Real detector using the Anthropic SDK structured output. Key read from env only."""
+    from .testme import strict_schema
+
     try:
         from dotenv import load_dotenv
 
         load_dotenv(BACKEND_DIR / ".env")
     except ImportError:  # pragma: no cover
         pass
-    api_key = os.environ.get("GEMINI_API_KEY")
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
-        raise PrepError("PREP_PROVIDER_ERROR", "GEMINI_API_KEY is not set in backend/.env")
-    model = os.environ.get("GEMINI_MODEL") or "gemini-flash-latest"
+        raise PrepError("PREP_PROVIDER_ERROR", "ANTHROPIC_API_KEY is not set in backend/.env")
+    model = os.environ.get("ANTHROPIC_MODEL") or DEFAULT_MODEL
+    schema = strict_schema(ProviderResponse)
 
     def detect(prompt: str) -> str:
         try:
-            from google import genai
-            from google.genai import types
+            import anthropic
 
-            client = genai.Client(api_key=api_key)
-            resp = client.models.generate_content(
+            client = anthropic.Anthropic(api_key=api_key)
+            resp = client.messages.create(
                 model=model,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    response_schema=ProviderResponse,
-                    temperature=0,
-                ),
+                max_tokens=MAX_OUTPUT_TOKENS,
+                messages=[{"role": "user", "content": prompt}],
+                output_config={"format": {"type": "json_schema", "schema": schema}},
             )
-            text = resp.text
-        except PrepError:
-            raise
         except Exception as exc:  # provider/network/SDK failure
-            raise PrepError("PREP_PROVIDER_ERROR", f"Gemini call failed: {type(exc).__name__}") from exc
+            raise PrepError("PREP_PROVIDER_ERROR", f"Anthropic call failed: {type(exc).__name__}") from exc
+        if getattr(resp, "stop_reason", None) == "max_tokens":
+            raise PrepError("PREP_PROVIDER_ERROR", "Anthropic response was cut off at max_tokens")
+        text = "".join(getattr(b, "text", "") for b in resp.content if getattr(b, "type", "") == "text")
         if not text:
-            raise PrepError("PREP_PROVIDER_ERROR", "Gemini returned an empty response")
+            raise PrepError("PREP_PROVIDER_ERROR", "Anthropic returned an empty response")
         return text
 
     return detect
@@ -366,7 +369,7 @@ def scan(
     windows = seed.get("scanWindows") or [
         {"id": "full", "startS": cues[0].start_s, "endS": cues[-1].end_s}
     ]
-    detect = detector or gemini_detector()
+    detect = detector or anthropic_detector()
 
     found: list[dict] = []
     for window in windows:
@@ -419,7 +422,7 @@ def scan(
 
 
 def normalize_video_time(t: Any, basis: str, clip_start_s: float = 0.0) -> float:
-    """Convert a Gemini timestamp to the full YouTube timeline exactly once.
+    """Convert a video-review timestamp to the full YouTube timeline exactly once.
 
     ``basis`` must be stated: ``"video"`` (already absolute) or ``"clip"``
     (relative to ``clip_start_s``).
