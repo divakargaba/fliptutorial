@@ -20,6 +20,10 @@ export type ActiveAttempt = {
   breakpoint: Breakpoint; revision: string; state: AttemptState; result: SubmissionResponse | null;
   error: ApiError['error'] | null; ownsPause: boolean; pausedAt: number; canResume: boolean; generated: boolean;
   planPause?: PlanPause;
+  // A solved task may be reopened deliberately, but its review must not emit
+  // another progress award. Capture this before grading changes solvedIds.
+  reviewOnly?: boolean;
+  wasConsumed?: boolean;
 };
 type TestMeAttempt = Pick<ActiveAttempt, 'ownsPause' | 'pausedAt' | 'error'>;
 
@@ -121,12 +125,25 @@ export class PlaybackSession {
   }
 
   open(breakpoint: Breakpoint, time: number, ownsPause: boolean): Ticket | null {
-    if (this.active || this.testMe || this.data?.status !== 'ready' || !this.available(breakpoint) ||
-        !this.data.breakpoints.some(b => b.id === breakpoint.id)) return null;
+    return this.openCurrent(breakpoint.id, time, ownsPause, false);
+  }
+
+  /** Explicit review can revisit consumed/skipped/solved pauses. Resolve the
+   * current record by id so an obsolete marker cannot inject old plan content. */
+  openFromTimeline(id: string, time: number, ownsPause: boolean): Ticket | null {
+    return this.openCurrent(id, time, ownsPause, true);
+  }
+
+  private openCurrent(id: string, time: number, ownsPause: boolean, manual: boolean): Ticket | null {
+    if (this.active || this.testMe || this.data?.status !== 'ready' || !Number.isFinite(time) || time < 0) return null;
+    const breakpoint = this.data.breakpoints.find(b => b.id === id);
+    if (!breakpoint || (!manual && !this.available(breakpoint))) return null;
+    const wasConsumed = this.consumed.has(breakpoint.id);
     this.consumed.add(breakpoint.id);
     this.attempt++;
     this.active = { breakpoint, revision: this.data.revision, state: 'editing', result: null,
-      error: null, ownsPause, pausedAt: time, canResume: false, generated: false };
+      error: null, ownsPause, pausedAt: time, canResume: false, generated: false,
+      reviewOnly: manual && this.solvedIds.has(breakpoint.exercise.id), wasConsumed };
     const planned = this.planPauses.get(breakpoint.id);
     if (planned) {
       this.active.planPause = planned;
@@ -134,6 +151,20 @@ export class PlaybackSession {
     }
     this.reset();
     return this.ticket();
+  }
+
+  timelineMarkers(duration: number) {
+    if (this.route !== 'ready' || this.data?.status !== 'ready' || !Number.isFinite(duration) || duration <= 0) return [];
+    return this.data.breakpoints.filter(b => Number.isFinite(b.pauseAtS) && b.pauseAtS >= 0 && b.pauseAtS < duration).map(b => {
+      const planned = this.planPauses.get(b.id);
+      return {
+        id: b.id, timeS: b.pauseAtS, position: Math.min(100, Math.max(0, b.pauseAtS / duration * 100)),
+        title: b.exercise.title, kind: planned?.kind ?? 'coding' as const,
+        concepts: [...((planned?.exercise ?? planned?.question)?.concepts ?? [])],
+        status: this.solvedIds.has(b.exercise.id) ? 'passed' as const
+          : this.consumed.has(b.id) ? 'attempted' as const : 'upcoming' as const,
+      };
+    }).sort((a, b) => a.timeS - b.timeS);
   }
 
   startTestMe(time: number, ownsPause: boolean): Ticket | null {
@@ -233,7 +264,7 @@ export class PlaybackSession {
   }
 
   releaseFailedMount(): void {
-    if (this.active && !this.active.generated) this.consumed.delete(this.active.breakpoint.id);
+    if (this.active && !this.active.generated && !this.active.wasConsumed) this.consumed.delete(this.active.breakpoint.id);
     this.interrupt();
   }
 
