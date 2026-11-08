@@ -103,8 +103,9 @@ def client(tmp_path: Path):
     d.mkdir()
     shutil.copy(CONTRACTS / "approved-record.fixture.json", d / "samplevid01.json")
     with patch("app.catalog.APPROVED_DIR", d), patch("app.analysis.anthropic_model_call", lambda: failing_model):
-        from app.main import app
+        from app.main import app, _PASSED
 
+        _PASSED.clear()
         with TestClient(app) as c:
             yield c
 
