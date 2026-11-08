@@ -223,6 +223,43 @@ def test_private_items_found_for_grading(tmp_path):
     assert p.find_exercise("nope") is None and p.find_question("nope") is None
 
 
+def test_ready_items_registered_with_feedback_store(tmp_path, monkeypatch):
+    from app import feedback
+
+    exercises: dict[str, dict] = {}
+    questions: dict[str, dict] = {}
+    monkeypatch.setattr(feedback, "register_exercise", lambda **kw: exercises.__setitem__(kw["exercise_id"], kw), raising=False)
+    monkeypatch.setattr(feedback, "register_question", lambda **kw: questions.__setitem__(kw["question_id"], kw), raising=False)
+    p = make_planner(tmp_path)
+    _, plan = asyncio.run(run_to_ready(p))
+    ex = plan["pauses"][0]["exercise"]
+    reg = exercises[ex["id"]]
+    assert reg["revision"] == ex["revision"] and reg["function_name"] == "sum_to" and len(reg["hidden_tests"]) == 3
+    assert reg["reference_solution"] and reg["language"] == "python" and set(reg["examples"][0]) == {"args", "expected"}
+    q = plan["pauses"][2]["question"]
+    assert questions[q["id"]]["correct_answer"] == "b" and questions[q["id"]]["choices"]
+
+    # A restarted backend (or an expired A2 entry) is refilled when the cached plan is served again.
+    exercises.clear()
+    questions.clear()
+    fresh = make_planner(tmp_path)
+    assert fresh.peek("vidPlanner1")["status"] == "ready"
+    assert ex["id"] in exercises and q["id"] in questions
+
+
+def test_planned_items_land_in_feedback_store(tmp_path):
+    """With lane A2 merged: planned items land in its real grading store."""
+    store_mod = pytest.importorskip("app.feedback.exercise_store")
+
+    p = make_planner(tmp_path)
+    _, plan = asyncio.run(run_to_ready(p))
+    ex, q = plan["pauses"][0]["exercise"], plan["pauses"][2]["question"]
+    stored = store_mod.get_store().get_exercise(ex["id"])
+    assert stored and stored.revision == ex["revision"] and len(stored.hiddenTests) == 3
+    sq = store_mod.get_store().get_question(q["id"])
+    assert sq and sq.correctAnswer == "b" and sq.style == "multiple_choice"
+
+
 def test_cached_plan_is_instant_for_next_viewer(tmp_path):
     asyncio.run(run_to_ready(make_planner(tmp_path)))
     model = StubModel()
