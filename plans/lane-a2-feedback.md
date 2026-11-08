@@ -26,12 +26,15 @@ A labelled set (`backend/tests/fixtures/submissions/`) of ≥30 right/wrong subm
 - [x] `POST /v2/hint` with level-aware depth: beginner=full hints, advanced=-1, expert=-2; reuses v1 RAG hint service
 - [x] Exercise store for server-side full exercise data (hidden tests, reference solutions)
 - [x] 35 labelled submissions across 4 languages (10 Python, 10 JS, 10 Java, 5 C++) + 5 concept questions
-- [x] 103 offline pytest tests: 45 runner tests + 58 feedback tests (all passing, stubbed Claude/Judge0)
+- [x] 109 offline pytest tests: 45 runner tests + 64 feedback tests (all passing, stubbed Claude/Judge0)
 - [x] Planner integration: `/v2/submit`, `/v2/answer`, `/v2/hint` resolve exercises/questions from A1's `find_exercise`/`find_question`
 - [x] Refresher integration: `/v2/answer` resolves refresher questions from B1's `lookup_refresher`
 - [x] Language-specific docs for hints: JS (21 chunks), Java (18), C++ (17), SQL (16); hint service loads per-language index
 - [x] Fix LEVELS_PATH/CONCEPTS_PATH bug (parents[3] instead of parent.parent.parent)
 - [x] v2 hint endpoint passes exercise language to hint service (was hardcoded to Python)
+- [x] FeedbackResult includes `schemaVersion: 2` per frozen contract (`extension/src/v2/types.ts`)
+- [x] `/v2/hint` accepts `previousHints` (list[str], max 5) and passes them to the hint service for improved progression
+- [x] API integration tests: submit passed/failed/run + answer all assert `schemaVersion: 2`; hint asserts `previousHints` passthrough
 - [ ] Live integration test with real Judge0 + Anthropic key
 
 ## Architecture

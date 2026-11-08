@@ -655,6 +655,154 @@ def registered_question():
     return q
 
 
+@pytest.mark.asyncio
+async def test_submit_passed_has_schema_version(registered_exercise):
+    """POST /v2/submit with a passing solution includes schemaVersion: 2."""
+    ex = registered_exercise["exercise"]
+    passing = next(s for s in registered_exercise["submissions"] if s["expectedOutcome"] == "passed")
+
+    # Stub the runner to return a passing result
+    fake_result = RunnerResult(
+        outcome="passed", passedCount=3, totalCount=3,
+        results=[
+            CaseResult(index=0, visible=True, passed=True, outcome="passed",
+                       args=[1, 2], expected=3, actual=3),
+        ],
+    )
+    with patch.object(Runner, "grade", new_callable=AsyncMock, return_value=fake_result):
+        from app.main import app
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/v2/submit", json={
+                "exerciseId": ex["id"], "revision": ex["revision"],
+                "language": "python", "code": passing["code"], "mode": "submit",
+            })
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["feedback"]["schemaVersion"] == 2
+    assert data["feedback"]["outcome"] == "passed"
+
+
+@pytest.mark.asyncio
+async def test_submit_failed_has_schema_version(registered_exercise):
+    """POST /v2/submit with a failing solution includes schemaVersion: 2."""
+    ex = registered_exercise["exercise"]
+    failing = next(s for s in registered_exercise["submissions"] if s["expectedOutcome"] == "wrong_answer")
+
+    fake_result = RunnerResult(
+        outcome="wrong_answer", passedCount=1, totalCount=3,
+        results=[
+            CaseResult(index=0, visible=True, passed=False, outcome="wrong_answer",
+                       args=[1, 2], expected=3, actual=0),
+        ],
+    )
+    with patch.object(Runner, "grade", new_callable=AsyncMock, return_value=fake_result):
+        with patch.dict("os.environ", {"ANTHROPIC_API_KEY": ""}, clear=False):
+            from app.main import app
+            transport = ASGITransport(app=app)
+            async with AsyncClient(transport=transport, base_url="http://test") as client:
+                resp = await client.post("/v2/submit", json={
+                    "exerciseId": ex["id"], "revision": ex["revision"],
+                    "language": "python", "code": failing["code"], "mode": "submit",
+                })
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["feedback"]["schemaVersion"] == 2
+    assert data["feedback"]["outcome"] == "failed"
+    assert data["feedback"]["diagnosis"] is not None
+
+
+@pytest.mark.asyncio
+async def test_run_mode_has_schema_version(registered_exercise):
+    """POST /v2/submit with mode=run and passing includes schemaVersion: 2."""
+    ex = registered_exercise["exercise"]
+    passing = next(s for s in registered_exercise["submissions"] if s["expectedOutcome"] == "passed")
+
+    fake_result = RunnerResult(
+        outcome="passed", passedCount=2, totalCount=2,
+        results=[
+            CaseResult(index=0, visible=True, passed=True, outcome="passed",
+                       args=[1, 2], expected=3, actual=3),
+        ],
+    )
+    with patch.object(Runner, "grade", new_callable=AsyncMock, return_value=fake_result):
+        from app.main import app
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/v2/submit", json={
+                "exerciseId": ex["id"], "revision": ex["revision"],
+                "language": "python", "code": passing["code"], "mode": "run",
+            })
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["feedback"]["schemaVersion"] == 2
+
+
+@pytest.mark.asyncio
+async def test_answer_has_schema_version(registered_question):
+    """POST /v2/answer includes schemaVersion: 2."""
+    q = registered_question
+    correct_test = next(t for t in q["tests"] if t["expectedCorrect"])
+
+    from app.main import app
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post("/v2/answer", json={
+            "questionId": q["id"], "revision": q["revision"],
+            "answer": correct_test["answer"],
+        })
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["feedback"]["schemaVersion"] == 2
+
+
+@pytest.mark.asyncio
+async def test_submit_empty_code_rejected(registered_exercise):
+    """POST /v2/submit with empty code returns 422."""
+    ex = registered_exercise["exercise"]
+    from app.main import app
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post("/v2/submit", json={
+            "exerciseId": ex["id"], "revision": ex["revision"],
+            "language": "python", "code": "   ", "mode": "run",
+        })
+    assert resp.status_code == 422
+    assert resp.json()["error"]["code"] == "INVALID_CODE"
+
+
+@pytest.mark.asyncio
+async def test_hint_accepts_previous_hints(registered_exercise):
+    """POST /v2/hint accepts previousHints and passes them through."""
+    ex = registered_exercise["exercise"]
+
+    # Stub the hint service
+    from app.hints import HintResponse
+    fake_resp = HintResponse(
+        focus="Think about the accumulation pattern",
+        feedback="Your loop logic needs adjustment",
+        hint="Consider what changes each iteration",
+        level=1,
+        sources=[],
+        aiGenerated=False,
+    )
+    with patch("app.hints.service") as mock_svc:
+        mock_svc.return_value.hint = AsyncMock(return_value=fake_resp)
+        from app.main import app
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/v2/hint", json={
+                "exerciseId": ex["id"], "revision": ex["revision"],
+                "code": "def raise_to_power(b, p):\n    pass",
+                "hintLevel": 1,
+                "previousHints": ["Consider using a loop"],
+            })
+    assert resp.status_code == 200
+    # Verify previousHints was passed to the service
+    call_args = mock_svc.return_value.hint.call_args
+    assert call_args[0][4] == ["Consider using a loop"]
+
+
 # ---------------------------------------------------------------------------
 # Total submission count across languages
 # ---------------------------------------------------------------------------

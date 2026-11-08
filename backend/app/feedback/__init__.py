@@ -220,6 +220,7 @@ async def submit(body: SubmitRequest) -> JSONResponse:
         )
 
         feedback = {
+            "schemaVersion": 2,
             "exerciseId": exercise.id,
             "outcome": "passed",
             "concept": {"id": concept_id, "name": concept_name},
@@ -259,6 +260,7 @@ async def submit(body: SubmitRequest) -> JSONResponse:
         )
 
         feedback = {
+            "schemaVersion": 2,
             "exerciseId": exercise.id,
             "outcome": "failed",
             "concept": {"id": concept_id, "name": concept_name},
@@ -275,6 +277,7 @@ async def submit(body: SubmitRequest) -> JSONResponse:
     else:
         # mode == "run" and passed: simple feedback, no deep analysis
         feedback = {
+            "schemaVersion": 2,
             "exerciseId": exercise.id,
             "outcome": grade_result.outcome,
             "concept": {"id": concept_id, "name": concept_name},
@@ -371,6 +374,7 @@ async def answer(body: AnswerRequest) -> JSONResponse:
         return _error(422, "UNKNOWN_STYLE", f"unsupported question style: {question.style}", request_id=request_id)
 
     feedback = {
+        "schemaVersion": 2,
         "exerciseId": body.questionId,
         "outcome": "passed" if result.correct else "failed",
         "concept": {"id": concept_id, "name": concept_name},
@@ -399,6 +403,7 @@ class V2HintRequest(BaseModel):
     hintLevel: int = Field(ge=0, le=3)
     learnerLevel: str = "beginner-1"
     lastResult: dict | None = None
+    previousHints: list[str] = Field(default_factory=list, max_length=5)
 
 
 @router.post("/hint")
@@ -484,7 +489,7 @@ async def hint(body: V2HintRequest) -> JSONResponse:
         except Exception:
             pass
 
-    resp = await hints_mod.service().hint(approved, body.code, effective_level, last, [], language=hint_lang)
+    resp = await hints_mod.service().hint(approved, body.code, effective_level, last, body.previousHints, language=hint_lang)
 
     return JSONResponse(
         content=resp.model_dump(),
