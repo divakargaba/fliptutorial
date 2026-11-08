@@ -174,6 +174,8 @@ class PauseSlot:
     importance: int
     id: str = ""
     rank: int = 3
+    ask_start_s: float | None = None  # question_posed: start of the block where the task is asked
+    screen: str = ""  # answer-on-screen check (screen.py): clear | moved | new_problem | unchecked | "" (not checked)
 
 
 @dataclass
@@ -289,7 +291,8 @@ def _validate_pauses(
             continue
         importance = po.importance if po.importance in (1, 2, 3) else 3
         slots.append(PauseSlot(section_index, round(pause_at, 1), round(reveal, 1) if reveal is not None else None,
-                               trigger, concept, po.idea.strip()[:300], importance))
+                               trigger, concept, po.idea.strip()[:300], importance,
+                               ask_start_s=after.start_s if trigger == "question_posed" else None))
     return slots
 
 
