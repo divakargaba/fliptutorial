@@ -332,6 +332,7 @@ async def answer(body: AnswerRequest) -> JSONResponse:
             pass
 
     # Check B1 profile's refresher questions
+    refresher_explanation: str | None = None
     if question is None:
         try:
             from ..profile.skills import lookup_refresher
@@ -345,8 +346,9 @@ async def answer(body: AnswerRequest) -> JSONResponse:
                     examples=[], hiddenTests=[], referenceSolution="",
                     questionId=q["id"], style=q["style"], prompt=q["prompt"],
                     choices=q.get("choices"), correctAnswer=ref["answer"],
-                    aiGenerated=False,
+                    aiGenerated=q.get("aiGenerated", False),
                 )
+                refresher_explanation = ref.get("explanation")
         except Exception:
             pass
 
@@ -373,14 +375,19 @@ async def answer(body: AnswerRequest) -> JSONResponse:
     else:
         return _error(422, "UNKNOWN_STYLE", f"unsupported question style: {question.style}", request_id=request_id)
 
+    # Use the refresher's curated explanation when available
+    explanation_text = result.explanation
+    if refresher_explanation:
+        explanation_text = refresher_explanation if result.correct else f"{result.explanation} {refresher_explanation}"
+
     feedback = {
         "schemaVersion": 2,
         "exerciseId": body.questionId,
         "outcome": "passed" if result.correct else "failed",
         "concept": {"id": concept_id, "name": concept_name},
         "assessedLevel": body.learnerLevel,
-        "summary": result.explanation,
-        "success": {"explanation": result.explanation, "optimization": None} if result.correct else None,
+        "summary": explanation_text,
+        "success": {"explanation": explanation_text, "optimization": None} if result.correct else None,
         "diagnosis": None,
         "aiGenerated": result.aiGenerated,
     }

@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, patch
@@ -976,3 +977,274 @@ class TestRefresherQuestionLookup:
         """Grade a refresher MC question incorrectly."""
         result = grade_multiple_choice("b", "a")
         assert not result.correct
+
+
+# ---------------------------------------------------------------------------
+# generate_refresher tests (stubbed Claude)
+# ---------------------------------------------------------------------------
+
+
+class TestGenerateRefresher:
+    """Tests for backend/app/feedback/refresher.py."""
+
+    def test_validate_good_question(self):
+        from app.feedback.refresher import _validate
+        data = {
+            "title": "Loop basics",
+            "prompt": "What does `for i in range(3)` produce?",
+            "choices": [
+                {"id": "a", "text": "0, 1, 2"},
+                {"id": "b", "text": "1, 2, 3"},
+                {"id": "c", "text": "0, 1, 2, 3"},
+            ],
+            "answer": "a",
+            "explanation": "range(3) yields 0, 1, 2.",
+        }
+        result = _validate(data)
+        assert result is not None
+        assert result["answer"] == "a"
+        assert len(result["choices"]) == 3
+
+    def test_validate_too_few_choices(self):
+        from app.feedback.refresher import _validate
+        data = {
+            "title": "Test",
+            "prompt": "Question?",
+            "choices": [{"id": "a", "text": "Only one"}],
+            "answer": "a",
+            "explanation": "Explanation.",
+        }
+        assert _validate(data) is None
+
+    def test_validate_too_many_choices(self):
+        from app.feedback.refresher import _validate
+        data = {
+            "title": "Test",
+            "prompt": "Question?",
+            "choices": [{"id": chr(ord("a") + i), "text": f"Choice {i}"} for i in range(7)],
+            "answer": "a",
+            "explanation": "Explanation.",
+        }
+        assert _validate(data) is None
+
+    def test_validate_duplicate_ids(self):
+        from app.feedback.refresher import _validate
+        data = {
+            "title": "Test",
+            "prompt": "Question?",
+            "choices": [{"id": "a", "text": "First"}, {"id": "a", "text": "Second"}],
+            "answer": "a",
+            "explanation": "Explanation.",
+        }
+        assert _validate(data) is None
+
+    def test_validate_duplicate_texts(self):
+        from app.feedback.refresher import _validate
+        data = {
+            "title": "Test",
+            "prompt": "Question?",
+            "choices": [{"id": "a", "text": "Same"}, {"id": "b", "text": "Same"}],
+            "answer": "a",
+            "explanation": "Explanation.",
+        }
+        assert _validate(data) is None
+
+    def test_validate_answer_not_in_choices(self):
+        from app.feedback.refresher import _validate
+        data = {
+            "title": "Test",
+            "prompt": "Question?",
+            "choices": [{"id": "a", "text": "One"}, {"id": "b", "text": "Two"}],
+            "answer": "c",
+            "explanation": "Explanation.",
+        }
+        assert _validate(data) is None
+
+    def test_validate_missing_fields(self):
+        from app.feedback.refresher import _validate
+        assert _validate({"title": "", "prompt": "Q?", "choices": [], "answer": "a", "explanation": "E"}) is None
+        assert _validate({}) is None
+
+    @pytest.mark.asyncio
+    async def test_generate_disabled(self):
+        """When BREAKPOINT_REFRESHER_GENERATE=0, returns None."""
+        from app.feedback.refresher import generate_refresher
+        with patch.dict(os.environ, {"BREAKPOINT_REFRESHER_GENERATE": "0"}):
+            result = await generate_refresher("loops", "Loops", "beginner-1", [])
+            assert result is None
+
+    @pytest.mark.asyncio
+    async def test_generate_no_api_key(self):
+        """Without ANTHROPIC_API_KEY, returns None."""
+        from app.feedback.refresher import generate_refresher
+        env = {k: v for k, v in os.environ.items() if k != "ANTHROPIC_API_KEY"}
+        with patch.dict(os.environ, env, clear=True):
+            result = await generate_refresher("loops", "Loops", "beginner-1", [])
+            assert result is None
+
+    @pytest.mark.asyncio
+    async def test_generate_success_stubbed(self):
+        """With a stubbed Anthropic client, returns a valid question."""
+        import sys
+        import types
+        import app.feedback.refresher as refresher_mod
+
+        # Reset backoff
+        refresher_mod._failure_backoff_until = 0.0
+
+        good_response = json.dumps({
+            "title": "Variable scope",
+            "prompt": "What is `x` after: `x = 5; x = x + 1`?",
+            "choices": [
+                {"id": "a", "text": "5"},
+                {"id": "b", "text": "6"},
+                {"id": "c", "text": "Error"},
+            ],
+            "answer": "b",
+            "explanation": "x starts at 5 and is incremented by 1.",
+        })
+
+        class FakeContent:
+            type = "text"
+            text = good_response
+
+        class FakeResponse:
+            stop_reason = "end_turn"
+            content = [FakeContent()]
+
+        mock_create = AsyncMock(return_value=FakeResponse())
+        mock_client_instance = type("MockClient", (), {"beta": type("Beta", (), {"messages": type("Messages", (), {"create": mock_create})()})()})()
+        MockAsyncAnthropic = lambda **kw: mock_client_instance
+
+        fake_anthropic = types.ModuleType("anthropic")
+        fake_anthropic.AsyncAnthropic = MockAsyncAnthropic  # type: ignore[attr-defined]
+
+        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
+            with patch.dict(sys.modules, {"anthropic": fake_anthropic}):
+                result = await refresher_mod.generate_refresher("variables", "Variables & assignment", "beginner-1", [])
+
+        assert result is not None
+        assert result["title"] == "Variable scope"
+        assert result["answer"] == "b"
+        assert len(result["choices"]) == 3
+
+    @pytest.mark.asyncio
+    async def test_generate_model_failure_triggers_backoff(self):
+        """After a failure, subsequent calls return None during backoff."""
+        import sys
+        import types
+        import app.feedback.refresher as refresher_mod
+
+        # Reset backoff
+        refresher_mod._failure_backoff_until = 0.0
+
+        mock_create = AsyncMock(side_effect=RuntimeError("model down"))
+        mock_client_instance = type("MockClient", (), {"beta": type("Beta", (), {"messages": type("Messages", (), {"create": mock_create})()})()})()
+        MockAsyncAnthropic = lambda **kw: mock_client_instance
+
+        fake_anthropic = types.ModuleType("anthropic")
+        fake_anthropic.AsyncAnthropic = MockAsyncAnthropic  # type: ignore[attr-defined]
+
+        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"}):
+            with patch.dict(sys.modules, {"anthropic": fake_anthropic}):
+                result = await refresher_mod.generate_refresher("loops", "Loops", "beginner-1", [])
+                assert result is None
+
+        # Now should be in backoff (no key needed; backoff is checked before the key)
+        result2 = await refresher_mod.generate_refresher("loops", "Loops", "beginner-1", [])
+        assert result2 is None
+
+        # Clean up
+        refresher_mod._failure_backoff_until = 0.0
+
+
+# ---------------------------------------------------------------------------
+# /v2/answer refresher: aiGenerated passthrough and explanation enrichment
+# ---------------------------------------------------------------------------
+
+
+class TestRefresherAnswerIntegration:
+    """Verify /v2/answer uses ref['question']['aiGenerated'] and ref['explanation']."""
+
+    @pytest.mark.asyncio
+    async def test_answer_refresher_ai_generated_passthrough(self):
+        """When a B1 refresher has aiGenerated=True, the feedback reflects it."""
+        from fastapi import FastAPI
+        from app.feedback import router
+
+        app = FastAPI()
+        app.include_router(router)
+
+        fake_ref = {
+            "question": {
+                "id": "rf-gen-loops-abc",
+                "revision": "rf-gen-loops-abc-xyz123",
+                "title": "AI Loop Question",
+                "style": "multiple_choice",
+                "prompt": "What does range(3) return?",
+                "choices": [{"id": "a", "text": "0,1,2"}, {"id": "b", "text": "1,2,3"}],
+                "concepts": ["loops"],
+                "level": "beginner-1",
+                "aiGenerated": True,
+            },
+            "answer": "a",
+            "explanation": "range(3) produces 0, 1, 2.",
+        }
+
+        with patch("app.feedback.exercise_store.get_store") as mock_store:
+            mock_store.return_value.get_question.return_value = None
+            with patch("app.feedback.lookup_refresher", create=True):
+                with patch("app.profile.skills.lookup_refresher", return_value=fake_ref):
+                    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+                        resp = await client.post("/v2/answer", json={
+                            "questionId": "rf-gen-loops-abc",
+                            "revision": "rf-gen-loops-abc-xyz123",
+                            "answer": "a",
+                            "learnerLevel": "beginner-1",
+                        })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["correct"] is True
+        # The feedback summary should use the refresher's explanation
+        assert "range(3)" in data["feedback"]["summary"]
+
+    @pytest.mark.asyncio
+    async def test_answer_refresher_wrong_includes_explanation(self):
+        """Wrong refresher answer includes the curated explanation in the summary."""
+        from fastapi import FastAPI
+        from app.feedback import router
+
+        app = FastAPI()
+        app.include_router(router)
+
+        fake_ref = {
+            "question": {
+                "id": "rf-loops-1",
+                "revision": "rf-loops-1-abc123",
+                "title": "Loop Refresher",
+                "style": "multiple_choice",
+                "prompt": "What does a for loop do?",
+                "choices": [{"id": "a", "text": "Iterates"}, {"id": "b", "text": "Declares"}],
+                "concepts": ["loops"],
+                "level": "beginner-1",
+                "aiGenerated": False,
+            },
+            "answer": "a",
+            "explanation": "A for loop iterates over a sequence.",
+        }
+
+        with patch("app.feedback.exercise_store.get_store") as mock_store:
+            mock_store.return_value.get_question.return_value = None
+            with patch("app.profile.skills.lookup_refresher", return_value=fake_ref):
+                async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+                    resp = await client.post("/v2/answer", json={
+                        "questionId": "rf-loops-1",
+                        "revision": "rf-loops-1-abc123",
+                        "answer": "b",
+                        "learnerLevel": "beginner-1",
+                    })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["correct"] is False
+        # Wrong answer: should include both the grading result and the refresher explanation
+        assert "A for loop iterates" in data["feedback"]["summary"]
