@@ -307,6 +307,66 @@ def test_provider_quota_is_busy(monkeypatch):
     assert "test-only" not in e.value.message
 
 
+def _fake_genai(monkeypatch, outcomes):
+    """Patch genai.Client; each generate_content pops the next outcome (exception or text)."""
+    import types as pytypes
+
+    calls = []
+
+    class Models:
+        async def generate_content(self, **kw):
+            calls.append(kw)
+            o = outcomes.pop(0)
+            if isinstance(o, BaseException):
+                raise o
+            return pytypes.SimpleNamespace(text=o)
+
+    class Client:
+        def __init__(self, api_key):
+            self.aio = pytypes.SimpleNamespace(models=Models())
+
+    import google.genai as real
+
+    monkeypatch.setattr(real, "Client", Client)
+    monkeypatch.setenv("GEMINI_API_KEY", "test-only")
+    return calls
+
+
+class _Overloaded(Exception):
+    code = 503
+
+
+def test_server_error_retries_once_then_succeeds(monkeypatch):
+    from app import testme
+
+    monkeypatch.setattr(testme, "SERVER_RETRY_BACKOFF_S", 0)
+    calls = _fake_genai(monkeypatch, [_Overloaded("503 UNAVAILABLE"), '{"ok": 1}'])
+    assert run(testme.gemini_model_call("gemini-2.5-flash")("prompt")) == '{"ok": 1}'
+    assert len(calls) == 2
+
+
+def test_server_error_twice_is_unavailable(monkeypatch):
+    from app import testme
+
+    monkeypatch.setattr(testme, "SERVER_RETRY_BACKOFF_S", 0)
+    calls = _fake_genai(monkeypatch, [_Overloaded("503"), _Overloaded("503")])
+    with pytest.raises(TestMeError) as e:
+        run(testme.gemini_model_call("gemini-2.5-flash")("prompt"))
+    assert e.value.code == "GENERATOR_UNAVAILABLE" and e.value.retryable
+    assert len(calls) == 2
+
+
+def test_slow_server_error_is_not_retried(monkeypatch):
+    from app import testme
+
+    monkeypatch.setattr(testme, "SERVER_RETRY_MAX_ELAPSED_S", -1)
+    calls = _fake_genai(monkeypatch, [_Overloaded("503"), '{"ok": 1}'])
+    with pytest.raises(TestMeError) as e:
+        run(testme.gemini_model_call("gemini-2.5-flash")("prompt"))
+    assert e.value.code == "GENERATOR_UNAVAILABLE"
+    assert len(calls) == 1
+
+
 def test_missing_key_is_unavailable(monkeypatch):
     from app import testme
 

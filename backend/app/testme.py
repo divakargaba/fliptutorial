@@ -59,6 +59,10 @@ THINKING_BUDGET = int(os.environ.get("GEMINI_TESTME_THINKING", "1024"))
 
 BUDGET_S = 18.0
 RETRY_MIN_REMAINING_S = 8.0
+# One retry on a Gemini 5xx ("high demand" 503), only when the failed call came
+# back fast enough that a second call can still fit in BUDGET_S.
+SERVER_RETRY_MAX_ELAPSED_S = 6.0
+SERVER_RETRY_BACKOFF_S = 0.5
 SET_TTL_S = 1800.0
 MAX_CACHED_SETS = 256
 RATE_LIMIT = 10
@@ -166,6 +170,13 @@ def build_prompt(clip: Clip, feedback: str | None = None) -> str:
     )
 
 
+def _is_server_error(exc: BaseException) -> bool:
+    code = getattr(exc, "code", None)
+    if isinstance(code, int) and 500 <= code < 600:
+        return True
+    return type(exc).__name__ == "ServerError"
+
+
 def gemini_model_call(model: str | None = None) -> ModelCall:
     """Real model call via google-genai; key read from env / backend/.env only."""
     try:
@@ -192,9 +203,20 @@ def gemini_model_call(model: str | None = None) -> ModelCall:
             )
             if THINKING_BUDGET >= 0:
                 config["thinking_config"] = types.ThinkingConfig(thinking_budget=THINKING_BUDGET)
-            resp = await client.aio.models.generate_content(
-                model=model_name, contents=prompt, config=types.GenerateContentConfig(**config)
-            )
+            gen_config = types.GenerateContentConfig(**config)
+            t0 = time.monotonic()
+            try:
+                resp = await client.aio.models.generate_content(
+                    model=model_name, contents=prompt, config=gen_config
+                )
+            except Exception as exc:
+                if not _is_server_error(exc) or time.monotonic() - t0 > SERVER_RETRY_MAX_ELAPSED_S:
+                    raise
+                logger.info("testme gemini %s; retrying once", getattr(exc, "code", type(exc).__name__))
+                await asyncio.sleep(SERVER_RETRY_BACKOFF_S)
+                resp = await client.aio.models.generate_content(
+                    model=model_name, contents=prompt, config=gen_config
+                )
             text = resp.text
         except TestMeError:
             raise
