@@ -182,6 +182,12 @@ export default defineContentScript({
     };
 
     function render() {
+      // The initial discovery deadline is not a permanent failure. A bound
+      // YouTube player can finish buffering after it expires; recover only
+      // for this route's ready, connected player and a usable panel anchor.
+      if (bindExpired && playerReady && player === currentPlayer() && player && player.readyState >= 2 && mountable()) {
+        bindExpired = false;
+      }
       void renderTimeline();
       if (!ui?.mounted || !isCurrent() || uiFailed) return;
       const active = session.active;
@@ -669,7 +675,14 @@ export default defineContentScript({
     function openFromBadge() {
       if (session.route === 'loading') return;
       if (session.route === 'unavailable' || bindExpired || uiFailed) {
-        bindExpired = false; uiFailed = false; observePlayer(); void lookup(); return;
+        bindExpired = false; uiFailed = false; observePlayer();
+        if (prepared === false && session.videoId) {
+          // Retrying v1 lookup alone would reapply the same terminal v2 error.
+          // Discard it and let loadPlan cancel the old personalized poller.
+          plan = null; session.route = 'loading'; session.reset(); render();
+          void loadPlan(session.generation, session.videoId, accountId);
+        } else void lookup();
+        return;
       }
       const video = player;
       if (session.active || session.testMe || !video || !playerReady || !isCurrent() || video !== currentPlayer() || isAd() || isFullscreen() || !mountable()) return;
@@ -728,7 +741,7 @@ export default defineContentScript({
       on('canplay', () => {
         // canplay without a metadata/source change may belong to the previous route.
         if (video !== oldPlayer || (!!video.currentSrc && video.currentSrc !== oldSource)) playerReady = true;
-        session.reset(); if (testMeEnabled) render();
+        session.reset(); render();
       });
       on('emptied', () => { playerReady = false; interrupt(); });
       on('seeking', () => { watch.reset(); interrupt(); });

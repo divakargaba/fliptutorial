@@ -96,6 +96,9 @@ export class PlaybackSession {
     const accepted = this.acceptLookup(generation, ['ready', 'planning'].includes(plan.status)
       ? { schemaVersion: 1, videoId: plan.videoId, revision: plan.planId, status: 'ready', breakpoints }
       : { schemaVersion: 1, videoId: plan.videoId, revision: null, status: 'unsupported', breakpoints: [] });
+    // A failed planner is retryable from the badge. Only a deliberate content
+    // verdict (not coding / no captions) belongs to the unsupported route.
+    if (accepted && plan.status === 'error') this.route = 'unavailable';
     // An unchanged poll must not erase a valid crossing for already-ready
     // content. Newly ready content still requires a fresh playback baseline.
     if (unchanged) this.previous = previous;
