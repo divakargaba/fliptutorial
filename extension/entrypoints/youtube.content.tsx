@@ -164,12 +164,17 @@ export default defineContentScript({
     const isFullscreen = () => !!document.fullscreenElement || !!document.querySelector('#movie_player.ytp-fullscreen');
     const isCurrent = () => ctx.isValid && watchVideoId(location.href) === session.videoId;
     const send = (message: WorkerMessage) => browser.runtime.sendMessage(message);
+    // YouTube is a single-page app: arriving from search results leaves that page's hidden, zero-width
+    // #secondary earlier in the DOM. Take the first match that is actually laid out, not the first match,
+    // otherwise the panel falls below the video until a hard reload.
+    const visibleIn = (selector: string, minWidth: number) => [...document.querySelectorAll(selector)]
+      .find(el => el.getBoundingClientRect().width >= minWidth) ?? null;
     const findAnchor = (): Element | null => {
-      const theater = document.querySelector('ytd-watch-flexy[theater]');
-      const secondary = document.querySelector('#secondary-inner, #secondary');
-      if (!theater && secondary && secondary.getBoundingClientRect().width >= 360) return secondary;
-      const below = document.querySelector('#below');
-      if (below && below.getBoundingClientRect().width > 0) return below;
+      const theater = document.querySelector('ytd-watch-flexy[theater]:not([hidden])');
+      const secondary = visibleIn('#secondary-inner, #secondary', 360);
+      if (!theater && secondary) return secondary;
+      const below = visibleIn('#below', 1);
+      if (below) return below;
       // YouTube hydrates #below and the right column after media is playable.
       // Its primary column already provides a safe in-flow slot after the player.
       const primary = document.querySelector('#primary-inner');
