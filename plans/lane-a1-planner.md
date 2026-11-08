@@ -52,7 +52,17 @@ Any YouTube video id → a cached, timestamped exercise plan before the learner 
 - Checks: `backend/tests/test_planner.py` passes 23/23 (24 with A2 merged) offline (stubbed Claude/Judge0/captions) and the full backend suite passes. Live smoke on 2026-11-08 (port 8011,
   real Claude + ce.judge0.com): `dQw4w9WgXcQ` gave `not_coding` ("only song lyrics…"). `nLRL_NcnK-4` (CS50P) had 18 sections / 13 pauses after the first windows, and the first
   pause was ready in about 1 min; the 2 coding exercises passed Judge0 verify. No secrets were in the public plan. `python -m app.planner.inspect_plan <videoId> <port> [--wait s]` prints a summary.
-- [ ] Goal 6: answer-on-screen check with storyboard frames (today: `question_posed` pauses before the reveal; demonstrations get a new problem).
+- [x] Goal 6: answer-on-screen check (`backend/app/planner/screen.py`). For each `question_posed` pause, before numbering, the planner reads
+  the watch page's storyboard spec (largest level, usually 160×90 every 10 s). It sends the sheet with the frames from the asking block's
+  start to the first frame after the pause, and asks Claude (same planner model, image input) per frame whether the answer is visible.
+  If the answer shows from frame k on, the pause moves to frame k-1 when that frame is clear and inside the asking block (`moved`).
+  Otherwise it becomes a NEW problem on the same idea at the same time (trigger `demonstration`, `new_problem`). No storyboard, a failed
+  fetch or a failed model call keeps the pause as before (`unchecked`). Sheets come as JPEG or WebP. `PauseSlot.screen` / `ask_start_s`
+  are kept in the plan cache only; there is no public contract change. Demonstration / concept_complete pauses already ask a new problem
+  and are not checked. Turn it off with `PLANNER_SCREEN_CHECK=0`. Offline: `tests/test_planner_screen.py` 6/6, full backend suite 297 passed / 5 skipped. Live 2026-11-08 on
+  `rfscVS0vtbw` (`claude-haiku-5-5`): the calculator pause at 3338 s came back `new_problem` (frames show `result = num1 + num2`), and the
+  reviewed exponent pause at 9803.3 s came back `clear` (header and partial body only). Limit: 160×90 frames, so small-font code reads as
+  "not visible" and the pause is kept.
 - [ ] Proof: `backend/content/eval/` with ≥20 labelled videos and a precision/recall report; auto-pause bar to post.
 - [x] Classification progress is saved after every ~40-min window (`classifyProgress` in the plan cache: windows done, numberer state, caption digest).
   A restarted backend resumes at the next window with the same section/pause ids and ranks, and reuses items already generated. If the captions changed
