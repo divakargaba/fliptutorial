@@ -290,7 +290,9 @@ def _parse_case(case: GenCase, label: str) -> tuple[list, Any]:
     return args, expected
 
 
-def check_output(out: GenOutput, clip: Clip, exercise_id: str) -> tuple[ApprovedExercise, list[str]]:
+def check_output(
+    out: GenOutput, clip: Clip, exercise_id: str, allowed_tags: tuple[str, ...] = CONCEPT_TAGS
+) -> tuple[ApprovedExercise, list[str]]:
     """Validate model output; return the private exercise and concept tags.
 
     Raises TestMeError(NOT_PYTHON / GENERATOR_UNAVAILABLE) for terminal answers
@@ -355,9 +357,9 @@ def check_output(out: GenOutput, clip: Clip, exercise_id: str) -> tuple[Approved
         # live requests past the time budget.
         logger.info("testme %s: wrongFailsOnArgsJson names no hidden test; relying on verify", exercise_id)
 
-    tags = [t for t in out.conceptTags if t in CONCEPT_TAGS]
+    tags = [t for t in out.conceptTags if t in allowed_tags]
     if not tags:
-        raise _CheckFailed(f"conceptTags must include one of {', '.join(CONCEPT_TAGS)}")
+        raise _CheckFailed(f"conceptTags must include one of {', '.join(allowed_tags)}")
     clip_ids = {c.id for c in clip.cues}
     evidence = out.conceptEvidenceCueIds
     if not evidence or any(e not in clip_ids for e in evidence):

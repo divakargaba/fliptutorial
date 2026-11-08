@@ -20,5 +20,32 @@ Any YouTube video id → a cached, timestamped exercise plan before the learner 
 ## Proof
 `backend/content/eval/`: ≥20 labelled videos (tutorials in several languages, theory e.g. Abdul Bari, mixed, and code-mentioning non-tutorials). Report precision/recall of "qualifies" per section and pause correctness; auto-pause enabled only above the bar we post on the board. Offline pytest with stubbed Claude.
 
-## Status
-- [ ] Not started
+## Status (2026-11-08)
+- [x] `POST /v2/plan`, `GET /v2/plan/{videoId}?learnerLevel=` (`backend/app/planner/`): returns at once (`planning`), plans in the
+  background, earliest ~40-min window first; pause ids stay stable while later windows are classified. 404 `PLAN_NOT_FOUND`,
+  422 `INVALID_VIDEO_ID` / `INVALID_LEVEL`.
+- [x] Goal 1: section classifier (code / theory / mixed / off_topic, `qualifies`, confidence) over ~20 s caption blocks.
+  Every block id the model cites is checked; evidence text is copied from the real captions. Low confidence or no
+  evidence means the section does not qualify. No qualifying section means `not_coding` (stops after the first window if it is clearly not programming).
+  `no_captions` / `error` are reported honestly and not cached to disk.
+- [x] Goal 2: language per section; Python code sections get coding pauses, while theory, pseudocode and other languages get concept
+  questions (multiple_choice / predict_output / short_answer) until A2's runners land (`vocab.CODING_LANGUAGES`).
+- [x] Goal 3: `question_posed` pauses at the end of the asking cue and before `revealAtS`; `demonstration` asks for a NEW problem with
+  the same idea. Generation sees only captions before `pauseAtS` (test-enforced).
+- [x] Goal 4: cache per video in `backend/content/plans/<videoId>.json` (gitignored; holds private answers), with one item set per level
+  tier (beginner / intermediate / advanced / expert). The next viewer gets the plan instantly and a restart resumes unfinished items.
+- [x] Goal 5: `rank` 1 = the key pause of each section (≥5 min apart), 2 = good, 3 = minor. Pauses are ≥60 s apart; cap 1 per ~6 min (2..30 per window).
+- [x] Goal 8 (Python): coding exercises reuse the Test me checks plus a live Judge0 verify (reference passes, known-wrong fails). If that fails, the
+  pause falls back to a concept question. Model is `claude-haiku-5-5` (`ANTHROPIC_PLANNER_MODEL` overrides it). Spend guard: 30 new videos/hour
+  (`PLANNER_MAX_NEW_VIDEOS_PER_HOUR`).
+- [x] Goal 7 (part): caption fallback order is innertube ANDROID → WEB → watch-page `captionTracks`; English uploader track → English ASR;
+  no translation. Payload cap raised 8 → 48 MB (CS50P's 9 h ASR track is 19 MB and failed before).
+- [x] For A2: `app.planner.find_exercise(id)` returns the PrivateExercise (`.exercise` is a v1 ApprovedExercise with hidden tests and solutions, plus `.revision`,
+  `.concepts`, `.level`), and `find_question(id)` returns the PrivateQuestion (`.answer`, `.explanation`, `.style`, `.choices`, `.revision`).
+- Checks: `backend/tests/test_planner.py` passes 19/19 offline (stubbed Claude/Judge0/captions) and the full backend suite passes. Live smoke on 2026-11-08 (port 8011,
+  real Claude + ce.judge0.com): `dQw4w9WgXcQ` gave `not_coding` ("only song lyrics…"). `nLRL_NcnK-4` (CS50P) had 18 sections / 13 pauses after the first windows, and the first
+  pause was ready in about 1 min; the 2 coding exercises passed Judge0 verify. No secrets were in the public plan. `python -m app.planner.inspect_plan <videoId> <port> [--wait s]` prints a summary.
+- [ ] Goal 6: answer-on-screen check with storyboard frames (today: `question_posed` pauses before the reveal; demonstrations get a new problem).
+- [ ] Proof: `backend/content/eval/` with ≥20 labelled videos and a precision/recall report; auto-pause bar to post.
+- [ ] Classification progress is persisted only when a video is fully classified (a restart mid-way re-classifies it).
+- [ ] Coding exercises in other languages once A2's runners exist.
