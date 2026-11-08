@@ -1,0 +1,56 @@
+import { useState } from 'react';
+import { createRoot } from 'react-dom/client';
+import css from '../../src/ui/theme.css?inline';
+import { ConceptQuestionPanel, FeedbackCard, LearnerSettings, LevelUp, RefresherPrompt, TopicNotAvailable, defaultSettings } from '../../src/ui/v2';
+import { ProfilePage, ProfileView } from '../../src/profile-ui';
+import { PracticePanel } from '../../src/ui/PracticePanel';
+import practice from '../../../contracts/practice-response.fixture.json';
+import type { Breakpoint } from '../../src/contracts';
+import type { ExercisePlan, FeedbackResult, PlanQuestion, PublicProfile } from '../../src/v2/types';
+import plan from '../../../contracts/v2/exercise-plan.fixture.json';
+import failed from '../../../contracts/v2/feedback-result.failed.fixture.json';
+import passed from '../../../contracts/v2/feedback-result.passed.fixture.json';
+import profile from '../../../contracts/v2/public-profile.fixture.json';
+
+const params = new URLSearchParams(location.search);
+const state = params.get('state') ?? 'question';
+const theme = params.get('theme') === 'light' ? 'light' : 'dark';
+Object.assign(globalThis, { chrome: { storage: { local: {
+  async get(keys: string | string[]) { return Object.fromEntries((Array.isArray(keys) ? keys : [keys]).map(key => [key, JSON.parse(localStorage.getItem(key) ?? 'null')])); },
+  async set(values: Record<string, unknown>) { for (const [key, value] of Object.entries(values)) localStorage.setItem(key, JSON.stringify(value)); },
+} } }, pageHotkeys: 0 });
+document.addEventListener('keydown', () => { (globalThis as typeof globalThis & { pageHotkeys: number }).pageHotkeys++; });
+document.body.style.background = theme === 'dark' ? '#0f0f0f' : '#fafafa';
+const host = document.querySelector('#root')!;
+const shadow = host.attachShadow({ mode: 'open' });
+const style = document.createElement('style'); style.textContent = css; shadow.append(style);
+const mount = document.createElement('div'); mount.className = 'breakpoint-shell'; mount.dataset.theme = theme;
+mount.style.cssText = `width:min(${state.startsWith('profile') ? '600' : '460'}px,calc(100% - 32px));margin:24px auto`;
+shadow.append(mount);
+const code = 'def raise_to_power(base_num, pow_num):\n    result = 1\n    while pow_num > 0:\n        result *= base_num\n    return result';
+function Showcase() {
+  const [settings, setSettings] = useState(defaultSettings);
+  const [dismissed, setDismissed] = useState(false);
+  const [feedback, setFeedback] = useState<FeedbackResult | null>(state === 'question-passed' ? passed as FeedbackResult : null);
+  const [checking, setChecking] = useState(state === 'question-checking');
+  const [action, setAction] = useState('');
+  if (state === 'profile-live') return <ProfilePage />;
+  if (state === 'profile') return <ProfileView profile={profile as PublicProfile} />;
+  if (state === 'coding-level' || state === 'coding-passed') return <PracticePanel videoId={practice.videoId} revision={practice.revision} breakpoint={practice.breakpoints[0]! as Breakpoint}
+    attempt={state === 'coding-passed' ? 'passed' : 'editing'} result={null} error={null} canResume={false} ownsPause={true} manualResume={state === 'coding-passed'}
+    conceptLevels={[{ concept: 'loops', level: 'beginner-2' }]} levelUp={{ concept: 'loops', level: 'beginner-2' }}
+    feedback={state === 'coding-passed' ? { result: passed as FeedbackResult, submittedCode: code } : null}
+    onRun={() => {}} onSubmit={() => {}} onSkip={() => {}} onClose={() => {}} onResume={() => {}} />;
+  if (state === 'failed') return <FeedbackCard feedback={failed as FeedbackResult} code={code} />;
+  if (state === 'passed' || state === 'beginner-passed') return <FeedbackCard feedback={state === 'passed' ? passed as FeedbackResult : { ...passed, assessedLevel: 'beginner-2', success: { ...passed.success, optimization: { ...passed.success.optimization, show: false } } } as FeedbackResult} code={code} />;
+  if (state === 'level-up') return <LevelUp concept="loops" level="beginner-2" />;
+  if (state === 'settings') return <LearnerSettings value={settings} videoId="rfscVS0vtbw" onChange={setSettings} />;
+  if (state === 'unavailable') return dismissed ? <p>Dismissed</p> : <TopicNotAvailable reason="This video discusses careers rather than teaching code." onDismiss={() => setDismissed(true)} />;
+  if (state === 'refresher') return <>{!dismissed && <RefresherPrompt due={profile.refresherDue} onDismiss={() => setDismissed(true)} onStart={setAction} />}<p role="status">{action}</p></>;
+  const question: PlanQuestion = { ...(plan as ExercisePlan).pauses[1]!.question!, ...(state === 'short' ? { style: 'short_answer', choices: undefined } : state === 'predict' ? { style: 'predict_output', choices: undefined } : {}) };
+  return <><ConceptQuestionPanel question={question} feedback={state === 'question-resume-error' ? passed as FeedbackResult : feedback} checking={checking}
+    error={state === 'question-error' ? { code: 'NETWORK', message: 'Connection failed.', retryable: true } : null} canResume={state === 'question-resume-error'} onAnswer={answer => {
+    setAction(answer); setChecking(true); setTimeout(() => { setChecking(false); setFeedback(answer === 'c' || answer === '3' ? passed as FeedbackResult : failed as FeedbackResult); }, 200);
+  }} onSkip={() => setAction('skip')} onClose={() => setAction('close')} onResume={() => setAction('resume')} /><output aria-label="Last action">{action}</output></>;
+}
+createRoot(mount).render(<Showcase />);

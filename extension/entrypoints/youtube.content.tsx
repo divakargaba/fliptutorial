@@ -22,12 +22,13 @@ import { WatchSegments } from '../src/plan/watch';
 import { PlanLoader } from '../src/plan/loader';
 import { planSolved, markPlanSolved } from '../src/plan/progress';
 import type { ExercisePlan, FeedbackResult, PracticeEvent } from '../src/v2/types';
-import { ConceptQuestionPanel, FeedbackCard, TopicNotAvailable } from '../src/ui/v2';
+import { ConceptQuestionPanel, LearnerSettings as LearnerSettingsView, TopicNotAvailable } from '../src/ui/v2';
+import { saveLearnerSettings } from '../src/plan/preferences';
 
-// B2 owns the visual implementation of these optional integration props. Keep
-// v1 callers untouched while its v2 feedback/draft support lands independently.
-type RenderedPanel = PracticePanelProps & { aiGenerated: boolean; ownsPause: boolean;
-  manualResume?: boolean; feedback?: FeedbackResult | null; level?: string; accountId?: string };
+// Keep the presentation contract shared with B2. accountId is wired ahead of
+// its draft-isolation follow-up; feedback uses the exact submitted snapshot.
+type RenderedPanel = PracticePanelProps & { aiGenerated: boolean; accountId?: string;
+  language?: PracticePanelProps['breakpoint']['exercise']['language'] };
 
 export default defineContentScript({
   matches: ['https://www.youtube.com/*'],
@@ -53,6 +54,7 @@ export default defineContentScript({
     let planLoader: PlanLoader | undefined;
     let planLoadSequence = 0;
     let dismissedUnavailable = false;
+    let settingsError: string | null = null;
     let feedbackState: { ticket: Ticket; feedback: FeedbackResult; code: string } | null = null;
     const attemptEvents = new WeakMap<object, { accountId: string; attempts: number; hintsUsed: number }>();
     // Content persists events directly, so navigation or worker cold-start cannot
@@ -185,13 +187,18 @@ export default defineContentScript({
       let panel: RenderedPanel | null = null;
       if (active && session.videoId) {
         const ticket = session.ticket();
+        const plannedItem = active.planPause?.exercise ?? active.planPause?.question;
         panel = {
           videoId: session.videoId, revision: active.revision, breakpoint: active.breakpoint,
+          language: active.breakpoint.exercise.language,
           attempt: active.state, result: active.result, error: active.error, canResume: active.canResume,
-          ...(active.planPause ? {
+          ...(plannedItem ? {
             manualResume: true, accountId: eventContext(active)!.accountId,
-            level: (active.planPause.exercise ?? active.planPause.question)!.level,
-            feedback: feedbackState && session.isCurrent(feedbackState.ticket) ? feedbackState.feedback : null,
+            conceptLevels: plannedItem.concepts.map(concept => ({
+              concept, level: plannedItem.level,
+            })),
+            feedback: feedbackState && session.isCurrent(feedbackState.ticket)
+              ? { result: feedbackState.feedback, submittedCode: feedbackState.code } : null,
           } : {}),
           aiGenerated: active.generated, ownsPause: active.ownsPause,
           ...(active.generated ? {} : {
@@ -230,6 +237,16 @@ export default defineContentScript({
               active={!!active && !active.generated} nextAtS={remaining[0]?.pauseAtS ?? null} onOpen={openFromBadge} />
           </div>}
           <TestMeControls />
+          {accountReady && session.videoId && <details className="bp-v2">
+            <summary>Practice settings</summary>
+            <LearnerSettingsView value={settings} videoId={session.videoId} onChange={next => {
+              // Persist first; the storage observer applies the same settings
+              // to every tab. A failed write must not pretend to be saved.
+              void saveLearnerSettings(next).then(() => { settingsError = null; render(); })
+                .catch(() => { settingsError = 'Could not save practice settings. Please try again.'; render(); });
+            }} />
+            {settingsError && <p role="alert">{settingsError}</p>}
+          </details>}
           {visiblePanel && <div data-breakpoint-panel data-ai-generated={visiblePanel.aiGenerated || undefined} tabIndex={-1} style={{ width: '100%' }}>
             {active?.planPause?.question
               ? <ConceptQuestionPanel key={`${session.generation}/${active.planPause.question.id}`}
@@ -238,8 +255,6 @@ export default defineContentScript({
                   feedback={feedbackState && session.isCurrent(feedbackState.ticket) ? feedbackState.feedback : null}
                   onAnswer={answer => void answerQuestion(answer)} onSkip={skip} onClose={skip} onResume={visiblePanel.onResume} />
               : <PracticePanel key={`${session.generation}/${visiblePanel.breakpoint.exercise.id}`} {...visiblePanel} />}
-            {active?.planPause?.exercise && feedbackState && session.isCurrent(feedbackState.ticket) &&
-              <FeedbackCard feedback={feedbackState.feedback} code={feedbackState.code} />}
           </div>}
         </div></TestMeContext.Provider></HintsContext.Provider>));
       } catch { failMount(); }
