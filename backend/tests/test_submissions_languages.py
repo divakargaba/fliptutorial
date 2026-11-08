@@ -128,7 +128,7 @@ def test_stale_revision_and_unsupported_language(client):
     set_id = "tm-langstalecheck"
     ex_id = _seed("javascript", set_id)
     assert _post(client, ex_id, "tm-other", "run").status_code == 409
-    set_id2 = "tm-langrustnorun"
-    ex_id2 = _seed("rust", set_id2)
+    set_id2 = "tm-langrubynorun"  # rust is graded since the stdio runner; ruby has no runner
+    ex_id2 = _seed("ruby", set_id2)
     resp = _post(client, ex_id2, set_id2, "run")
     assert resp.status_code == 422 and resp.json()["error"]["code"] == "UNSUPPORTED_LANGUAGE"

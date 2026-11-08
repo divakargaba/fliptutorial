@@ -35,6 +35,7 @@ A labelled set (`backend/tests/fixtures/submissions/`) of ≥30 right/wrong subm
 - [x] FeedbackResult includes `schemaVersion: 2` per frozen contract (`extension/src/v2/types.ts`)
 - [x] `/v2/hint` accepts `previousHints` (list[str], max 5) and passes them to the hint service for improved progression
 - [x] API integration tests: submit passed/failed/run + answer all assert `schemaVersion: 2`; hint asserts `previousHints` passthrough
+- [x] Stdio runner integration: TypeScript, C, C#, Go, Rust via `stdio_runner.py` (whole-program stdin/stdout grading); 24 new tests; SUPPORTED_LANGUAGES now 10
 - [ ] Live integration test with real Judge0 + Anthropic key
 
 ## Follow-up tasks (assigned #6718569949)
@@ -52,6 +53,7 @@ A labelled set (`backend/tests/fixtures/submissions/`) of ≥30 right/wrong subm
 - `java_runner.py`: Java OpenJDK 13 (Judge0 id 62), wraps user's `Solution` class
 - `cpp_runner.py`: C++ GCC 10.2 (Judge0 id 54), auto-types args from Python values
 - `sql_runner.py`: SQLite (Judge0 id 82), `.mode json` output, row-based comparison
+- `stdio_runner.py`: Generic stdin/stdout runner for TypeScript (101), C (103), C# (51), Go (107), Rust (108); whole-program execution, normalised stdout comparison
 
 ### Feedback (`backend/app/feedback/`)
 - `__init__.py`: Router with `/v2/submit`, `/v2/answer`, `/v2/hint`; exercise resolution from store → v1 catalog → A1 planner → B1 refresher
