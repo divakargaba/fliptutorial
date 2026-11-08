@@ -52,6 +52,16 @@ keep the same paused frame beyond the solved hold. Closing the panel must also
 preserve that pause. A cache-reopen case returns the same generated exercise twice
 and requires a fresh review instead of the previous attempt's verdict.
 
+Verified against `f6abdf1`: all six already-paused/cache-reopen cases pass at
+1440×900 and 1024×768. Native-pause efficient/inefficient screenshots are saved
+in `assets/ui-checks/hints-efficiency/{desktop,narrow}-test-me-native-pause-*.png`.
+These checks confirm review requests and playback ownership; they do not certify
+the solved screen's resume wording. The efficient native-pause screenshot still
+shows a countdown and **Resume now**, although no automatic resume is scheduled.
+The current callback closes that panel while preserving the learner's pause.
+The lead must agree a pause-ownership panel signal and explicit button behavior
+with the playback owner before that UI contract changes.
+
 ```powershell
 $env:WXT_TESTME_ENABLED = 'true'
 $env:WXT_API_BASE_URL = 'http://127.0.0.1:8019'
