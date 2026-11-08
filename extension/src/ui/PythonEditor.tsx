@@ -2,10 +2,32 @@ import { useEffect, useRef } from 'react';
 import { basicSetup } from 'codemirror';
 import { EditorView, keymap } from '@codemirror/view';
 import { Prec } from '@codemirror/state';
-import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
+import { HighlightStyle, StreamLanguage, syntaxHighlighting } from '@codemirror/language';
 import { tags as t } from '@lezer/highlight';
 import { python } from '@codemirror/lang-python';
+import { javascript } from '@codemirror/lang-javascript';
+import { java } from '@codemirror/lang-java';
+import { cpp } from '@codemirror/lang-cpp';
+import { sql } from '@codemirror/lang-sql';
+import { rust } from '@codemirror/lang-rust';
+import { go } from '@codemirror/legacy-modes/mode/go';
+import { csharp } from '@codemirror/legacy-modes/mode/clike';
 import type { Language } from '../v2/types';
+
+function syntax(language: Language) {
+  switch (language) {
+    case 'python': return python();
+    case 'javascript': return javascript();
+    case 'typescript': return javascript({ typescript: true });
+    case 'java': return java();
+    case 'c': case 'cpp': return cpp();
+    case 'sql': return sql();
+    case 'rust': return rust();
+    case 'go': return StreamLanguage.define(go);
+    case 'csharp': return StreamLanguage.define(csharp);
+    default: return [];
+  }
+}
 
 // Colours come from CSS variables so the editor follows YouTube's light/dark theme.
 const highlight = HighlightStyle.define([
@@ -59,7 +81,7 @@ export function PythonEditor({ initialCode, onChange, onRun, onSubmit, described
           { key: 'Mod-Enter', run: () => { handlers.current.onRun(); return true; } },
           { key: 'Mod-Shift-Enter', run: () => { handlers.current.onSubmit(); return true; } },
         ])),
-        basicSetup, ...(language === 'python' ? [python(), syntaxHighlighting(highlight)] : []), theme,
+        basicSetup, syntax(language), syntaxHighlighting(highlight), theme,
         EditorView.contentAttributes.of({
           'aria-label': `${{ python: 'Python', javascript: 'JavaScript', typescript: 'TypeScript', java: 'Java', cpp: 'C++', c: 'C', csharp: 'C#', go: 'Go', rust: 'Rust', sql: 'SQL', pseudocode: 'Pseudocode', unknown: 'Source' }[language]} code`, spellcheck: 'false', ...(describedBy ? { 'aria-describedby': describedBy } : {}),
         }),

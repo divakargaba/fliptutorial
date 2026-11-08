@@ -12,6 +12,15 @@ import plan from '../../../contracts/v2/exercise-plan.fixture.json';
 import failed from '../../../contracts/v2/feedback-result.failed.fixture.json';
 import passed from '../../../contracts/v2/feedback-result.passed.fixture.json';
 import profile from '../../../contracts/v2/public-profile.fixture.json';
+import { ACCOUNT_KEY, SETTINGS_KEY, readAccount, readSettings } from '../../src/plan/settings';
+
+// The preview has no extension context; production uses A3's browser helpers.
+const previewPreferences = {
+  async loadActiveAccount() { return readAccount(JSON.parse(localStorage.getItem(ACCOUNT_KEY) ?? 'null')); },
+  async loadLearnerSettings() { return readSettings(JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? 'null') ?? undefined); },
+  async setActiveAccount(value: string) { localStorage.setItem(ACCOUNT_KEY, JSON.stringify(value)); },
+  async saveLearnerSettings(value: typeof defaultSettings) { localStorage.setItem(SETTINGS_KEY, JSON.stringify(value)); },
+};
 
 const params = new URLSearchParams(location.search);
 const state = params.get('state') ?? 'question';
@@ -46,7 +55,7 @@ function Showcase() {
       { ...pauses[0]!, id: 'missing-exercise', exercise: null, pauseAtS: 7000 },
     ]} passedIds={new Set(['later'])} onOpen={setAction} /><output aria-label="Opened challenge">{action}</output></>;
   }
-  if (state === 'profile-live') return <ProfilePage />;
+  if (state === 'profile-live') return <ProfilePage preferences={previewPreferences} />;
   if (state === 'profile') return <ProfileView profile={profile as PublicProfile} />;
   if (state === 'coding-language' || state === 'coding-accounts') {
     const language = (params.get('language') ?? 'javascript') as Language;
