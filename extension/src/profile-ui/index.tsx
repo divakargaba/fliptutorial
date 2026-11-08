@@ -35,13 +35,14 @@ async function get(path: string, signal: AbortSignal): Promise<unknown> {
   const response = await fetch(`${base}${path}`, { signal: AbortSignal.any([signal, AbortSignal.timeout(6000)]) }).catch(() => {
     throw new Error('Could not reach the local profile service. Check that the backend is running and retry.');
   });
+  if (response.status === 404) throw new Error('This profile is private or does not exist.');
   if (!response.ok) throw new Error(response.status === 501 ? 'Profiles are not available yet. Try again when the local profile service is ready.' : 'Could not load the local profile. Check that the backend is running.');
   return response.json();
 }
 function safeVideo(url: string) {
   try { const parsed = new URL(url); return parsed.protocol === 'https:' && ['www.youtube.com', 'youtube.com', 'youtu.be'].includes(parsed.hostname); } catch { return false; }
 }
-export function ProfileView({ profile }: { profile: PublicProfile }) {
+export function ProfileView({ profile, onViewProfile }: { profile: PublicProfile; onViewProfile?(accountId: string): void }) {
   return <article className="bp-v2" aria-label="Skill profile"><h1>{profile.displayName}</h1><p>{profile.public ? 'Public profile enabled' : 'Private profile'} · Local test account</p>
     <section className="bp-v2-card"><h2>Skills</h2>{!profile.skills.length && <p>Complete a challenge to start building your skills. Every concept starts at Beginner I.</p>}
       {profile.skills.map(skill => {
@@ -58,8 +59,43 @@ export function ProfileView({ profile }: { profile: PublicProfile }) {
     {!!profile.highlights.length && <section className="bp-v2-card"><h2>Highlights</h2><ul>{profile.highlights.map(item => <li key={item}>{item}</li>)}</ul></section>}
     {!!profile.refresherDue.length && <section className="bp-v2-card"><h2>Time to refresh</h2><p>Skill strength fades without practice. A refresher can help.</p><ul>{profile.refresherDue.map(item => <li key={item.concept}>{conceptName(item.concept)}: {item.reason}</li>)}</ul></section>}
     <section className="bp-v2-card"><h2>In-demand skills</h2>{!profile.topInDemand.length && <p>No recommendations yet.</p>}{profile.topInDemand.slice(0, 3).map(item => <div key={item.concept}><h3>{conceptName(item.concept)}</h3><p>{item.reason}</p>{safeVideo(item.videoUrl) && <a href={item.videoUrl} target="_blank" rel="noreferrer">Watch a tutorial on {conceptName(item.concept)}</a>}</div>)}</section>
-    <section className="bp-v2-card"><h2>Complementary teammates</h2>{!profile.complements.length && <p>No complementary profiles yet.</p>}{profile.complements.map(person => <div key={person.accountId}><h3>{person.displayName}</h3><p>{person.why}</p></div>)}</section>
+    <section className="bp-v2-card"><h2>Complementary teammates</h2>{!profile.complements.length && <p>No complementary profiles yet.</p>}{profile.complements.map(person => <div key={person.accountId}>
+      <h3>{onViewProfile ? <button type="button" className="bp-v2-link" onClick={() => onViewProfile(person.accountId)}>{person.displayName}</button> : person.displayName}</h3><p>{person.why}</p>
+    </div>)}</section>
   </article>;
+}
+function TeammateProfile({ accountId, myName, onBack }: { accountId: string; myName: string; onBack(): void }) {
+  const [profile, setProfile] = useState<PublicProfile | null>(null);
+  const [error, setError] = useState('');
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    const controller = new AbortController();
+    setProfile(null); setError('');
+    void get(`/v2/profile/${encodeURIComponent(accountId)}/public`, controller.signal).then(data => {
+      if (controller.signal.aborted) return;
+      const parsed = profileSchema.parse(data);
+      setProfile(parsed);
+    }).catch(cause => { if (!controller.signal.aborted) setError(loadError(cause)); });
+    return () => controller.abort();
+  }, [accountId]);
+  const connect = () => {
+    if (!profile) return;
+    const strongSkills = profile.skills.filter(s => {
+      const rank = levels.levels.findIndex(l => l.id === s.level);
+      return rank >= 5; // Intermediate I and up
+    }).slice(0, 3).map(s => conceptName(s.concept));
+    const skillText = strongSkills.length ? ` I see you're strong in ${strongSkills.join(' and ')}.` : '';
+    const message = `Hi ${profile.displayName}, I'm ${myName} on Breakpoint.${skillText} I think we'd make a great team. Want to collaborate?`;
+    void navigator.clipboard.writeText(message).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); }).catch(() => {});
+  };
+  return <div className="bp-v2">
+    <nav><button type="button" className="bp-v2-link" onClick={onBack} aria-label="Back to your profile">&larr; Back</button></nav>
+    {error ? <div role="alert"><p>{error}</p></div> : profile
+      ? <><ProfileView profile={profile} />
+        <div className="bp-v2-card bp-v2-actions"><button type="button" className="bp-v2-primary" onClick={connect}>{copied ? 'Copied!' : 'Connect'}</button>
+          <small>Copies a short intro message to your clipboard.</small></div></>
+      : <p role="status">Loading profile…</p>}
+  </div>;
 }
 export function ProfilePage({ preferences: prefs = preferences }: { preferences?: Preferences } = {}) {
   const [accounts, setAccounts] = useState<LocalAccount[]>([]);
@@ -70,6 +106,7 @@ export function ProfilePage({ preferences: prefs = preferences }: { preferences?
   const [retry, setRetry] = useState(0);
   const [settings, setSettings] = useState<LearnerSettingsValue>(defaultSettings);
   const [storageReady, setStorageReady] = useState(false);
+  const [viewing, setViewing] = useState<string | null>(null);
   useEffect(() => {
     const controller = new AbortController();
     setError(''); setProfile(null); setAccount('');
@@ -100,13 +137,18 @@ export function ProfilePage({ preferences: prefs = preferences }: { preferences?
     }).catch(cause => { if (!controller.signal.aborted) setError(loadError(cause)); });
     return () => controller.abort();
   }, [account]);
+  if (viewing) {
+    return <main className="bp-v2 bp-v2-profile"><header><strong>Breakpoint</strong></header>
+      <TeammateProfile accountId={viewing} myName={profile?.displayName ?? 'a learner'} onBack={() => setViewing(null)} />
+    </main>;
+  }
   return <main className="bp-v2 bp-v2-profile"><header><strong>Breakpoint</strong></header>
     {!!accounts.length && <label className="bp-v2-setting">Test account<select value={account} onChange={event => {
       const accountId = event.target.value;
       setAccount(accountId); setSavingError('');
       void persist(() => prefs.setActiveAccount(accountId)).catch(() => setSavingError('Account selection could not be saved.'));
     }}>{accounts.map(item => <option key={item.accountId} value={item.accountId}>{item.displayName}</option>)}</select></label>}
-    {error ? <div role="alert"><p>{error}</p><button onClick={() => setRetry(value => value + 1)}>Retry</button></div> : profile ? <ProfileView profile={profile} /> : <p role="status">Loading profile…</p>}
+    {error ? <div role="alert"><p>{error}</p><button onClick={() => setRetry(value => value + 1)}>Retry</button></div> : profile ? <ProfileView profile={profile} onViewProfile={setViewing} /> : <p role="status">Loading profile…</p>}
     {storageReady && <LearnerSettings value={settings} onChange={value => {
       setSettings(value); setSavingError('');
       void persist(() => prefs.saveLearnerSettings(value)).catch(() => setSavingError('Practice settings could not be saved.'));

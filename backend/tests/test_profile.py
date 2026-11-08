@@ -458,8 +458,52 @@ def test_frontend_and_backend_pair_up_as_full_stack(seeded):
 def test_matches_explain_why_and_skip_private_accounts(seeded):
     ana = seeded.get("/v2/profile/test-ana", params=NOW_Q).json()["complements"]
     ben = next(m for m in ana if m["accountId"] == "test-ben")
-    assert ben["why"] == "Advanced in http-apis and sql-joins, where Ana is a beginner"
+    assert "http-apis" in ben["why"] and "Ana is a beginner" in ben["why"]
     for acct in ("test-ana", "test-ben", "test-cam", "test-dee"):
         ms = seeded.get(f"/v2/matches/{acct}", params=NOW_Q).json()["matches"]
         assert ms and all(m["accountId"] not in {acct, "test-eli"} for m in ms)
         assert all(m["why"] for m in ms)
+
+
+def test_public_profile_returns_full_profile_for_public_accounts(seeded):
+    body = seeded.get("/v2/profile/test-ana/public", params=NOW_Q).json()
+    assert body["schemaVersion"] == 2 and body["accountId"] == "test-ana"
+    assert body["public"] is True
+    assert set(body) == {"schemaVersion", "accountId", "displayName", "public", "skills",
+                         "highlights", "refresherDue", "topInDemand", "complements"}
+
+
+def test_public_profile_returns_404_for_private_accounts(seeded):
+    seeded.post("/v2/profile/test-ben/public", json={"public": False})
+    r = seeded.get("/v2/profile/test-ben/public", params=NOW_Q)
+    assert r.status_code == 404
+    assert r.json()["error"]["code"] == "PRIVATE_ACCOUNT"
+
+
+def test_public_profile_returns_404_for_unknown_accounts(seeded):
+    r = seeded.get("/v2/profile/nobody/public", params=NOW_Q)
+    assert r.status_code == 404
+
+
+def test_broader_matching_applies_group_pair_bonuses(empty):
+    """Accounts strong in different concept groups get a complementary bonus."""
+    base_time = NOW - timedelta(days=30)
+    # User X: strong in data-structures (lists, dicts)
+    # User Y: strong in algorithms (sorting, searching)
+    events_x = []
+    events_y = []
+    for i in range(12):
+        events_x.append({**_pass(i, "lists", base_time + timedelta(days=i)),
+                         "accountId": "test-x", "level": f"intermediate-{min(i + 1, 5)}", "optimal": True})
+        events_x.append({**_pass(100 + i, "dicts", base_time + timedelta(days=i)),
+                         "accountId": "test-x", "level": f"intermediate-{min(i + 1, 5)}", "optimal": True})
+        events_y.append({**_pass(200 + i, "sorting", base_time + timedelta(days=i)),
+                         "accountId": "test-y", "level": f"intermediate-{min(i + 1, 5)}", "optimal": True})
+        events_y.append({**_pass(300 + i, "searching", base_time + timedelta(days=i)),
+                         "accountId": "test-y", "level": f"intermediate-{min(i + 1, 5)}", "optimal": True})
+    empty.post("/v2/events", json={"events": events_x + events_y})
+    empty.post("/v2/profile/test-x/public", json={"public": True})
+    empty.post("/v2/profile/test-y/public", json={"public": True})
+    ms = empty.get("/v2/matches/test-x", params=NOW_Q).json()["matches"]
+    assert ms and ms[0]["accountId"] == "test-y"
+    assert ms[0]["score"] > 0

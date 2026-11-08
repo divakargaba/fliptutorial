@@ -37,6 +37,12 @@ A labelled set (`backend/tests/fixtures/submissions/`) of ≥30 right/wrong subm
 - [x] API integration tests: submit passed/failed/run + answer all assert `schemaVersion: 2`; hint asserts `previousHints` passthrough
 - [ ] Live integration test with real Judge0 + Anthropic key
 
+## Follow-up tasks (assigned #6718569949)
+- [x] Level-up pop-up wiring: youtube.content.tsx fetches rank before/after a passing submit or correct answer; if rank goes up, passes `levelUp` to PracticePanel (existing LevelUp component)
+- [x] Clickable profiles: popup teammate names are buttons; clicking opens their public profile (via GET /v2/profile/{id}/public) with back + Connect (copies intro message)
+- [x] Broader matching: matching.py scores complementarity across all concept groups (10 groups, 10 pair bonuses), not only frontend/backend; full-stack pair label preserved
+- [x] GET /v2/profile/{accountId}/public: returns 404 for private/unknown accounts, full profile for public accounts; 4 new tests
+
 ## Architecture
 
 ### Runners (`backend/app/runners/`)
