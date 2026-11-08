@@ -47,14 +47,16 @@ from .transcripts import Clip
 logger = logging.getLogger("breakpoint.testme")
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
-PROMPT_VERSION = "tm1"
+PROMPT_VERSION = "tm2"
 # Test me runs on Haiku for latency headroom under BUDGET_S; ANTHROPIC_TESTME_MODEL
 # overrides it. ANTHROPIC_MODEL (prep scan, Sonnet) does not apply here.
 DEFAULT_MODEL = "claude-haiku-5-5"
 MAX_OUTPUT_TOKENS = 4096
 
 BUDGET_S = 18.0
-RETRY_MIN_REMAINING_S = 8.0
+# Retry a rejected set only if the first attempt was quick; otherwise fail fast
+# (GENERATOR_UNAVAILABLE ~10 s) instead of timing out at BUDGET_S.
+RETRY_MIN_REMAINING_S = 13.0
 # One retry on an Anthropic 5xx (e.g. 529 overloaded), only when the failed call
 # came back fast enough that a second call can still fit in BUDGET_S.
 SERVER_RETRY_MAX_ELAPSED_S = 6.0
@@ -99,7 +101,10 @@ class _CheckFailed(Exception):
 
 
 class GenCase(BaseModel):
-    argsJson: str = Field(description='JSON array of positional arguments, e.g. "[2, 3]"')
+    argsJson: str = Field(
+        description='Always a JSON array with one element per parameter, even for one '
+        'argument: f(2, 3) -> "[2, 3]", f(5) -> "[5]", f("abc") -> "[\\"abc\\"]"'
+    )
     expectedJson: str = Field(description='JSON return value, e.g. "5" or "\\"abc\\""')
 
 
@@ -152,9 +157,12 @@ def build_prompt(clip: Clip, feedback: str | None = None) -> str:
         "differs from expectedJson.\n"
         "- The function returns a value (no print, no input, no files, no imports).\n"
         "- 1 or 2 examples (shown to the learner) and 3 to 5 hiddenTests covering edge "
-        "cases; inputs must all differ. Each argsJson is a JSON array of arguments and "
-        "expectedJson a JSON value; use only integers, strings, booleans or null "
-        "(no floats, lists or dicts).\n"
+        "cases; inputs must all differ. argsJson is ALWAYS a JSON array in square "
+        "brackets with exactly one element per function parameter, even when there is "
+        "only one: f(5) is \"[5]\", f(\"abc\") is \"[\\\"abc\\\"]\", f(2, 3) is \"[2, 3]\"; "
+        "never a bare value like \"5\" or \"\\\"abc\\\"\". wrongFailsOnArgsJson uses the "
+        "same array form. expectedJson is a single JSON value; use only integers, "
+        "strings, booleans or null (no floats, lists or dicts).\n"
         f"- title <= {MAX_TITLE} chars; statement <= {MAX_STATEMENT} chars, plain text "
         "that names the function and says what it returns.\n"
         f"- conceptTags from: {', '.join(CONCEPT_TAGS)}.\n"

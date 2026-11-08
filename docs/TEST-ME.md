@@ -110,8 +110,10 @@ Time budget: the extension waits 20 s, so the backend budget is 18 s end to end
 - Concept checks: ≥1 concept tag from the PRD list; ≥1 evidence cue id, all present
   in the clip (the concept was taught before the moment).
 - Then `verify(exercise)` (T3 Judge0 method): reference passes all, wrong fails ≥1.
-  A failed rule/concept/verify check gets one retry when ≥8 s of budget remain;
-  otherwise `GENERATOR_UNAVAILABLE`.
+  A failed rule/concept/verify check gets one retry when ≥13 s of budget remain
+  (only a quick first attempt); otherwise it fails fast with `GENERATOR_UNAVAILABLE`
+  (~10 s) instead of timing out at 18 s. The prompt requires `argsJson` to always be
+  a JSON array, one element per parameter (`f(5)` → `"[5]"`).
 - Cache: key = `videoId` + last cue id of the clip + prompt version, TTL 30 min; the
   `setId` is `tm-<16 hex>` of that key. Only verified sets are cached. In-flight
   requests for the same key share one generation. `get_set(setId)` returns the

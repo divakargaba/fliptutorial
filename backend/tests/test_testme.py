@@ -256,6 +256,21 @@ def test_no_retry_when_budget_is_low():
     assert len(model.prompts) == 1
 
 
+def test_slow_rejected_first_attempt_fails_fast_with_default_threshold():
+    # A 5.5 s first attempt leaves < 13 s of the 18 s budget: no retry, fail fast.
+    model = StubModel(_good(functionName="bad name"), _good(), delay=5.5)
+    with pytest.raises(TestMeError) as e:
+        run(gen(model).generate(CLIP, ok_verify()))
+    assert e.value.code == "GENERATOR_UNAVAILABLE" and len(model.prompts) == 1
+
+
+def test_prompt_requires_args_json_array_even_for_one_argument():
+    p = build_prompt(CLIP)
+    assert "ALWAYS a JSON array" in p and 'f(5) is "[5]"' in p
+    desc = GenOutput.model_json_schema()["$defs"]["GenCase"]["properties"]["argsJson"]["description"]
+    assert desc.startswith("Always a JSON array") and '"[5]"' in desc
+
+
 def test_verify_exception_propagates_for_endpoint_mapping():
     class Unavailable(Exception):
         pass
