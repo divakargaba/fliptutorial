@@ -10,7 +10,7 @@ export default defineConfig({
   use: { baseURL: 'http://127.0.0.1:4173', browserName: 'chromium' },
   webServer: {
     cwd: extensionRoot,
-    command: 'node node_modules/wxt/bin/wxt.mjs build && node node_modules/vite/bin/vite.js --config tests/e2e/vite.preview.config.ts',
+    command: 'node node_modules/wxt/bin/wxt.mjs build --config tests/e2e/wxt.test.config.ts && node node_modules/vite/bin/vite.js --config tests/e2e/vite.preview.config.ts',
     url: 'http://127.0.0.1:4173/tests/e2e/preview.html',
     reuseExistingServer: false,
   },
@@ -18,7 +18,7 @@ export default defineConfig({
     ...[{ name: 'desktop', viewport: { width: 1440, height: 900 } },
       { name: 'narrow', viewport: { width: 1024, height: 768 } }].flatMap(({ name, viewport }) => [
       { name: `preview-${name}`, testMatch: ['ui.preview.spec.ts', 'drafts.spec.ts', 'test-me.preview.spec.ts', 'v2.preview.spec.ts', 'workspace.preview.spec.ts', ...(name === 'desktop' ? ['api.spec.ts'] : [])], use: { viewport } },
-      { name: `mv3-${name}`, testMatch: ['extension.spec.ts', 'release.spec.ts', 'test-me.spec.ts', 'hints.spec.ts', 'v2-popup.spec.ts', 'plan.spec.ts', 'progress.spec.ts', 'panel-fit.spec.ts', 'workspace.spec.ts'], use: { viewport } },
+      { name: `mv3-${name}`, testMatch: ['extension.spec.ts', 'release.spec.ts', 'test-me.spec.ts', 'hints.spec.ts', 'v2-popup.spec.ts', 'plan.spec.ts', 'progress.spec.ts', 'panel-fit.spec.ts', 'workspace.spec.ts', 'learning.spec.ts'], use: { viewport } },
     ]),
   ],
 });

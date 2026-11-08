@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test';
-import { automaticPause, test } from './extension.fixture';
+import { automaticPause, correctCode, unlockHints, test } from './extension.fixture';
 
 test('placement moves the mounted workspace, preserves edits and is remembered', async ({ app }, info) => {
   const page = app.page;
@@ -39,6 +39,7 @@ test('hints overlay without resizing the editor and reopen without another reque
   const page = app.page;
   await automaticPause(page);
   const editor = page.getByRole('textbox', { name: 'Python code' });
+  await unlockHints(page);
   const before = await page.locator('.bp-editor-card').boundingBox();
   await page.getByRole('button', { name: 'Stuck? Get a hint', exact: true }).click();
   await expect(page.locator('.bp-hint-card')).toHaveCount(1);
@@ -51,11 +52,16 @@ test('hints overlay without resizing the editor and reopen without another reque
   await expect(page.locator('.bp-help-popover')).toHaveCount(0);
   await page.getByRole('button', { name: 'Hints (1 of 3)', exact: true }).click();
   await expect(page.locator('.bp-hint-card')).toHaveCount(1);
-  expect(app.hints).toHaveLength(1);
-  await editor.fill('def raise_to_power(base, exponent):\n    return base ** exponent');
+  expect(app.hints.filter(h => h.level > 0)).toHaveLength(1);
+  await editor.focus();
+  await editor.press('ControlOrMeta+A');
+  await page.keyboard.insertText(correctCode);
+  await expect(editor).toHaveText(correctCode);
   await expect(page.locator('.bp-help-popover')).toHaveCount(0);
   await page.emulateMedia({ reducedMotion: 'reduce' });
+  await app.rejectResume(true); // Keep the legacy auto-resume flow visible for the motion assertion.
   await page.getByRole('button', { name: 'Submit', exact: true }).click();
+  await expect.poll(() => app.requests.at(-1)).toMatchObject({ mode: 'submit', code: correctCode });
   await expect(page.locator('.bp-celebration-check')).toBeVisible();
   expect(await page.locator('.bp-celebration-check').evaluate(el => getComputedStyle(el).animationName)).toBe('none');
   await page.locator('.bp-workbench').screenshot({ animations: 'disabled', path: info.outputPath('workbench-success.png') });

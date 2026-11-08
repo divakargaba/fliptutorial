@@ -23,7 +23,7 @@ test.describe('v2 refresher runtime', () => {
     await expect(page.getByRole('complementary', { name: 'Skill refresher' })).toBeVisible();
     await page.locator('#start').click();
     await expect.poll(() => page.locator('video').evaluate(video => video.paused)).toBe(false);
-    await page.getByRole('button', { name: 'Start refresher', exact: true }).click();
+    await page.getByRole('button', { name: 'Practice', exact: true }).click();
     await expect(page.getByRole('heading', { name: question.title })).toBeVisible();
     expect(await page.locator('video').evaluate(video => video.paused)).toBe(true);
     await page.getByRole('radio', { name: '3', exact: true }).check();

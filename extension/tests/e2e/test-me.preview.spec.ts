@@ -23,7 +23,7 @@ test('generation can close while loading and labels survive results and Solved',
   await expect(page.getByRole('textbox', { name: 'Python code' })).toBeVisible();
   await expect(page.getByText('AI-generated practice', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Run', exact: true }).click();
-  await expect(page.getByText('Examples passed', { exact: true })).toBeVisible();
+  await expect(page.getByText('Run complete', { exact: true })).toBeVisible();
   await expect(page.getByText('AI-generated practice', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Submit', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Solved', exact: true })).toBeFocused();
