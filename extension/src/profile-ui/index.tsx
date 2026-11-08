@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
 import { AnimatePresence, motion, MotionConfig } from 'motion/react';
-import { ArrowLeft, Check, ChevronDown, ChevronRight, Copy, ExternalLink, Info, Settings2, TrendingDown, TrendingUp, X, Zap } from 'lucide-react';
+import { ArrowLeft, Check, ChevronDown, ChevronRight, Copy, ExternalLink, Info, Settings2, TrendingDown, TrendingUp, X } from 'lucide-react';
+import { BrandMark } from '../ui/BrandMark';
 import '@fontsource-variable/inter';
 import type { PublicProfile } from '../v2/types';
 import levels from '../../../contracts/v2/levels.json';
@@ -513,7 +514,7 @@ export function ProfilePage({ preferences: prefs = preferences }: { preferences?
   const current = accounts.find(item => item.accountId === account);
   return <MotionConfig reducedMotion="user"><main className="bp-v2 bp-v2-profile bp-pf-root">
     <header className="bp-pf-top">
-      <span className="bp-pf-brand"><span className="bp-pf-mark" aria-hidden="true"><Zap size={13} strokeWidth={2.5} /></span>Breakpoint</span>
+      <span className="bp-pf-brand"><BrandMark size={24} />Breakpoint</span>
       <span className="bp-pf-top-actions">
         {DEMO_MODE && !!accounts.length && <label className="bp-pf-viewing"><span className="sr-only">Viewing as</span>
           <span aria-hidden="true">Viewing as {current ? displayName(current.displayName) : ''}</span><ChevronDown size={14} aria-hidden="true" />

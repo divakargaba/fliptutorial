@@ -12,6 +12,7 @@ import { listSolved, markSolved } from '../src/progress';
 import { PlaybackSession, watchVideoId, type Ticket } from '../src/playback';
 import { TestMeContext } from '../src/test-me';
 import { Badge } from '../src/ui/Badge';
+import { BrandMark } from '../src/ui/BrandMark';
 import { TestMeControls } from '../src/ui/TestMeControls';
 import { PracticePanel, SOLVED_HOLD_MS, type PracticePanelProps } from '../src/ui/PracticePanel';
 import { HintsContext, type AnalysisState } from '../src/hints';
@@ -280,7 +281,7 @@ export default defineContentScript({
             <RefresherPrompt due={[{ concept: refresher.concept, reason: refresher.reason }]}
               onStart={startRefresher} onDismiss={() => { refresher = null; render(); }} />}
           {accountReady && session.videoId && <details className="bp-v2">
-            <summary>Practice settings</summary>
+            <summary><span className="bp-logo-inline"><BrandMark size={14} /></span>Practice settings</summary>
             <LearnerSettingsView value={settings} videoId={session.videoId} onChange={next => {
               // Persist first; the storage observer applies the same settings
               // to every tab. A failed write must not pretend to be saved.

@@ -38,7 +38,6 @@ html:has(.bp-pf-root) { width: 400px; }
 .bp-pf-top { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; gap: 8px; height: 52px; padding: 0 4px 0 var(--pf-gutter);
   background: rgba(10, 10, 11, .85); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-bottom: 1px solid var(--pf-hair); }
 .bp-pf-brand { display: inline-flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; }
-.bp-pf-mark { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 6px; background: var(--pf-accent); color: #fff; }
 .bp-pf-top-actions { display: flex; align-items: center; }
 .bp-pf-viewing { position: relative; display: inline-flex; align-items: center; gap: 4px; height: 44px; padding: 0 8px; border-radius: 8px; font-size: 13px; color: var(--pf-text-2); cursor: pointer; }
 .bp-pf-viewing:hover { color: var(--pf-text); background: var(--pf-raised); }

@@ -1,4 +1,5 @@
-import { Check, CircleAlert, LoaderCircle, RotateCw, SquareCode } from 'lucide-react';
+import { Check, CircleAlert, LoaderCircle, RotateCw } from 'lucide-react';
+import { BrandMark } from './BrandMark';
 import { formatTimestamp } from './format';
 
 export type BadgeProps = {
@@ -20,7 +21,7 @@ const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 // Always one <button> element so React keeps the same DOM node (and focus) across states.
 export function Badge({ state, total, remaining, solved, active, nextAtS, onOpen }: BadgeProps) {
-  let kind: string; let label: string; let icon; let text: string; let meta: React.ReactNode = null;
+  let kind: string; let label: string; let icon: React.ReactNode = null; let text: string; let meta: React.ReactNode = null;
   if (state === 'loading') {
     kind = 'loading'; label = 'Breakpoint · finding practice'; text = 'Finding practice…';
     icon = <LoaderCircle size={15} className="bp-spin" aria-hidden="true" />;
@@ -36,18 +37,17 @@ export function Badge({ state, total, remaining, solved, active, nextAtS, onOpen
     kind = 'ready';
     label = `Breakpoint · ${plural(remaining, 'challenge')}${nextAtS !== null ? ` at ${formatTimestamp(nextAtS)}` : ''}`;
     text = remaining === total ? plural(total, 'challenge') : `${plural(remaining, 'challenge')} left`;
-    icon = <SquareCode size={15} aria-hidden="true" />;
     if (nextAtS !== null) meta = `at ${formatTimestamp(nextAtS)}`;
   } else {
     kind = solved > 0 ? 'solved' : 'done'; label = `Breakpoint · ${solved} of ${total} solved`;
     text = solved === total ? (total === 1 ? 'Challenge solved' : 'All challenges solved') : `${solved} of ${total} solved`;
-    icon = solved > 0 ? <Check size={15} className="bp-pass" aria-hidden="true" /> : <SquareCode size={15} aria-hidden="true" />;
+    if (solved > 0) icon = <Check size={15} className="bp-pass" aria-hidden="true" />;
   }
   const clickable = kind === 'ready' || kind === 'unavailable';
   return <button type="button" className="bp-badge" data-state={kind} aria-label={label}
     aria-disabled={!clickable || undefined} aria-busy={kind === 'loading' || undefined}
     title={kind === 'ready' ? 'Open the next challenge now' : undefined}
     onClick={clickable ? onOpen : undefined}>
-    {icon}<span>{text}</span>{meta !== null && <span className="bp-badge-meta">{meta}</span>}
+    <BrandMark size={16} />{icon}<span>{text}</span>{meta !== null && <span className="bp-badge-meta">{meta}</span>}
   </button>;
 }

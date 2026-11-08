@@ -4,6 +4,7 @@ import levels from '../../../../contracts/v2/levels.json';
 import concepts from '../../../../contracts/v2/concepts.json';
 import { FeedbackEditor } from './FeedbackEditor';
 import { PracticeMore } from '../PracticeMore';
+import { BrandMark } from '../BrandMark';
 export { TimelineMarkers } from '../TimelineChallenges';
 export type { TimelineMarker, TimelineMarkersProps } from '../TimelineChallenges';
 
@@ -90,7 +91,7 @@ function QuestionForm({ question, feedback, checking, error, canResume, progress
   const passed = feedback?.outcome === 'passed';
   return <section className="bp-v2 bp-panel" aria-labelledby={title}
     onKeyDown={event => event.stopPropagation()} onKeyUp={event => event.stopPropagation()} onKeyPress={event => event.stopPropagation()}>
-    <header className="bp-v2-header"><span>Concept practice</span><button type="button" onClick={onClose} aria-label="Close practice">Close</button></header>
+    <header className="bp-v2-header"><span className="bp-brand-row"><BrandMark size={16} />Concept practice</span><button type="button" onClick={onClose} aria-label="Close practice">Close</button></header>
     <div className="bp-v2-body"><h2 id={title} ref={heading} tabIndex={-1}>{question.title}</h2>
       <div className="bp-v2-chips">{question.concepts.map(concept => <LevelChip key={concept} concept={concept} level={question.level} />)}</div>
       {question.aiGenerated && <small>AI-generated practice</small>}<p className="bp-v2-prompt">{question.prompt}</p>
@@ -134,14 +135,14 @@ export function FeedbackCard({ feedback, code }: FeedbackCardProps) {
 
 export type NotAvailableProps = { reason: string; onDismiss(): void };
 export function TopicNotAvailable({ reason, onDismiss }: NotAvailableProps) {
-  return <section className="bp-v2 bp-v2-card" aria-label="Topic not available"><h2>Topic not available</h2><p>{reason}</p><p>Keep watching. Practice will appear on a supported coding topic.</p><button onClick={onDismiss}>Dismiss</button></section>;
+  return <section className="bp-v2 bp-v2-card" aria-label="Topic not available"><h2 className="bp-brand-row"><BrandMark size={18} />Topic not available</h2><p>{reason}</p><p>Keep watching. Practice will appear on a supported coding topic.</p><button onClick={onDismiss}>Dismiss</button></section>;
 }
 export function RefresherPrompt({ due, onStart, onDismiss }: {
   due: PublicProfile['refresherDue']; onStart(concept: string): void; onDismiss(): void;
 }) {
   if (!due.length) return null;
   const first = due[0]!;
-  return <aside className="bp-v2 bp-v2-card" aria-label="Skill refresher"><h2>A quick refresher?</h2><p>Keep {conceptName(first.concept)} fresh with a short question.</p><p>{first.reason}</p>
+  return <aside className="bp-v2 bp-v2-card" aria-label="Skill refresher"><h2 className="bp-brand-row"><BrandMark size={18} />A quick refresher?</h2><p>Keep {conceptName(first.concept)} fresh with a short question.</p><p>{first.reason}</p>
     <div className="bp-v2-actions"><button onClick={onDismiss}>Later</button><button className="bp-v2-primary" onClick={() => onStart(first.concept)}>Start refresher</button></div></aside>;
 }
 export type LearnerSettingsValue = Settings;

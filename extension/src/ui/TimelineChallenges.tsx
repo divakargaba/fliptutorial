@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Check, Lightbulb } from 'lucide-react';
 import type { PlanPause } from '../v2/types';
 import { formatTimestamp } from './format';
+import { BrandMark } from './BrandMark';
 
 export type TimelineChallengesProps = {
   /** Already validated pauses eligible under the runtime's current settings. */
@@ -72,7 +73,7 @@ export function TimelineMarkers({ markers, onSelect }: TimelineMarkersProps) {
       <ChallengeList markers={ready.filter(pause => cluster.includes(pause.id))} onSelect={onSelect} />
       <button type="button" onClick={() => setCluster(null)}>Close nearby challenges</button>
     </div>}
-    <details className="bp-challenge-disclosure"><summary>Challenges ({ready.length})</summary>
+    <details className="bp-challenge-disclosure"><summary><span className="bp-logo-inline"><BrandMark size={14} /></span>Challenges ({ready.length})</summary>
       {ready.length ? <ChallengeList markers={ready} onSelect={onSelect} /> : <p>No challenges ready yet.</p>}
     </details>
   </div>;
