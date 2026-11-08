@@ -33,8 +33,8 @@ logger = logging.getLogger("breakpoint.feedback")
 
 router = APIRouter(prefix="/v2", tags=["feedback"])
 
-LEVELS_PATH = Path(__file__).resolve().parent.parent.parent / "contracts" / "v2" / "levels.json"
-CONCEPTS_PATH = Path(__file__).resolve().parent.parent.parent / "contracts" / "v2" / "concepts.json"
+LEVELS_PATH = Path(__file__).resolve().parents[3] / "contracts" / "v2" / "levels.json"
+CONCEPTS_PATH = Path(__file__).resolve().parents[3] / "contracts" / "v2" / "concepts.json"
 
 _levels: list[dict] | None = None
 _concepts: dict[str, str] | None = None

@@ -14,13 +14,13 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from backend.app.feedback import register_exercise, register_question
-from backend.app.feedback.exercise_store import get_store, ExerciseStore, StoredExercise
-from backend.app.feedback.diagnosis import diagnose, static_diagnosis, FailingCase
-from backend.app.feedback.optimization import analyze_success
-from backend.app.feedback.concepts import grade_multiple_choice, grade_predict_output, grade_short_answer
-from backend.app.runners import get_runner, SUPPORTED_LANGUAGES
-from backend.app.runners.base import RunnerResult, CaseResult, Runner
+from app.feedback import register_exercise, register_question
+from app.feedback.exercise_store import get_store, ExerciseStore, StoredExercise
+from app.feedback.diagnosis import diagnose, static_diagnosis, FailingCase
+from app.feedback.optimization import analyze_success
+from app.feedback.concepts import grade_multiple_choice, grade_predict_output, grade_short_answer
+from app.runners import get_runner, SUPPORTED_LANGUAGES
+from app.runners.base import RunnerResult, CaseResult, Runner
 
 FIXTURES = Path(__file__).parent / "fixtures" / "submissions"
 
@@ -84,11 +84,11 @@ class TestRunnerRegistry:
         assert "sql" in SUPPORTED_LANGUAGES
 
     def test_get_runner_returns_correct_type(self):
-        from backend.app.runners.python_runner import PythonRunner
-        from backend.app.runners.javascript_runner import JavaScriptRunner
-        from backend.app.runners.java_runner import JavaRunner
-        from backend.app.runners.cpp_runner import CppRunner
-        from backend.app.runners.sql_runner import SqlRunner
+        from app.runners.python_runner import PythonRunner
+        from app.runners.javascript_runner import JavaScriptRunner
+        from app.runners.java_runner import JavaRunner
+        from app.runners.cpp_runner import CppRunner
+        from app.runners.sql_runner import SqlRunner
 
         assert isinstance(get_runner("python"), PythonRunner)
         assert isinstance(get_runner("javascript"), JavaScriptRunner)
@@ -682,19 +682,19 @@ class TestLevelAwareHintDepth:
     """Verify that advanced/expert learners get vaguer hints."""
 
     def test_beginner_no_penalty(self):
-        from backend.app.feedback import _tier_from_level
+        from app.feedback import _tier_from_level
         assert _tier_from_level("beginner-1") == "beginner"
 
     def test_intermediate_tier(self):
-        from backend.app.feedback import _tier_from_level
+        from app.feedback import _tier_from_level
         assert _tier_from_level("intermediate-3") == "intermediate"
 
     def test_advanced_tier(self):
-        from backend.app.feedback import _tier_from_level
+        from app.feedback import _tier_from_level
         assert _tier_from_level("advanced-2") == "advanced"
 
     def test_expert_tier(self):
-        from backend.app.feedback import _tier_from_level
+        from app.feedback import _tier_from_level
         assert _tier_from_level("expert-5") == "expert"
 
 
@@ -709,7 +709,7 @@ class TestPlannerExerciseLookup:
     def test_submit_finds_planner_exercise(self):
         """When the exercise is only in the planner, /v2/submit should find it."""
         from dataclasses import dataclass
-        from backend.app.catalog import ApprovedExercise, Example, HiddenTest
+        from app.catalog import ApprovedExercise, Example, HiddenTest
 
         # Build a mock PrivateExercise
         @dataclass
@@ -740,11 +740,11 @@ class TestPlannerExerciseLookup:
             language="python",
         )
 
-        with patch("backend.app.feedback.get_store") as mock_store:
+        with patch("app.feedback.get_store") as mock_store:
             mock_store.return_value.get_exercise.return_value = None
-            with patch("backend.app.planner.find_exercise", return_value=fake):
-                from backend.app.feedback import StoredExercise
-                from backend.app.planner import find_exercise
+            with patch("app.planner.find_exercise", return_value=fake):
+                from app.feedback import StoredExercise
+                from app.planner import find_exercise
                 result = find_exercise("plan-ex-1")
                 assert result is not None
                 assert result.revision == "r-plan1"
@@ -779,8 +779,8 @@ class TestPlannerQuestionLookup:
             concepts=["arithmetic"], level="beginner-1",
         )
 
-        with patch("backend.app.planner.find_question", return_value=fake):
-            from backend.app.planner import find_question
+        with patch("app.planner.find_question", return_value=fake):
+            from app.planner import find_question
             result = find_question("plan-q-1")
             assert result is not None
             assert result.id == "plan-q-1"
@@ -812,8 +812,8 @@ class TestRefresherQuestionLookup:
             "explanation": "A for loop iterates over a sequence.",
         }
 
-        with patch("backend.app.profile.skills.lookup_refresher", return_value=fake_ref):
-            from backend.app.profile.skills import lookup_refresher
+        with patch("app.profile.skills.lookup_refresher", return_value=fake_ref):
+            from app.profile.skills import lookup_refresher
             result = lookup_refresher("rf-loops-1")
             assert result is not None
             assert result["answer"] == "a"

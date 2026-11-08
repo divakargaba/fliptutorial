@@ -10,8 +10,8 @@ import json
 
 import pytest
 
-from backend.app.runners import get_runner, SUPPORTED_LANGUAGES
-from backend.app.runners.base import Runner
+from app.runners import get_runner, SUPPORTED_LANGUAGES
+from app.runners.base import Runner
 
 
 class TestPythonRunner:
