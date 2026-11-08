@@ -113,7 +113,7 @@ New error codes: `NO_CAPTIONS` 404, `NOT_PYTHON` 422, `TOO_EARLY` 422 (under
 | T3 | @divakargaba | Reference and wrong-solution checks through Judge0: new method in `grader.py`. Accepts a generated exercise (function name, reference solution, known-wrong solution, test cases), runs both through Judge0, returns pass/fail for each. Must confirm reference passes all tests and known-wrong fails at least one. | — | Done |
 | T4 | @divakargaba | `POST /v1/test-me` endpoint in `main.py`: accepts `videoId` and `timestampS`, set cache with TTL, new error codes (`NO_CAPTIONS`, `NOT_PYTHON`, `TOO_EARLY`, `GENERATOR_UNAVAILABLE`, `GENERATOR_TIMEOUT`, `SET_EXPIRED`), catalog fallback for generated IDs, contract + fixture. | T2, T3 | Done (wired to T1; lazy-imports T2 testme.py — returns 503 until T2 lands) |
 | T5 | @abdullahwarv2 | Background `testMe` message + Zod schema in `src/contracts.ts` and `entrypoints/background.ts`. | T4 contract | Done — `321936e`; worker accepts `testMe`, Zod validates public response and errors, 20 s timeout, content script pauses player, `TestMeContext` exposed for T6 |
-| T6 | @reyanshBadhwar26 | "Test me" button in `src/ui/`, loading and error states, "AI-generated practice" label. | T5 | Ready — T5 landed; consume `useContext(TestMeContext)` from `extension/src/test-me.ts`, build with `WXT_TESTME_ENABLED=true`; see T5 handoff in board post #6714885894 |
+| T6 | @reyanshBadhwar26 | "Test me" button in `src/ui/`, loading and error states, "AI-generated practice" label. | T5 | UI implemented; blocked on @abdullahwarv2 mounting `TestMeControls` inside the existing provider, outside the prepared badge condition. See `extension/src/ui/README.md`. |
 | T7 | @abdullahwarraichh | Real-YouTube walkthrough on 2 unprepared videos at 1× and 2×, times in Measured results. 3 clean runs required. | T6 | Todo |
 | T8 | @abdullahwarraichh, @divakargaba | Phase 2: quiz generation + `POST /v1/test-me/answer`. | T7 | Todo |
 | T9 | @reyanshBadhwar26 | Phase 2: quiz view and score line in `src/ui/`. | T8 | Todo |
@@ -147,6 +147,7 @@ New error codes: `NO_CAPTIONS` 404, `NOT_PYTHON` 422, `TOO_EARLY` 422 (under
 
 | Check | Result |
 | --- | --- |
+| T6 UI component validation | Typecheck, **38 Vitest**, production build, and **75/75 Playwright** checks passed (24 new T6 component checks + 51 existing preview/MV3 checks), desktop 1440×900 and narrow 1024×768. Tests cover null/disabled context, loading cancellation, eight generation errors and retry, AI-generated labels through Run/Solved, and expired-set draft recovery with disabled grading and dark/light AA text contrast. Final command exited 0 after stopping its own leftover Vite process; Windows sandbox process launches failed with error 1909 during cleanup, so an approved host command stopped only test PID 45208. No provider calls; backend unchanged and not retested. Component preview callbacks are simulated: actual Test me mounting, worker/player integration and live generation remain unverified pending @abdullahwarv2's content-script mount of `TestMeControls` (see `extension/src/ui/README.md`) and T2. T9 remains gated on T8 after T7. |
 | R3 release failure matrix + accessibility | Validated checkpoint `d056427`: **16/16 MV3 release checks passed**, desktop 1440×900 and narrow 1024×768. HTTP `GRADER_UNAVAILABLE`, `GRADER_TIMEOUT`, `BUSY`, `STALE_EXERCISE`, `INVALID_CODE`, plus the real 15 s worker network timeout preserve the multiline draft and paused media time, re-enable grading, allow keyboard Skip/resume and recover the draft after reload. Stale revision reload and subsequent request revision are asserted. Dark/light editing, wrong-answer, API-error and solved states pass browser-computed AA text contrast (including Python syntax) and focused accessibility checks (names, tab eligibility, heading/live results, keyboard entry/exit and focus outline). Muted text, light success text and light comment contrast fixes are in the checkpoint. **28 screenshots**: `extension/assets/ui-checks/release/`. Typecheck and **31 Vitest** pass; production build passes through the Playwright web-server command. Tests use a loopback fixture API on :8019, no provider calls. Windows sandbox cleanup required stopping only the test's leftover Vite process before Playwright reported `16 passed` and exited 0. This focused audit is not axe/full WCAG certification; manual desktop Chrome, screen-reader, forced-color and zoom checks remain unverified here. |
 | Badge visible after player ready (target ≤ 2 s) | U6 final: **0.581 / 0.592 / 0.135 s** on consecutive cold profiles. Prior D4: 2.46 s (cold first launch), 1.46 s, 1.44 s; first run missed the target before the fix |
 | Full grade round trip (target ≤ 8 s) | Submit click → video playing: 4.97 s, 4.20 s, 3.78 s (8/8 cases, live Judge0). Run with wrong code → failed result: 2.69 s, 1.43 s, 1.99 s |
@@ -163,7 +164,14 @@ the 16 release cases (51/51 total, split with complementary grep filters).
 Both commands rebuilt the production extension and exited 0. Each needed only
 its own leftover Vite test server stopped to finish Windows sandbox cleanup.
 No tests were skipped. Backend tests were not rerun for this UI/E2E-only work.
-T6 waits for @abdullahwarv2's T5 handoff; T9 remains gated on T8.
+T6 consumes the T5 context handoff; the UI is implemented, with the final
+content-script mount pending @abdullahwarv2 (see `extension/src/ui/README.md`).
+T9 remains gated on T8, which starts only after T7 passes.
+
+Final T6 board check: @abdullahwarraichh announced T2 complete at `03e00f4`;
+that commit is not yet in this checkout (runner handles sync). The same post
+asks @divakargaba to resolve live model quota/reliability before T7. T6 UI has
+not made provider calls or changed provider configuration.
 
 U6 startup diagnosis: the initial lookup took roughly 65–89 ms, while WXT's cold
 stylesheet fetch held shadow mounting for about 2.15 s. YouTube also exposes a

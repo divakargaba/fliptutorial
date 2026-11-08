@@ -1,0 +1,62 @@
+import { useContext, useEffect, useRef } from 'react';
+import { CircleAlert, LoaderCircle, Play, Sparkles, X } from 'lucide-react';
+import { TestMeContext } from '../test-me';
+
+const ERRORS: Record<string, { title: string; action: string }> = {
+  NO_CAPTIONS: { title: 'No English captions', action: 'Try a Python tutorial with English captions.' },
+  NOT_PYTHON: { title: 'Python practice only', action: 'Try a tutorial teaching Python.' },
+  TOO_EARLY: { title: 'Keep watching a little longer', action: 'Watch at least three minutes of the tutorial before trying again.' },
+  GENERATOR_UNAVAILABLE: { title: 'Practice generation unavailable', action: 'Try again, or resume the video.' },
+  GENERATOR_TIMEOUT: { title: 'Practice generation timed out', action: 'Try again, or resume the video.' },
+  BUSY: { title: 'Practice generation is busy', action: 'Wait a minute before trying again, or resume the video.' },
+  NETWORK: { title: 'Can’t reach Breakpoint', action: 'Check that the local backend is running, then try again.' },
+  TIMEOUT: { title: 'Request timed out', action: 'Try again, or resume the video.' },
+};
+
+/** Mount beside the prepared badge, including on unsupported/unprepared videos. */
+export function TestMeControls() {
+  const context = useContext(TestMeContext);
+  const heading = useRef<HTMLHeadingElement>(null);
+  const start = useRef<HTMLButtonElement>(null);
+  const status = context?.request?.status;
+  useEffect(() => {
+    if (!status) return;
+    heading.current?.focus({ preventScroll: true });
+    return () => { if (start.current?.isConnected) start.current.focus({ preventScroll: true }); };
+  }, [status]);
+  if (!context) return null;
+  const { canStart, request, onStart, onRetry, onClose } = context;
+  const error = request?.status === 'error' ? request.error : null;
+  const description = error ? ERRORS[error.code] : null;
+  return <div className="bp-test-me">
+    <button ref={start} type="button" className="bp-badge" disabled={!canStart} aria-disabled={!canStart || undefined} onClick={onStart}
+      title="Create Python practice from what you have watched so far">
+      <Sparkles size={15} aria-hidden="true" />Test me
+    </button>
+    {request && <section className="bp-panel bp-generation" aria-labelledby="bp-generation-heading">
+      <header className="bp-header">
+        <span className="bp-generated-label"><Sparkles size={12} aria-hidden="true" />AI-generated practice</span>
+        <button type="button" className="bp-icon-button" aria-label="Close generated practice" onClick={onClose}>
+          <X size={18} aria-hidden="true" />
+        </button>
+      </header>
+      <div className="bp-body" aria-live="polite" aria-atomic="true">
+        <h2 id="bp-generation-heading" ref={heading} tabIndex={-1}>
+          {error ? description?.title ?? 'Practice unavailable' : 'Creating your practice…'}
+        </h2>
+        {error ? <>
+          <p className="bp-generation-message"><CircleAlert size={16} aria-hidden="true" />{error.message}</p>
+          <p className="bp-note">{description?.action ?? 'Close this panel to resume watching.'}</p>
+        </> : <>
+          <p className="bp-generation-message" role="status"><LoaderCircle size={16} className="bp-spin" aria-hidden="true" />
+            Using the captions up to this moment and checking the exercise.</p>
+          <p className="bp-note">Your video is paused. This can take up to 20 seconds.</p>
+        </>}
+      </div>
+      <footer className="bp-footer">
+        <button type="button" className="bp-skip" onClick={onClose}><Play size={14} aria-hidden="true" />Resume video</button>
+        {error?.retryable && <button type="button" className="bp-button bp-primary" onClick={onRetry}>Try again</button>}
+      </footer>
+    </section>}
+  </div>;
+}

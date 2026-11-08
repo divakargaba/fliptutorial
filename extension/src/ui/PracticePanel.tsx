@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useContext, useEffect, useRef, useState } from 'react';
 import { Check, CircleAlert, LoaderCircle, Pause, Play, Send, SkipForward, X } from 'lucide-react';
 import type { Breakpoint, SubmissionResponse } from '../contracts';
 import { flushDraft, loadDraft, saveDraft } from '../drafts';
 import { PythonEditor } from './PythonEditor';
+import { TestMeContext } from '../test-me';
 import { formatCall, formatTimestamp, formatValue, functionName, richText } from './format';
 
 /** How long the solved moment stays on screen before the video resumes on its own. */
@@ -42,11 +43,13 @@ const ERROR_TITLE: Record<string, string> = {
   GRADER_UNAVAILABLE: 'Grader unavailable', GRADER_TIMEOUT: 'Grading timed out', BUSY: 'Grader is busy',
   STALE_EXERCISE: 'Exercise updated', EXERCISE_NOT_FOUND: 'Exercise unavailable', INVALID_CODE: 'Check your code',
   NETWORK: 'Can’t reach Breakpoint', TIMEOUT: 'Request timed out',
+  SET_EXPIRED: 'Practice expired',
 };
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
 const MOD = isMac ? '⌘' : 'Ctrl';
 
 function Panel(props: PracticePanelProps & { draftKey: string }) {
+  const aiGenerated = useContext(TestMeContext)?.aiGenerated ?? false;
   const { breakpoint: { exercise }, draftKey, attempt, result, error, leaving = false } = props;
   const [code, setCode] = useState<string | null>(null);
   const [storageError, setStorageError] = useState(false);
@@ -56,7 +59,7 @@ function Panel(props: PracticePanelProps & { draftKey: string }) {
   const solved = attempt === 'passed';
   const tooLarge = code !== null && new TextEncoder().encode(code).length > 16384;
   const invalidCode = code === null || !code.trim() || tooLarge;
-  const blocked = leaving || checking || invalidCode || solved;
+  const blocked = leaving || checking || invalidCode || solved || error?.code === 'SET_EXPIRED';
   const fn = functionName(exercise.starterCode);
 
   useEffect(() => {
@@ -99,6 +102,8 @@ function Panel(props: PracticePanelProps & { draftKey: string }) {
         <X size={18} aria-hidden="true" />
       </button>
     </header>
+
+    {aiGenerated && <p className="bp-generated-label bp-generated-panel">AI-generated practice</p>}
 
     {solved ? <Solved heading={heading} result={result} canResume={props.canResume}
       resumeAtS={props.breakpoint.pauseAtS} holdMs={props.holdMs ?? SOLVED_HOLD_MS} onResume={props.onResume} /> : <>
@@ -179,7 +184,9 @@ function Results({ attempt, lastMode, result, error }: {
     body = <div className="bp-console-body bp-banner" key={`error-${error.code}`}>
       <CircleAlert size={16} aria-hidden="true" />
       <div><strong>{ERROR_TITLE[error.code] ?? 'Something went wrong'}</strong>
-        <p>{error.message} {error.retryable ? 'Try again, or skip and keep watching.' : 'Skip to keep watching.'}</p></div>
+        <p>{error.message} {error.code === 'SET_EXPIRED'
+          ? 'Your draft is kept. Close or skip, then use Test me to create a new exercise.'
+          : error.retryable ? 'Try again, or skip and keep watching.' : 'Skip to keep watching.'}</p></div>
     </div>;
   } else if (result) {
     body = <div className="bp-console-body" key={JSON.stringify(result)}>

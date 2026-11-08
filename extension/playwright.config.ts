@@ -17,7 +17,7 @@ export default defineConfig({
   projects: [
     ...[{ name: 'desktop', viewport: { width: 1440, height: 900 } },
       { name: 'narrow', viewport: { width: 1024, height: 768 } }].flatMap(({ name, viewport }) => [
-      { name: `preview-${name}`, testMatch: ['ui.preview.spec.ts', 'drafts.spec.ts', ...(name === 'desktop' ? ['api.spec.ts'] : [])], use: { viewport } },
+      { name: `preview-${name}`, testMatch: ['ui.preview.spec.ts', 'drafts.spec.ts', 'test-me.preview.spec.ts', ...(name === 'desktop' ? ['api.spec.ts'] : [])], use: { viewport } },
       { name: `mv3-${name}`, testMatch: ['extension.spec.ts', 'release.spec.ts'], use: { viewport } },
     ]),
   ],

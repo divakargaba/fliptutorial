@@ -48,7 +48,8 @@ export async function auditPanel(page: Page) {
       // Native contenteditable elements participate in tab order without a tabindex attribute.
       if (!control.matches(':disabled') && !control.isContentEditable && control.tabIndex < 0) controlFailures.push(`Unreachable ${control.textContent}`);
     }
-    if (!panel.getAttribute('aria-labelledby') || !panel.querySelector('#bp-heading')) controlFailures.push('Panel heading missing');
+    const headingId = panel.getAttribute('aria-labelledby');
+    if (!headingId || !panel.querySelector(`#${CSS.escape(headingId)}`)) controlFailures.push('Panel heading missing');
     if (!panel.querySelector('[aria-live], [role="status"]')) controlFailures.push('Result announcement missing');
     return { checkedTextNodes, minimumRatio, contrastFailures, controlFailures };
   });

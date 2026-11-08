@@ -1,11 +1,14 @@
 // Standalone UI acceptance fixture. It does not exercise the extension worker/playback.
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import css from '../../src/ui/theme.css?inline';
 import fixture from '../../../contracts/practice-response.fixture.json';
 import failed from '../../../contracts/submission-response.fixture.json';
 import { Badge } from '../../src/ui/Badge';
 import { PracticePanel, type PracticePanelProps } from '../../src/ui/PracticePanel';
+import { TestMeContext } from '../../src/test-me';
+import { TestMeControls } from '../../src/ui/TestMeControls';
+import generated from '../../../contracts/testme-response.fixture.json';
 
 const local = {
   async get(key: string) { return { [key]: localStorage.getItem(key) ?? undefined }; },
@@ -62,4 +65,43 @@ function Preview() {
       onSkip={close} onClose={close} onResume={close} />}
   </>;
 }
-createRoot(mount).render(<Preview />);
+// Component-only T6 harness: worker/player integration remains a separate MV3 gate.
+function TestMePreview() {
+  const params = new URLSearchParams(location.search);
+  const [stage, setStage] = useState<'idle' | 'loading' | 'error' | 'exercise'>('idle');
+  const [attempt, setAttempt] = useState<PracticePanelProps['attempt']>('editing');
+  const [error, setError] = useState<PracticePanelProps['error']>(null);
+  const [result, setResult] = useState<PracticePanelProps['result']>(null);
+  const errorCode = params.get('error');
+  const retryable = !['NO_CAPTIONS', 'NOT_PYTHON', 'TOO_EARLY'].includes(errorCode ?? '');
+  useEffect(() => {
+    if (stage !== 'loading') return;
+    const timer = setTimeout(() => setStage(errorCode ? 'error' : 'exercise'), 700);
+    return () => clearTimeout(timer);
+  }, [stage, errorCode]);
+  const close = () => { setStage('idle'); setAttempt('editing'); setError(null); setResult(null); };
+  const grade = (mode: 'run' | 'submit') => {
+    if (params.has('expired')) {
+      setError({ code: 'SET_EXPIRED', message: 'This generated set has expired.', retryable: false });
+      setAttempt('failed');
+    } else {
+      setResult({ outcome: 'passed', passedCount: 1, totalCount: 1,
+        results: [{ kind: 'visible', index: 0, passed: true, args: [2, 3], expected: 8, actual: 8 }] });
+      setAttempt(mode === 'submit' ? 'passed' : 'failed');
+    }
+  };
+  return <TestMeContext.Provider value={params.get('testme') === 'off' ? null : {
+    canStart: stage === 'idle' && !params.has('unready'), aiGenerated: stage === 'exercise',
+    request: stage === 'loading' ? { status: 'loading' } : stage === 'error'
+      ? { status: 'error', error: { code: errorCode!, message: `Fixture ${errorCode}.`, retryable } } : null,
+    onStart: () => setStage('loading'), onRetry: () => setStage('loading'), onClose: close,
+  }}>
+    <TestMeControls />
+    {stage === 'exercise' && <PracticePanel videoId={fixture.videoId} revision={generated.setId}
+      breakpoint={{ id: 'generated', pauseAtS: 300, revealAtS: 302, exercise: generated.exercise }}
+      attempt={attempt} result={result} error={error} canResume={attempt === 'passed'}
+      onRun={() => grade('run')} onSubmit={() => grade('submit')}
+      onSkip={close} onClose={close} onResume={close} />}
+  </TestMeContext.Provider>;
+}
+createRoot(mount).render(new URLSearchParams(location.search).has('testme') ? <TestMePreview /> : <Preview />);

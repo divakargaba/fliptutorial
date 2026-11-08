@@ -22,6 +22,15 @@ shadow root, editor and Chrome storage run unchanged. A local HTTP server suppli
 contract fixtures and controlled failed, successful, delayed and unavailable grades.
 No provider credentials or provider requests are used.
 
+T6 component checks (`test-me.preview.spec.ts`) use `?testme=on` in the shadow-root
+preview with the real `TestMeContext`, controls and practice panel. They cover the
+off/disabled states, loading cancellation, eight generation errors and explicit
+retry, labels through Run and Solved, and expired-set draft recovery with disabled
+grading in dark/light themes. These tests simulate the caller callbacks; they do
+not prove worker requests, player pause/resume or mounting on an unprepared video.
+The content-script owner still needs to mount `TestMeControls` as documented in
+`src/ui/README.md`; then add/run the opt-in MV3 flow before T7 live walkthroughs.
+
 The rejected-resume case injects a rejected `play()` only in the content script's
 isolated world, then restores it before checking the Resume video button. Other
 flows use the browser's normal media methods.

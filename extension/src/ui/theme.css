@@ -1,6 +1,16 @@
 @import 'tailwindcss';
 @source './*.tsx';
 
+.bp-test-me { margin: 8px 0; }
+.bp-generation { margin-top: 8px; }
+.bp-generation .bp-body { display: grid; gap: 12px; }
+.bp-generation h2 { font-size: 18px; line-height: 26px; font-weight: 600; }
+.bp-generation .bp-footer { justify-content: space-between; }
+.bp-generation-message { display: flex; align-items: flex-start; gap: 8px; overflow-wrap: anywhere; }
+.bp-generation-message svg { flex-shrink: 0; margin-top: 2px; }
+.bp-generated-label { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--bp-text-2); }
+.bp-generated-panel { margin: 12px 16px 0; }
+
 /*
  * Breakpoint lives inside YouTube's watch page, so it borrows YouTube's own visual language:
  * Roboto, pill-shaped controls, translucent chips, the page's light/dark surfaces.
