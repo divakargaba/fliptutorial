@@ -26,7 +26,9 @@ A labelled set (`backend/tests/fixtures/submissions/`) of ≥30 right/wrong subm
 - [x] `POST /v2/hint` with level-aware depth: beginner=full hints, advanced=-1, expert=-2; reuses v1 RAG hint service
 - [x] Exercise store for server-side full exercise data (hidden tests, reference solutions)
 - [x] 35 labelled submissions across 4 languages (10 Python, 10 JS, 10 Java, 5 C++) + 5 concept questions
-- [x] 98 offline pytest tests: 41 runner tests + 57 feedback tests (all passing, stubbed Claude/Judge0)
+- [x] 103 offline pytest tests: 45 runner tests + 58 feedback tests (all passing, stubbed Claude/Judge0)
+- [x] Planner integration: `/v2/submit`, `/v2/answer`, `/v2/hint` resolve exercises/questions from A1's `find_exercise`/`find_question`
+- [x] Refresher integration: `/v2/answer` resolves refresher questions from B1's `lookup_refresher`
 - [ ] Language-specific docs for hints (JS, Java, C++, SQL) — currently all use Python docs
 - [ ] Live integration test with real Judge0 + Anthropic key
 
@@ -41,7 +43,7 @@ A labelled set (`backend/tests/fixtures/submissions/`) of ≥30 right/wrong subm
 - `sql_runner.py`: SQLite (Judge0 id 82), `.mode json` output, row-based comparison
 
 ### Feedback (`backend/app/feedback/`)
-- `__init__.py`: Router with `/v2/submit`, `/v2/answer`, `/v2/hint`; exercise resolution from store or v1 catalog
+- `__init__.py`: Router with `/v2/submit`, `/v2/answer`, `/v2/hint`; exercise resolution from store → v1 catalog → A1 planner → B1 refresher
 - `diagnosis.py`: Claude-powered misconception analysis with static fallback
 - `optimization.py`: Success feedback with complexity analysis; `show=false` for beginners
 - `concepts.py`: Deterministic MC/predict-output grading + Claude rubric for short answers

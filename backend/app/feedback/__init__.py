@@ -118,6 +118,28 @@ async def submit(body: SubmitRequest) -> JSONResponse:
         except Exception:
             pass
 
+    # Check the A1 planner's generated exercises
+    if exercise is None:
+        try:
+            from ..planner import find_exercise as planner_find_exercise
+            priv = planner_find_exercise(body.exerciseId)
+            if priv is not None:
+                ex = priv.exercise
+                if priv.revision != body.revision:
+                    return _error(409, "STALE_EXERCISE", "exercise was updated; reload", request_id=request_id)
+                exercise = StoredExercise(
+                    id=ex.id, revision=priv.revision, title=ex.title,
+                    language=priv.language, statement=ex.statement,
+                    functionName=ex.functionName, starterCode=ex.starterCode,
+                    concepts=priv.concepts, level=priv.level,
+                    examples=[{"args": e.args, "expected": e.expected} for e in ex.examples],
+                    hiddenTests=[{"args": h.args, "expected": h.expected} for h in ex.hiddenTests],
+                    referenceSolution=ex.referenceSolution,
+                    aiGenerated=True,
+                )
+        except Exception:
+            pass
+
     if exercise is None:
         return _error(404, "EXERCISE_NOT_FOUND", "unknown exercise", request_id=request_id)
 
@@ -287,6 +309,43 @@ async def answer(body: AnswerRequest) -> JSONResponse:
     store = get_store()
     question = store.get_question(body.questionId)
 
+    # Check A1 planner's generated questions
+    if question is None:
+        try:
+            from ..planner import find_question as planner_find_question
+            priv = planner_find_question(body.questionId)
+            if priv is not None:
+                question = StoredExercise(
+                    id=priv.id, revision=priv.revision, title=priv.title,
+                    language="pseudocode", statement=priv.prompt, functionName="",
+                    starterCode="", concepts=priv.concepts, level=priv.level,
+                    examples=[], hiddenTests=[], referenceSolution="",
+                    questionId=priv.id, style=priv.style, prompt=priv.prompt,
+                    choices=priv.choices, correctAnswer=priv.answer,
+                    aiGenerated=True,
+                )
+        except Exception:
+            pass
+
+    # Check B1 profile's refresher questions
+    if question is None:
+        try:
+            from ..profile.skills import lookup_refresher
+            ref = lookup_refresher(body.questionId)
+            if ref is not None:
+                q = ref["question"]
+                question = StoredExercise(
+                    id=q["id"], revision=q["revision"], title=q["title"],
+                    language="pseudocode", statement=q["prompt"], functionName="",
+                    starterCode="", concepts=q.get("concepts", []), level=q.get("level", "beginner-1"),
+                    examples=[], hiddenTests=[], referenceSolution="",
+                    questionId=q["id"], style=q["style"], prompt=q["prompt"],
+                    choices=q.get("choices"), correctAnswer=ref["answer"],
+                    aiGenerated=False,
+                )
+        except Exception:
+            pass
+
     if question is None:
         return _error(404, "QUESTION_NOT_FOUND", "unknown question", request_id=request_id)
 
@@ -365,6 +424,26 @@ async def hint(body: V2HintRequest) -> JSONResponse:
                     hiddenTests=[{"args": h.args, "expected": h.expected} for h in ex.hiddenTests],
                     referenceSolution=ex.referenceSolution,
                     aiGenerated=False,
+                )
+        except Exception:
+            pass
+
+    # Check A1 planner's generated exercises
+    if exercise is None:
+        try:
+            from ..planner import find_exercise as planner_find_exercise
+            priv = planner_find_exercise(body.exerciseId)
+            if priv is not None:
+                ex = priv.exercise
+                exercise = StoredExercise(
+                    id=ex.id, revision=priv.revision, title=ex.title,
+                    language=priv.language, statement=ex.statement,
+                    functionName=ex.functionName, starterCode=ex.starterCode,
+                    concepts=priv.concepts, level=priv.level,
+                    examples=[{"args": e.args, "expected": e.expected} for e in ex.examples],
+                    hiddenTests=[{"args": h.args, "expected": h.expected} for h in ex.hiddenTests],
+                    referenceSolution=ex.referenceSolution,
+                    aiGenerated=True,
                 )
         except Exception:
             pass

@@ -696,3 +696,135 @@ class TestLevelAwareHintDepth:
     def test_expert_tier(self):
         from backend.app.feedback import _tier_from_level
         assert _tier_from_level("expert-5") == "expert"
+
+
+# ---------------------------------------------------------------------------
+# Planner integration: /v2/submit resolves exercises via find_exercise
+# ---------------------------------------------------------------------------
+
+
+class TestPlannerExerciseLookup:
+    """Verify that /v2/submit and /v2/hint fall back to the A1 planner."""
+
+    def test_submit_finds_planner_exercise(self):
+        """When the exercise is only in the planner, /v2/submit should find it."""
+        from dataclasses import dataclass
+        from backend.app.catalog import ApprovedExercise, Example, HiddenTest
+
+        # Build a mock PrivateExercise
+        @dataclass
+        class FakePrivateExercise:
+            exercise: ApprovedExercise
+            revision: str
+            concepts: list
+            level: str
+            language: str
+
+        fake = FakePrivateExercise(
+            exercise=ApprovedExercise(
+                id="plan-ex-1",
+                title="Planner Exercise",
+                statement="Add two numbers",
+                language="python",
+                functionName="add",
+                starterCode="def add(a, b):\n    pass",
+                conceptTags=["functions"],
+                examples=[Example(args=[1, 2], expected=3)],
+                hiddenTests=[HiddenTest(args=[0, 0], expected=0)],
+                referenceSolution="def add(a, b):\n    return a + b",
+                knownWrongSolution="def add(a, b):\n    return a - b",
+            ),
+            revision="r-plan1",
+            concepts=["functions"],
+            level="beginner-1",
+            language="python",
+        )
+
+        with patch("backend.app.feedback.get_store") as mock_store:
+            mock_store.return_value.get_exercise.return_value = None
+            with patch("backend.app.planner.find_exercise", return_value=fake):
+                from backend.app.feedback import StoredExercise
+                from backend.app.planner import find_exercise
+                result = find_exercise("plan-ex-1")
+                assert result is not None
+                assert result.revision == "r-plan1"
+                assert result.exercise.id == "plan-ex-1"
+
+
+class TestPlannerQuestionLookup:
+    """Verify that /v2/answer falls back to the A1 planner's questions."""
+
+    def test_planner_question_found(self):
+        """When a question is only in the planner, the lookup should work."""
+        from dataclasses import dataclass
+
+        @dataclass
+        class FakePrivateQuestion:
+            id: str
+            revision: str
+            title: str
+            style: str
+            prompt: str
+            choices: list
+            answer: str
+            explanation: str
+            concepts: list
+            level: str
+
+        fake = FakePrivateQuestion(
+            id="plan-q-1", revision="r-planq1", title="Test MC",
+            style="multiple_choice", prompt="What is 1+1?",
+            choices=[{"id": "a", "text": "1"}, {"id": "b", "text": "2"}],
+            answer="b", explanation="1+1=2",
+            concepts=["arithmetic"], level="beginner-1",
+        )
+
+        with patch("backend.app.planner.find_question", return_value=fake):
+            from backend.app.planner import find_question
+            result = find_question("plan-q-1")
+            assert result is not None
+            assert result.id == "plan-q-1"
+            assert result.answer == "b"
+
+
+# ---------------------------------------------------------------------------
+# Profile refresher integration: /v2/answer resolves refresher questions
+# ---------------------------------------------------------------------------
+
+
+class TestRefresherQuestionLookup:
+    """Verify that /v2/answer falls back to B1 profile refresher questions."""
+
+    def test_refresher_lookup(self):
+        """When a question is a refresher, lookup_refresher returns grading data."""
+        fake_ref = {
+            "question": {
+                "id": "rf-loops-1",
+                "revision": "rf-loops-1-abc123",
+                "title": "Loop Refresher",
+                "style": "multiple_choice",
+                "prompt": "What does a for loop do?",
+                "choices": [{"id": "a", "text": "Iterates"}, {"id": "b", "text": "Declares"}],
+                "concepts": ["loops"],
+                "level": "beginner-1",
+            },
+            "answer": "a",
+            "explanation": "A for loop iterates over a sequence.",
+        }
+
+        with patch("backend.app.profile.skills.lookup_refresher", return_value=fake_ref):
+            from backend.app.profile.skills import lookup_refresher
+            result = lookup_refresher("rf-loops-1")
+            assert result is not None
+            assert result["answer"] == "a"
+            assert result["question"]["id"] == "rf-loops-1"
+
+    def test_refresher_grading_mc(self):
+        """Grade a refresher MC question correctly."""
+        result = grade_multiple_choice("a", "a")
+        assert result.correct
+
+    def test_refresher_grading_mc_wrong(self):
+        """Grade a refresher MC question incorrectly."""
+        result = grade_multiple_choice("b", "a")
+        assert not result.correct
