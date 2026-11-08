@@ -97,3 +97,9 @@ Any YouTube video id → a cached, timestamped exercise plan before the learner 
   the extension's v1 `ExerciseSchema` (`language: z.literal('python')`, A3) and `/v1/submissions` (`grader.grade` is the
   Python wrapper, lead's `main.py`). No `main.py` change was needed. The v1 shape cannot carry a concept question, so where
   coding is impossible Test me still answers `NOT_PYTHON` / `GENERATOR_UNAVAILABLE`. Offline: `tests/test_testme_languages.py`.
+- [x] Non-Python `/v1/submissions` (lead handoff 6718339579, `backend/app/main.py`): exercises whose `language` isn't python
+  (Test me javascript/java/cpp) are graded by `app.runners.get_runner(language).grade(...)` and mapped to `SubmissionResponse`
+  (visible/hidden results, same 409/410/404 resolution; 503/504/429 from `RunnerUnavailable`/`RunnerTimeout`/`RunnerBusy`;
+  422 `UNSUPPORTED_LANGUAGE` with no runner). A passing submit unlocks `/v1/analysis` as for Python. Python keeps `grader.grade`.
+  `_resolve_exercise` needed no change (already language-agnostic). Offline: `tests/test_submissions_languages.py` (Judge0 stubbed
+  at the runner's submit/poll). Default-on for all four languages waits on A3's `ExerciseSchema` change.
