@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
 import { AnimatePresence, motion, MotionConfig } from 'motion/react';
-import { ArrowLeft, Check, ChevronDown, ChevronRight, Copy, ExternalLink, Info, Settings2, TrendingDown, X, Zap } from 'lucide-react';
+import { ArrowLeft, Check, ChevronDown, ChevronRight, Copy, ExternalLink, Info, Settings2, TrendingDown, TrendingUp, X, Zap } from 'lucide-react';
 import '@fontsource-variable/inter';
 import type { PublicProfile } from '../v2/types';
 import levels from '../../../contracts/v2/levels.json';
@@ -194,7 +194,7 @@ function FieldRow({ field, pulledAt }: { field: Field; pulledAt: string | null }
   return <li className="bp-pf-field"><details>
     <summary>
       <span className="bp-pf-linkrow-text">
-        <span className="bp-pf-row-title">{field.name}{field.rising && <span className="bp-pf-rising" title={field.wefSkill ? `WEF Future of Jobs 2025 fastest-growing skill: ${field.wefSkill}` : undefined}>Rising</span>}</span>
+        <span className="bp-pf-row-title">{field.name}{field.rising && <span className="bp-pf-rising" title={field.wefSkill ? `WEF Future of Jobs 2025 fastest-growing skill: ${field.wefSkill}` : undefined}><TrendingUp size={14} aria-hidden="true" />Rising</span>}</span>
         <span className="bp-pf-sub">{local}{p.scope !== 'country' ? ` · ${num(p.canada)} across Canada` : ''}</span>
         <ul className="bp-pf-tags bp-pf-tags-sm">{field.skills.map(s => <li key={s.name}>{s.name}</li>)}</ul>
       </span>
@@ -203,7 +203,7 @@ function FieldRow({ field, pulledAt }: { field: Field; pulledAt: string | null }
     <div className="bp-pf-field-body">
       <p className="bp-pf-sub">{field.summary}</p>
       <ul className="bp-pf-field-skills">{field.skills.map(s => <li key={s.name}>
-        <span>{s.name}{typeof s.share === 'number' && <span className="bp-pf-caption"> · in {pct(s.share)} of postings</span>}</span>
+        <span className="bp-pf-field-skill">{s.name}{typeof s.share === 'number' && <span className="bp-pf-caption">In {pct(s.share)} of postings</span>}</span>
         {s.level ? <Tier level={s.level.level} levelName={s.level.levelName} /> : <span className="bp-pf-caption">{s.tracked ? 'Not started' : 'Learn outside Breakpoint'}</span>}
       </li>)}</ul>
       {!!field.tutorials.length && <div className="bp-pf-field-block"><p className="bp-pf-caption">Practice it on real {field.name.toLowerCase()} work</p>
@@ -211,7 +211,7 @@ function FieldRow({ field, pulledAt }: { field: Field; pulledAt: string | null }
           <span>{t.title}</span>
           <span className="bp-pf-caption">{t.codingChallenges} coding challenges · first at {clock(t.firstChallenge.atS)}: {t.firstChallenge.title}</span>
         </a></li>)}</ul></div>}
-      {!!field.alsoAskedFor.length && <p className="bp-pf-sub"><strong>Also asked for:</strong> {field.alsoAskedFor.map(r => `${r.name} (${pct(r.share)})`).join(', ')}</p>}
+      {!!field.alsoAskedFor.length && <p className="bp-pf-sub">Also asked for: {field.alsoAskedFor.map(r => `${r.name} (${pct(r.share)})`).join(', ')}</p>}
       {safeJobs(p.searchUrl) && <a className="bp-pf-field-jobs" href={p.searchUrl} target="_blank" rel="noreferrer">
         See the {num(p.count)} postings in {p.where}<ExternalLink size={13} aria-hidden="true" /></a>}
       <p className="bp-pf-caption">Adzuna postings with “{p.titleContains}” in the title{pulledAt ? `, pulled ${pullDate(pulledAt)}` : ''}. Shares are across Canada.</p>
@@ -225,7 +225,7 @@ function InDemand({ profile }: { profile: PublicProfile }) {
   if (state === null) return null;
   if (state === 'error' || !state.fields.length) return <WorthLearning profile={profile} />;
   return <section aria-labelledby="demand-head"><SectionLabel end={state.pulledAt ? <span className="bp-pf-label-end">{pullDate(state.pulledAt)}</span> : undefined}>
-    <span id="demand-head">In demand 🔥</span></SectionLabel>
+    <span id="demand-head">In demand</span></SectionLabel>
     <ul className="bp-v2-card bp-pf-group">{state.fields.map(field => <FieldRow key={field.id} field={field} pulledAt={state.pulledAt} />)}</ul>
     <p className="bp-pf-caption bp-pf-pad">Job counts: Adzuna Canada. Rising: WEF Future of Jobs 2025.</p>
   </section>;
