@@ -72,4 +72,5 @@ pytest driven by `practice-events.fixture.json` + generated event streams: level
   exercise first; questions apply the idea to a new input (MC only with an mcReason, or on the last attempt);
   private per-choice why-wrong notes + retry hint, served by /v2/answer without a model call. Eval rescore (run 3):
   coding:concept 59:15 (was 45:29), precision 1.000 unchanged; the 15 left are C#/TypeScript/C/Go code.
-- [ ] Generic stdin/stdout runner for every other Judge0 language (approved, next).
+- [x] Generic stdin/stdout runner (app/runners/stdio_runner.py): TypeScript, C, C#, Go, Rust code sections get verified
+  whole-program coding exercises; live grade + generate checked per language.

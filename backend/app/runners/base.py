@@ -32,7 +32,8 @@ MAX_CONCURRENT_CASES = 3
 MAX_ACTIVE_GRADES = 2
 POLL_INTERVAL = 0.5
 
-SUPPORTED_LANGUAGES = ("python", "javascript", "java", "cpp", "sql")
+# Function-style runners, then the generic stdin/stdout runner (stdio_runner.py).
+SUPPORTED_LANGUAGES = ("python", "javascript", "java", "cpp", "sql", "typescript", "c", "csharp", "go", "rust")
 
 
 class RunnerUnavailable(Exception):
