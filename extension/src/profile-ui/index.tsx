@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
-import { AnimatePresence, motion, MotionConfig } from 'motion/react';
-import { ArrowLeft, ArrowUpRight, Check, ChevronRight, Copy, Settings2 } from 'lucide-react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { animate, AnimatePresence, motion, MotionConfig } from 'motion/react';
+import { ArrowLeft, ChartColumn, Check, ChevronRight, CircleCheck, Copy, ExternalLink, GraduationCap, Handshake, Layers, Lightbulb, RotateCcw, Sparkles, TrendingDown, TrendingUp, TriangleAlert, Users, Zap } from 'lucide-react';
 import '@fontsource-variable/inter';
 import type { PublicProfile } from '../v2/types';
 import levels from '../../../contracts/v2/levels.json';
@@ -50,11 +50,11 @@ type Mate = PublicProfile['complements'][number];
 const rankOf = (level: string) => Math.max(0, levels.levels.findIndex(item => item.id === level));
 const STRONG = 5; // index of Intermediate I
 const ease = [0.22, 1, 0.36, 1] as const;
-const firstName = (name: string) => name.replace(/\s*\(.*?\)\s*/g, ' ').trim().split(' ')[0] ?? name;
-const lower = (text: string) => text.toLowerCase();
+const firstName = (name: string) => name.split(' ')[0] ?? name;
 function initials(name: string) {
   return name.replace(/\(.*?\)/g, '').trim().split(/\s+/).map(part => part[0] ?? '').join('').slice(0, 2).toUpperCase() || '?';
 }
+function hueOf(name: string) { let hue = 0; for (const char of name) hue = (hue * 31 + char.charCodeAt(0)) % 360; return hue; }
 function progressFor(skill: Skill) {
   const index = rankOf(skill.level);
   const current = levels.levels[index]; const next = levels.levels[index + 1];
@@ -62,54 +62,98 @@ function progressFor(skill: Skill) {
   return { next, progress };
 }
 const byLevel = (a: Skill, b: Skill) => rankOf(b.level) - rankOf(a.level) || b.xp - a.xp;
-function strongIn(profile: PublicProfile | null | undefined, against: PublicProfile | null | undefined) {
+function Avatar({ name, size = 40, ring }: { name: string; size?: number; ring?: number }) {
+  const hue = hueOf(name);
+  const r = size / 2 + 4; const c = 2 * Math.PI * r;
+  return <span className="bp-pf-avatar-wrap" style={{ width: size + 12, height: size + 12 }} aria-hidden="true">
+    {ring !== undefined && <svg width={size + 12} height={size + 12} className="bp-pf-ring">
+      <circle cx={size / 2 + 6} cy={size / 2 + 6} r={r} className="bp-pf-ring-track" />
+      <motion.circle cx={size / 2 + 6} cy={size / 2 + 6} r={r} className="bp-pf-ring-fill" strokeDasharray={c}
+        initial={{ strokeDashoffset: c }} animate={{ strokeDashoffset: c * (1 - ring) }} transition={{ duration: 1.1, ease }} />
+    </svg>}
+    <span className="bp-pf-avatar" style={{ width: size, height: size, fontSize: size * 0.38, background: `linear-gradient(135deg, hsl(${hue} 70% 58%), hsl(${(hue + 40) % 360} 65% 42%))` }}>{initials(name)}</span>
+  </span>;
+}
+function Count({ value }: { value: number }) {
+  const [shown, setShown] = useState(0);
+  useEffect(() => { const controls = animate(0, value, { duration: 0.9, ease, onUpdate: v => setShown(Math.round(v)) }); return () => controls.stop(); }, [value]);
+  return <>{shown.toLocaleString()}</>;
+}
+function Stat({ icon, label, value }: { icon: ReactNode; label: string; value: number }) {
+  return <div className="bp-pf-stat"><dt><span className="bp-pf-stat-icon">{icon}</span>{label}</dt><dd><Count value={value} /></dd></div>;
+}
+function Hero({ profile, extra }: { profile: PublicProfile; extra?: ReactNode }) {
+  const xp = profile.skills.reduce((sum, skill) => sum + skill.xp, 0);
+  const solved = profile.skills.reduce((sum, skill) => sum + skill.passed, 0);
+  const best = [...profile.skills].sort(byLevel)[0];
+  return <motion.section className="bp-pf-hero" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease }}>
+    <div className="bp-pf-hero-top">
+      <Avatar name={profile.displayName} size={52} ring={best ? progressFor(best).progress : 0} />
+      <div className="bp-pf-hero-text"><h1>{profile.displayName}</h1>
+        {best ? <p><span className={`bp-pf-pill${rankOf(best.level) >= STRONG ? ' is-strong' : ''}`}>{best.levelName}</span><span>in {conceptName(best.concept)}</span></p> : <p>Just getting started</p>}
+      </div>
+    </div>
+    <dl className="bp-pf-stats">
+      <Stat icon={<Zap size={14} />} label="Total XP" value={xp} />
+      <Stat icon={<CircleCheck size={14} />} label="Solved" value={solved} />
+      <Stat icon={<Layers size={14} />} label="Skills" value={profile.skills.length} />
+    </dl>
+    {extra}
+  </motion.section>;
+}
+function SkillRow({ skill, index }: { skill: Skill; index: number }) {
+  const { next, progress } = progressFor(skill);
+  const name = conceptName(skill.concept);
+  const fading = skill.strength < 0.35;
+  return <motion.li className="bp-pf-skill" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.05 * index, ease }}>
+    <div className="bp-pf-skill-top"><h3>{name}</h3><span className={`bp-pf-pill${rankOf(skill.level) >= STRONG ? ' is-strong' : ''}`}>{skill.levelName}</span></div>
+    <div className="bp-pf-bar" aria-hidden="true"><motion.span initial={{ width: 0 }} animate={{ width: `${Math.max(progress * 100, 2)}%` }} transition={{ duration: 0.9, delay: 0.1 + 0.05 * index, ease }} /></div>
+    <progress className="sr-only" aria-label={`${name} level progress`} value={progress} max={1} />
+    <div className="bp-pf-skill-meta">
+      <small><span className="bp-pf-num">{skill.xp}</span> XP{next ? <> · <span className="bp-pf-num">{next.minXp - skill.xp}</span> to {next.name}</> : ' · Max level'}</small>
+      {fading ? <small className="bp-pf-fading"><TrendingDown size={12} /> Fading</small>
+        : <small className="bp-pf-strength" title="Strength fades without practice"><span style={{ opacity: 0.35 + skill.strength * 0.65 }} />{Math.round(skill.strength * 100)}%</small>}
+    </div>
+    <small className="bp-pf-sub">{skill.passed} solved · {skill.tutorials} {skill.tutorials === 1 ? 'tutorial' : 'tutorials'} · {new Date(skill.lastPracticedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</small>
+  </motion.li>;
+}
+function SkillsCard({ profile }: { profile: PublicProfile }) {
+  return <section className="bp-v2-card bp-pf-card"><header className="bp-pf-card-head"><h2>Skills</h2><small>Ranked by level</small></header>
+    {!profile.skills.length ? <small>Complete a challenge to start building your skills. Every concept starts at Beginner I.</small>
+      : <ul className="bp-pf-list">{[...profile.skills].sort(byLevel).map((skill, index) => <SkillRow key={skill.concept} skill={skill} index={index} />)}</ul>}
+  </section>;
+}
+function GrowthCards({ profile }: { profile: PublicProfile }) {
+  return <>
+    {!!profile.refresherDue.length && <section className="bp-pf-card bp-pf-refresh"><header className="bp-pf-card-head"><h2><RotateCcw size={14} /> Time to refresh</h2></header>
+      <small>These are fading. A one-question refresher brings them back next time you watch.</small>
+      <ul className="bp-pf-chips">{profile.refresherDue.map(item => <li key={item.concept} className="bp-pf-chip is-warn">{conceptName(item.concept)}</li>)}</ul></section>}
+    {!!profile.topInDemand.length && <section className="bp-pf-card"><header className="bp-pf-card-head"><h2><TrendingUp size={14} /> In demand</h2><small>Top 3 right now</small></header>
+      <ul className="bp-pf-list">{profile.topInDemand.slice(0, 3).map(item => <li key={item.concept} className="bp-pf-demand">
+        <div><h3>{conceptName(item.concept)}</h3><small>{item.reason}</small></div>
+        {safeVideo(item.videoUrl) && <a href={item.videoUrl} target="_blank" rel="noreferrer" aria-label={`Watch a tutorial on ${conceptName(item.concept)}`}>Watch <ExternalLink size={12} /></a>}
+      </li>)}</ul></section>}
+  </>;
+}
+function strongIn(profile: PublicProfile | undefined, against: PublicProfile | null) {
   if (!profile) return [];
   const theirs = new Map((against?.skills ?? []).map(skill => [skill.concept, rankOf(skill.level)]));
   return profile.skills.filter(s => rankOf(s.level) >= STRONG && (theirs.get(s.concept) ?? 0) < STRONG).sort(byLevel);
 }
-const enter = { initial: { opacity: 0, y: 4 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.28, ease } };
-
-function Avatar({ name, size = 28 }: { name: string; size?: number }) {
-  return <span className="bp-pf-avatar" aria-hidden="true" style={{ width: size, height: size, fontSize: Math.round(size * 0.38) }}>{initials(name)}</span>;
+function MateCard({ mate, me, detail, index, onView }: { mate: Mate; me: PublicProfile; detail?: PublicProfile; index: number; onView?(): void }) {
+  const [lead = mate.why] = mate.why.split('. ');
+  const teaches = strongIn(detail, me).slice(0, 2);
+  const Tag = onView ? motion.button : motion.div;
+  return <li><Tag type={onView ? 'button' : undefined} className="bp-pf-mate" onClick={onView} aria-label={onView ? `View ${mate.displayName}'s profile` : undefined}
+    initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.06 * index, ease }} whileHover={onView ? { y: -1 } : undefined} whileTap={onView ? { scale: 0.99 } : undefined}>
+    <Avatar name={mate.displayName} size={38} />
+    <span className="bp-pf-mate-text"><strong>{mate.displayName}</strong><span>{lead.replace(/\.$/, '')}</span>
+      {!!teaches.length && <span className="bp-pf-chips">{teaches.map(s => <span key={s.concept} className="bp-pf-chip is-good"><GraduationCap size={11} />{conceptName(s.concept)}</span>)}</span>}
+    </span>
+    {onView && <ChevronRight size={16} className="bp-pf-chevron" />}
+  </Tag></li>;
 }
-function Identity({ profile }: { profile: PublicProfile }) {
-  const xp = profile.skills.reduce((sum, skill) => sum + skill.xp, 0);
-  const solved = profile.skills.reduce((sum, skill) => sum + skill.passed, 0);
-  const best = [...profile.skills].sort(byLevel)[0];
-  return <motion.header className="bp-pf-identity" {...enter}>
-    <h1>{profile.displayName}</h1>
-    <p className="bp-pf-mono">{best ? <>{lower(best.levelName)} · {lower(conceptName(best.concept))}</> : 'new learner'}<span className="bp-pf-sep">/</span>{xp.toLocaleString()} xp<span className="bp-pf-sep">/</span>{solved} solved</p>
-  </motion.header>;
-}
-function Section({ title, meta, children }: { title: string; meta?: string; children: React.ReactNode }) {
-  return <section className="bp-v2-card bp-pf-panel">
-    <div className="bp-pf-panel-head"><h2>{title}</h2>{meta && <small className="bp-pf-mono">{meta}</small>}</div>
-    {children}
-  </section>;
-}
-function SkillRow({ skill }: { skill: Skill }) {
-  const { next, progress } = progressFor(skill);
-  const name = conceptName(skill.concept);
-  const fading = skill.strength < 0.35;
-  return <li className="bp-pf-row">
-    <div className="bp-pf-row-main">
-      <span className="bp-pf-row-title">{fading && <span className="bp-pf-dot" title="Fading: practice soon" aria-label="Fading" />}{name}</span>
-      <span className="bp-pf-row-sub bp-pf-mono">{skill.xp}{next ? ` / ${next.minXp}` : ''} xp</span>
-    </div>
-    <span className={`bp-pf-row-end bp-pf-mono${rankOf(skill.level) >= STRONG ? ' is-strong' : ''}`}>{lower(skill.levelName)}</span>
-    <span className="bp-pf-track" aria-hidden="true"><motion.span initial={{ scaleX: 0 }} animate={{ scaleX: Math.max(progress, 0.02) }} transition={{ duration: 0.7, ease }} /></span>
-    <progress className="sr-only" aria-label={`${name} level progress`} value={progress} max={1} />
-  </li>;
-}
-function MateRow({ mate, detail, me, onView }: { mate: Mate; detail?: PublicProfile; me: PublicProfile; onView?(): void }) {
-  const teaches = strongIn(detail, me).map(s => lower(conceptName(s.concept)));
-  const sub = teaches.length ? `teaches ${teaches[0]}${teaches.length > 1 ? ` +${teaches.length - 1}` : ''}` : 'loading…';
-  const inner = <><Avatar name={mate.displayName} />
-    <span className="bp-pf-row-main"><span className="bp-pf-row-title">{firstName(mate.displayName)}</span><span className="bp-pf-row-sub bp-pf-mono">{sub}</span></span>
-    {onView && <ChevronRight size={14} className="bp-pf-row-end" aria-hidden="true" />}</>;
-  return <li>{onView ? <button type="button" className="bp-pf-row is-link" onClick={onView} aria-label={`View ${mate.displayName}'s profile`}>{inner}</button> : <div className="bp-pf-row">{inner}</div>}</li>;
-}
-function useMateDetails(profile: PublicProfile) {
+function TeammatesCard({ profile, onViewProfile }: { profile: PublicProfile; onViewProfile?(accountId: string): void }) {
   const [details, setDetails] = useState<Record<string, PublicProfile>>({});
   useEffect(() => {
     const controller = new AbortController();
@@ -117,40 +161,35 @@ function useMateDetails(profile: PublicProfile) {
       .then(data => { const parsed = profileSchema.safeParse(data); if (parsed.success && !controller.signal.aborted) setDetails(prev => ({ ...prev, [mate.accountId]: parsed.data })); }).catch(() => {});
     return () => controller.abort();
   }, [profile.accountId, profile.complements]);
-  return details;
+  return <section className="bp-v2-card bp-pf-card"><header className="bp-pf-card-head"><h2><Users size={14} /> Complementary teammates</h2></header>
+    <small className="bp-pf-sub">Strong where you're still learning, and keen to learn what you know. Pair up for projects and hackathons.</small>
+    {!profile.complements.length ? <p className="bp-pf-empty">No matches yet. Keep practicing and matches will appear as your skills grow.</p>
+      : <ul className="bp-pf-mates">{profile.complements.map((mate, index) => <MateCard key={mate.accountId} mate={mate} me={profile} detail={details[mate.accountId]} index={index} onView={onViewProfile ? () => onViewProfile(mate.accountId) : undefined} />)}</ul>}
+  </section>;
 }
-function SkillsSection({ profile, limit, title = 'Skills' }: { profile: PublicProfile; limit?: number; title?: string }) {
-  const sorted = [...profile.skills].sort(byLevel);
-  return <Section title={title} meta={`${profile.skills.length} tracked`}>
-    {!sorted.length ? <small className="bp-pf-empty">Solve a challenge to start a skill. Everything starts at beginner i.</small>
-      : <ul className="bp-pf-rows">{sorted.slice(0, limit).map(skill => <SkillRow key={skill.concept} skill={skill} />)}</ul>}
-  </Section>;
-}
-function UpNext({ profile }: { profile: PublicProfile }) {
-  const refresh = profile.refresherDue.slice(0, 1);
-  const trending = profile.topInDemand.filter(item => safeVideo(item.videoUrl)).slice(0, 2);
-  if (!refresh.length && !trending.length) return null;
-  return <Section title="Up next">
-    <ul className="bp-pf-rows">
-      {refresh.map(item => <li key={item.concept} className="bp-pf-row"><span className="bp-pf-row-main"><span className="bp-pf-row-title">Refresh {conceptName(item.concept)}</span><span className="bp-pf-row-sub bp-pf-mono">fading · quick question next video</span></span><span className="bp-pf-row-end bp-pf-mono is-warn">due</span></li>)}
-      {trending.map(item => <li key={item.concept}><a className="bp-pf-row is-link" href={item.videoUrl} target="_blank" rel="noreferrer" aria-label={`Watch a tutorial on ${conceptName(item.concept)}`}>
-        <span className="bp-pf-row-main"><span className="bp-pf-row-title">{conceptName(item.concept)}</span><span className="bp-pf-row-sub bp-pf-mono">in demand · watch a tutorial</span></span><ArrowUpRight size={14} className="bp-pf-row-end" aria-hidden="true" /></a></li>)}
-    </ul>
-  </Section>;
-}
-export function ProfileView({ profile, onViewProfile }: { profile: PublicProfile; onViewProfile?(accountId: string): void }) {
-  const details = useMateDetails(profile);
+export function ProfileView({ profile, onViewProfile, heroExtra }: { profile: PublicProfile; onViewProfile?(accountId: string): void; heroExtra?: ReactNode }) {
+  const [tab, setTab] = useState<'skills' | 'teammates'>('skills');
+  const tabs = [
+    { id: 'skills' as const, label: 'Skills', icon: <ChartColumn size={14} /> },
+    { id: 'teammates' as const, label: 'Teammates', icon: <Users size={14} />, count: profile.complements.length },
+  ];
   return <MotionConfig reducedMotion="user"><article className="bp-v2 bp-pf bp-pf-root" aria-label="Skill profile">
-    <Identity profile={profile} />
-    <SkillsSection profile={profile} limit={4} />
-    <Section title="Teammates" meta={profile.complements.length ? `${profile.complements.length} matches` : undefined}>
-      {!profile.complements.length ? <small className="bp-pf-empty">Matches show up as your skills grow.</small>
-        : <ul className="bp-pf-rows">{profile.complements.map(mate => <MateRow key={mate.accountId} mate={mate} detail={details[mate.accountId]} me={profile} onView={onViewProfile ? () => onViewProfile(mate.accountId) : undefined} />)}</ul>}
-    </Section>
-    <UpNext profile={profile} />
+    <Hero profile={profile} extra={heroExtra} />
+    {!!profile.highlights.length && <ul className="bp-pf-highlights" aria-label="Highlights">{profile.highlights.slice(0, 2).map(item => <li key={item}><Sparkles size={12} />{item}</li>)}</ul>}
+    <div className="bp-pf-tabs" role="tablist" aria-label="Profile sections">
+      {tabs.map(item => <button key={item.id} type="button" role="tab" aria-selected={tab === item.id} onClick={() => setTab(item.id)}>
+        {tab === item.id && <motion.span layoutId={`bp-pf-tab-${profile.accountId}`} className="bp-pf-tab-pill" transition={{ type: 'spring', stiffness: 500, damping: 38 }} />}
+        <span className="bp-pf-tab-label">{item.icon}{item.label}{!!item.count && <em>{item.count}</em>}</span>
+      </button>)}
+    </div>
+    <AnimatePresence mode="wait" initial={false}>
+      <motion.div key={tab} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.2, ease }}>
+        {tab === 'skills' ? <><SkillsCard profile={profile} /><GrowthCards profile={profile} /></> : <TeammatesCard profile={profile} onViewProfile={onViewProfile} />}
+      </motion.div>
+    </AnimatePresence>
   </article></MotionConfig>;
 }
-function TeammateProfile({ accountId, me, onBack }: { accountId: string; me: PublicProfile | null; onBack(): void }) {
+function TeammateProfile({ accountId, me, why, onBack }: { accountId: string; me: PublicProfile | null; why: string; onBack(): void }) {
   const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
@@ -162,56 +201,56 @@ function TeammateProfile({ accountId, me, onBack }: { accountId: string; me: Pub
     }).catch(cause => { if (!controller.signal.aborted) setError(loadError(cause)); });
     return () => controller.abort();
   }, [accountId]);
-  const theyTeach = strongIn(profile, me).slice(0, 2);
-  const youTeach = strongIn(me, profile).slice(0, 2);
+  const theyTeach = strongIn(profile ?? undefined, me).slice(0, 3);
+  const youTeach = strongIn(me ?? undefined, profile).slice(0, 3);
   const message = useMemo(() => {
     if (!profile) return '';
     const learn = theyTeach.map(s => conceptName(s.concept)); const give = youTeach.map(s => conceptName(s.concept));
-    return `Hi ${firstName(profile.displayName)}! I'm ${me ? firstName(me.displayName) : 'a learner'} on Breakpoint.`
-      + (learn.length ? ` I'm learning ${learn.join(' and ')}, which you're strong in.` : '')
-      + (give.length ? ` I can help with ${give.join(' and ')}.` : '')
-      + ' Want to pair up on a project or hackathon?';
+    return `Hi ${firstName(profile.displayName)}! I'm ${me?.displayName ?? 'a learner'} on Breakpoint.`
+      + (learn.length ? ` You're strong in ${learn.join(', ')}, which I'm working on.` : '')
+      + (give.length ? ` I can help with ${give.join(', ')} in return.` : '')
+      + ' Want to pair up on a project or hackathon and learn from each other?';
   }, [profile, me, theyTeach, youTeach]);
   const connect = () => {
     if (!message) return;
-    void navigator.clipboard.writeText(message).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2200); }).catch(() => setError('Could not copy to the clipboard.'));
+    void navigator.clipboard.writeText(message).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2500); }).catch(() => setError('Could not copy to the clipboard.'));
   };
-  return <div className="bp-v2 bp-pf bp-pf-root">
+  return <MotionConfig reducedMotion="user"><div className="bp-v2 bp-pf bp-pf-root">
     <button type="button" className="bp-pf-back" onClick={onBack} aria-label="Back to your profile"><ArrowLeft size={14} /> Back</button>
-    {error ? <p role="alert" className="bp-pf-error">{error}</p> : !profile ? <Skeleton /> : <>
-      <Identity profile={profile} />
-      <motion.section className="bp-pf-panel bp-pf-match" {...enter}>
-        <ul className="bp-pf-checks">
-          {theyTeach.map(s => <li key={s.concept}><Check size={13} /><span>Teaches you <strong>{conceptName(s.concept)}</strong></span></li>)}
-          {youTeach.map(s => <li key={s.concept}><Check size={13} /><span>You teach them <strong>{conceptName(s.concept)}</strong></span></li>)}
-          {!theyTeach.length && !youTeach.length && <li><Check size={13} /><span>Similar level, a good study partner</span></li>}
-        </ul>
-        <motion.button type="button" className="bp-pf-cta" onClick={connect} whileTap={{ scale: 0.98 }}>
-          {copied ? <><Check size={14} /> Intro copied</> : <><Copy size={14} /> Connect with {firstName(profile.displayName)}</>}
+    {error ? <div role="alert" className="bp-pf-card bp-pf-error"><TriangleAlert size={16} /><p>{error}</p></div> : !profile ? <Skeleton /> : <>
+      <Hero profile={profile} />
+      <motion.section className="bp-pf-card bp-pf-match" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.08, ease }}>
+        <header className="bp-pf-card-head"><h2><Handshake size={15} /> Why you match</h2></header>
+        <small className="bp-pf-sub">{why}</small>
+        <div className="bp-pf-swap">
+          <div><h3><GraduationCap size={13} /> They teach you</h3>{theyTeach.length ? <ul className="bp-pf-chips">{theyTeach.map(s => <li key={s.concept} className="bp-pf-chip is-good">{conceptName(s.concept)}</li>)}</ul> : <small>Nothing yet</small>}</div>
+          <div><h3><Lightbulb size={13} /> You teach them</h3>{youTeach.length ? <ul className="bp-pf-chips">{youTeach.map(s => <li key={s.concept} className="bp-pf-chip is-accent">{conceptName(s.concept)}</li>)}</ul> : <small>Nothing yet</small>}</div>
+        </div>
+        <blockquote className="bp-pf-quote">{message}</blockquote>
+        <motion.button type="button" className="bp-pf-connect" onClick={connect} whileTap={{ scale: 0.98 }}>
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.span key={copied ? 'done' : 'idle'} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.15 }}>
+              {copied ? <><Check size={15} /> Intro copied, paste it in a DM</> : <><Copy size={15} /> Connect with {firstName(profile.displayName)}</>}
+            </motion.span>
+          </AnimatePresence>
         </motion.button>
-        <small className="bp-pf-note">Copies a short intro you can send them.</small>
       </motion.section>
-      <SkillsSection profile={profile} title={`${firstName(profile.displayName)}'s skills`} />
+      <SkillsCard profile={profile} />
     </>}
-  </div>;
+  </div></MotionConfig>;
 }
 function Skeleton() {
-  return <div className="bp-pf" role="status" aria-label="Loading profile"><div className="bp-pf-skel" style={{ height: 56 }} /><div className="bp-pf-skel" /><div className="bp-pf-skel" /></div>;
+  return <div className="bp-pf" role="status" aria-label="Loading profile"><div className="bp-pf-skel bp-pf-skel-hero" /><div className="bp-pf-skel" /><div className="bp-pf-skel" /></div>;
 }
-function SettingsView({ profile, settings, onSettings, onPublic, onBack }: { profile: PublicProfile | null; settings: LearnerSettingsValue; onSettings(value: LearnerSettingsValue): void; onPublic(): void; onBack(): void }) {
+function PublicToggle({ profile, onChange }: { profile: PublicProfile; onChange(next: boolean): void }) {
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
-  return <div className="bp-v2 bp-pf bp-pf-root">
-    <button type="button" className="bp-pf-back" onClick={onBack} aria-label="Back to your profile"><ArrowLeft size={14} /> Back</button>
-    <header className="bp-pf-identity"><h1 className="bp-pf-h1-sm">Settings</h1></header>
-    {profile && <section className="bp-pf-panel"><label className="bp-pf-setting"><span><span className="bp-pf-row-title">Visible to teammates</span><span className="bp-pf-row-sub bp-pf-mono">{profile.public ? 'others can match with you' : 'hidden from matches'}</span></span>
-      <input type="checkbox" role="switch" className="bp-pf-switch" checked={profile.public} disabled={busy} onChange={event => {
-        const next = event.target.checked; setBusy(true); setFailed(false);
-        void fetch(`${base}/v2/profile/${encodeURIComponent(profile.accountId)}/public`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ public: next }) })
-          .then(response => { if (!response.ok) throw new Error(); onPublic(); }).catch(() => setFailed(true)).finally(() => setBusy(false));
-      }} /></label>{failed && <small role="alert" className="bp-pf-error">Could not save.</small>}</section>}
-    <div className="bp-pf-settings"><LearnerSettings value={settings} onChange={onSettings} /></div>
-  </div>;
+  return <label className="bp-pf-public"><span><strong>{profile.public ? 'Visible to teammates' : 'Hidden from teammates'}</strong><small>{profile.public ? 'Others can find and match with you' : 'You won’t appear in anyone’s matches'}</small></span>
+    <input type="checkbox" role="switch" className="bp-pf-switch" checked={profile.public} disabled={busy} onChange={event => {
+      const next = event.target.checked; setBusy(true); setFailed(false);
+      void fetch(`${base}/v2/profile/${encodeURIComponent(profile.accountId)}/public`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ public: next }) })
+        .then(response => { if (!response.ok) throw new Error(); onChange(next); }).catch(() => setFailed(true)).finally(() => setBusy(false));
+    }} />{failed && <small role="alert">Could not save.</small>}</label>;
 }
 export function ProfilePage({ preferences: prefs = preferences }: { preferences?: Preferences } = {}) {
   const [accounts, setAccounts] = useState<LocalAccount[]>([]);
@@ -222,7 +261,7 @@ export function ProfilePage({ preferences: prefs = preferences }: { preferences?
   const [retry, setRetry] = useState(0);
   const [settings, setSettings] = useState<LearnerSettingsValue>(defaultSettings);
   const [storageReady, setStorageReady] = useState(false);
-  const [view, setView] = useState<'home' | 'settings' | { mate: string }>('home');
+  const [viewing, setViewing] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
   useEffect(() => {
     const controller = new AbortController();
@@ -252,32 +291,25 @@ export function ProfilePage({ preferences: prefs = preferences }: { preferences?
     }).catch(cause => { if (!controller.signal.aborted) setError(loadError(cause)); });
     return () => controller.abort();
   }, [account, reload]);
-  const saveSettings = (value: LearnerSettingsValue) => {
-    setSettings(value); setSavingError('');
-    void persist(() => prefs.saveLearnerSettings(value)).catch(() => setSavingError('Practice settings could not be saved.'));
-  };
-  const key = typeof view === 'string' ? view : `mate-${view.mate}`;
-  return <MotionConfig reducedMotion="user"><main className="bp-v2 bp-v2-profile bp-pf-root">
-    <header className="bp-pf-top">
-      <span className="bp-pf-brand"><strong>Break</strong>point</span>
-      <span className="bp-pf-top-actions">
-        {!!accounts.length && <label className="bp-pf-account"><span className="sr-only">Test account</span><select value={account} onChange={event => {
-          const accountId = event.target.value;
-          setProfile(null); setView('home'); setAccount(accountId); setSavingError('');
-          void persist(() => prefs.setActiveAccount(accountId)).catch(() => setSavingError('Account selection could not be saved.'));
-        }}>{accounts.map(item => <option key={item.accountId} value={item.accountId}>{item.displayName}</option>)}</select></label>}
-        <button type="button" className="bp-pf-icon" aria-label="Settings" aria-pressed={view === 'settings'} onClick={() => setView(view === 'settings' ? 'home' : 'settings')}><Settings2 size={15} /></button>
-      </span>
-    </header>
-    <AnimatePresence mode="wait" initial={false}>
-      <motion.div key={key} initial={{ opacity: 0, x: key === 'home' ? -8 : 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.18, ease }}>
-        {view === 'settings' ? storageReady && <SettingsView profile={profile} settings={settings} onSettings={saveSettings} onPublic={() => setReload(value => value + 1)} onBack={() => setView('home')} />
-          : typeof view === 'object' ? <TeammateProfile accountId={view.mate} me={profile} onBack={() => setView('home')} />
-          : error ? <div role="alert" className="bp-pf bp-pf-error-wrap"><p className="bp-pf-error">{error}</p><button type="button" className="bp-pf-ghost" onClick={() => setRetry(value => value + 1)}>Retry</button></div>
-          : profile ? <ProfileView profile={profile} onViewProfile={mate => setView({ mate })} />
-          : <Skeleton />}
-      </motion.div>
-    </AnimatePresence>
-    {savingError && <p role="alert" className="bp-pf-error">{savingError}</p>}
-  </main></MotionConfig>;
+  const header = <header className="bp-pf-top">
+    <span className="bp-pf-brand"><span className="bp-pf-logo"><Zap size={13} strokeWidth={2.5} /></span>Breakpoint</span>
+    {!!accounts.length && <label className="bp-pf-account"><span className="sr-only">Test account</span><select value={account} onChange={event => {
+      const accountId = event.target.value;
+      setProfile(null); setViewing(null); setAccount(accountId); setSavingError('');
+      void persist(() => prefs.setActiveAccount(accountId)).catch(() => setSavingError('Account selection could not be saved.'));
+    }}>{accounts.map(item => <option key={item.accountId} value={item.accountId}>{item.displayName}</option>)}</select></label>}
+  </header>;
+  if (viewing) {
+    const why = profile?.complements.find(person => person.accountId === viewing)?.why ?? '';
+    return <main className="bp-v2 bp-v2-profile bp-pf-root">{header}<TeammateProfile accountId={viewing} me={profile} why={why} onBack={() => setViewing(null)} /></main>;
+  }
+  return <main className="bp-v2 bp-v2-profile bp-pf-root">{header}
+    {error ? <div role="alert" className="bp-pf bp-pf-error-wrap"><div className="bp-pf-card bp-pf-error"><TriangleAlert size={16} /><p>{error}</p></div><button onClick={() => setRetry(value => value + 1)}>Retry</button></div>
+      : profile ? <ProfileView profile={profile} onViewProfile={setViewing} heroExtra={<PublicToggle profile={profile} onChange={() => setReload(value => value + 1)} />} />
+      : <Skeleton />}
+    {storageReady && <div className="bp-pf-settings"><LearnerSettings value={settings} onChange={value => {
+      setSettings(value); setSavingError('');
+      void persist(() => prefs.saveLearnerSettings(value)).catch(() => setSavingError('Practice settings could not be saved.'));
+    }} /></div>}{savingError && <p role="alert">{savingError}</p>}
+  </main>;
 }
