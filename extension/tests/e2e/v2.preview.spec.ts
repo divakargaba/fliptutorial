@@ -2,6 +2,40 @@ import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 const profile = JSON.parse(readFileSync(new URL('../../../contracts/v2/public-profile.fixture.json', import.meta.url), 'utf8'));
 
+test('v2 account switching isolates drafts, including unflushed edits', async ({ page }) => {
+  await page.goto('/tests/showcase/v2.html?state=coding-accounts');
+  const editor = page.getByRole('textbox', { name: 'JavaScript code' });
+  await editor.fill('// Ana private draft');
+  await page.getByLabel('Draft account').selectOption('test-ben');
+  await expect(editor).toContainText('function solution');
+  await editor.fill('// Ben private draft');
+  await page.getByLabel('Draft account').selectOption('test-ana');
+  await expect(editor).toHaveText('// Ana private draft');
+  await page.getByLabel('Draft account').selectOption('test-ben');
+  await expect(editor).toHaveText('// Ben private draft');
+  await page.reload();
+  await expect(editor).toHaveText('// Ana private draft');
+});
+
+for (const [language, label, filename] of [['javascript', 'JavaScript', 'main.js'], ['java', 'Java', 'Main.java'], ['cpp', 'C++', 'main.cpp'], ['sql', 'SQL', 'query.sql']]) {
+  test(`v2 ${language} editor presents its language and submits exact source`, async ({ page }, info) => {
+    await page.goto(`/tests/showcase/v2.html?state=coding-language&language=${language}`);
+    await expect(page.locator('.bp-file')).toHaveText(filename!);
+    await expect(page.locator('.bp-call')).toHaveText('Input: true, null');
+    await expect(page.locator('.bp-expected')).toHaveText('false');
+    const editor = page.getByRole('textbox', { name: `${label} code`, exact: true });
+    await editor.fill('source with jklf and spaces');
+    await editor.press('Control+Enter');
+    await expect(page.getByLabel('Submitted source')).toHaveText('source with jklf and spaces');
+    await editor.press('Tab');
+    await expect(editor).not.toBeFocused();
+    for (const theme of ['dark', 'light']) {
+      await page.locator('.breakpoint-shell').evaluate((shell, theme) => { (shell as HTMLElement).dataset.theme = theme; }, theme);
+      await page.screenshot({ path: info.outputPath(`${language}-${theme}.png`), fullPage: true, animations: 'disabled' });
+    }
+  });
+}
+
 test('v2 question sends choice id, permits retry, and offers explicit resume', async ({ page }) => {
   await page.goto('/tests/showcase/v2.html');
   await expect(page.getByRole('heading', { name: 'Reading a 2D list' })).toBeFocused();

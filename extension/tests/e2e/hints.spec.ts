@@ -1,6 +1,19 @@
 import { expect } from '@playwright/test';
 import { analysisFixture, automaticPause, correctCode, expectPlaying, hintFixture, test } from './extension.fixture';
 
+test('a long hint remains valid input for Next hint', async ({ app }) => {
+  await automaticPause(app.page);
+  app.hintText = 'Think about each step and the changing accumulator. '.repeat(85);
+  await app.page.getByRole('button', { name: 'Stuck? Get a hint', exact: true }).click();
+  await expect(app.page.locator('.bp-hint-card')).toHaveCount(1);
+  await app.page.getByRole('button', { name: 'Next hint (2 of 3)', exact: true }).click();
+  await expect(app.page.locator('.bp-hint-card')).toHaveCount(2);
+  expect(app.hints[1]?.previousHints).toEqual([Array.from(`Hint 1: ${app.hintText}`).slice(0, 400).join('')]);
+  await expect(app.page.locator('.bp-hint-card').first().locator('p')).toHaveText(`Hint 1: ${app.hintText}`);
+  await expect(app.page.locator('.bp-hints .bp-inline-error')).toHaveCount(0);
+  expect(await app.page.locator('video').evaluate(video => video.paused)).toBe(true);
+});
+
 test('wrong Run explains the failure and hints stop at three', async ({ app }, info) => {
   const { page } = app;
   await automaticPause(page);
