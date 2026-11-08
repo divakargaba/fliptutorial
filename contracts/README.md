@@ -48,3 +48,11 @@ Full product spec: `docs/PRD.md`.
 Optional panel props: `index`, `total` ("Challenge 2 of 3"), `leaving` (exit animation), `holdMs` (solved moment before auto-resume; caller waits `SOLVED_HOLD_MS`).
 Also `Badge` (`extension/src/ui/Badge.tsx`): `{ state: "loading"|"ready"|"unavailable"; total; remaining; solved; active: boolean; nextAtS: number|null; onOpen(): void }`. Always one `<button>`; non-actionable states use `aria-disabled`.
 Drafts: `extension/src/drafts.ts` (UI owner) exports `loadDraft(key)`, `saveDraft(key, code)` (debounced), `flushDraft(key)`; key = `${videoId}/${exerciseId}/${revision}`.
+
+## Hints and efficiency feedback (H1/H2, owner @divakargaba)
+- `POST /v1/hints` body `{ exerciseId, revision, code, level: 0..3, lastResult?: { outcome, args?, expected?, actual?, diagnostic? }, previousHints?: string[] }`
+  → `hint-response.fixture.json`. Level 0 = feedback on the failing attempt only; 1 = nudge; 2 = the specific tool + doc; 3 = plain-words outline.
+  Grounded in `backend/content/docs/*.json` (official docs, BM25). Never returns code that solves the exercise (leak guard + deterministic doc fallback; `aiGenerated: false` when the fallback answered).
+- `POST /v1/analysis` body `{ exerciseId, revision, code }` → `analysis-response.fixture.json`. Only for code that already passed Submit (else `403 NOT_SOLVED`).
+  `betterSolution` is present only when the learner is not optimal and the suggestion passed every test in Judge0.
+- Errors as usual plus `NOT_SOLVED` 403. Worker messages: `{ type: "hint", ... }` (15 s timeout) and `{ type: "analyze", ... }` (15 s).

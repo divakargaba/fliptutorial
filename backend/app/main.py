@@ -5,6 +5,8 @@ Routes:
   GET  /v1/videos/{video_id}/practice
   POST /v1/submissions
   POST /v1/test-me
+  POST /v1/hints
+  POST /v1/analysis
 """
 
 from __future__ import annotations
@@ -205,10 +207,112 @@ async def submit(body: SubmissionRequest, request: Request):
     except grader.Busy as exc:
         return error_response(429, "BUSY", str(exc), retryable=True, request_id=request_id)
 
+    if body.mode == "submit" and result.outcome == "passed":
+        _remember_pass(exercise.id, revision, body.code)
+
     return JSONResponse(
         content=result.model_dump(),
         headers={"X-Request-Id": request_id},
     )
+
+
+# ---------------------------------------------------------------------------
+# Hints (H1) and efficiency analysis (H2)
+# ---------------------------------------------------------------------------
+
+import hashlib
+import time as _time
+
+from . import analysis as analysis_mod
+from . import hints as hints_mod
+
+# Code that passed Submit, so /v1/analysis never reveals a better solution to
+# someone who has not solved the exercise. Kept in memory for an hour.
+_PASSED: dict[str, float] = {}
+_PASS_TTL_S = 3600
+
+
+def _pass_key(exercise_id: str, revision: str | None, code: str) -> str:
+    return hashlib.sha256(f"{exercise_id}\0{revision}\0{code}".encode()).hexdigest()
+
+
+def _remember_pass(exercise_id: str, revision: str | None, code: str) -> None:
+    now = _time.monotonic()
+    for k in [k for k, t in _PASSED.items() if now - t > _PASS_TTL_S]:
+        del _PASSED[k]
+    _PASSED[_pass_key(exercise_id, revision, code)] = now
+
+
+def _resolve_exercise(exercise_id: str, revision: str, request_id: str):
+    """(exercise, None) or (None, error JSONResponse) for approved or generated exercises."""
+    found = catalog.find_exercise(exercise_id)
+    if found is not None:
+        record, exercise = found
+        if record.revision != revision:
+            return None, error_response(409, "STALE_EXERCISE", "exercise was updated; reload", retryable=False,
+                                        request_id=request_id)
+        return exercise, None
+    try:
+        from .testme import find_exercise as find_generated
+    except ImportError:
+        find_generated = None
+    gen = find_generated(exercise_id) if find_generated else None
+    if gen is not None and gen.exercise.id == exercise_id:
+        if gen.set_id != revision:
+            return None, error_response(409, "STALE_EXERCISE", "exercise was updated; reload", retryable=False,
+                                        request_id=request_id)
+        return gen.exercise, None
+    if exercise_id.startswith("tm-"):
+        return None, error_response(410, "SET_EXPIRED", "this generated exercise has expired; press Test me again",
+                                    request_id=request_id)
+    return None, error_response(404, "EXERCISE_NOT_FOUND", "unknown exercise", request_id=request_id)
+
+
+class HintRequest(BaseModel):
+    exerciseId: str
+    revision: str
+    code: str = Field(max_length=16384)
+    level: int = Field(ge=0, le=hints_mod.MAX_LEVEL)
+    lastResult: hints_mod.LastResult | None = None
+    previousHints: list[str] = Field(default_factory=list, max_length=6)
+
+
+@app.post("/v1/hints")
+async def get_hint(body: HintRequest):
+    request_id = uuid.uuid4().hex[:12]
+    exercise, err = _resolve_exercise(body.exerciseId, body.revision, request_id)
+    if err is not None:
+        return err
+    resp = await hints_mod.service().hint(exercise, body.code, body.level, body.lastResult,
+                                          [h[:400] for h in body.previousHints])
+    return JSONResponse(content=resp.model_dump(), headers={"X-Request-Id": request_id})
+
+
+class AnalysisRequest(BaseModel):
+    exerciseId: str
+    revision: str
+    code: str = Field(max_length=16384)
+
+
+@app.post("/v1/analysis")
+async def get_analysis(body: AnalysisRequest):
+    request_id = uuid.uuid4().hex[:12]
+    exercise, err = _resolve_exercise(body.exerciseId, body.revision, request_id)
+    if err is not None:
+        return err
+    if _pass_key(exercise.id, body.revision, body.code) not in _PASSED:
+        return error_response(403, "NOT_SOLVED", "submit a passing solution first", retryable=False,
+                              request_id=request_id)
+
+    async def verify(ex: ApprovedExercise, code: str) -> bool:
+        try:
+            graded = await grader.grade(exercise=ex, code=code, mode="submit", request_id=request_id)
+        except Exception:  # noqa: BLE001
+            return False
+        return graded.outcome == "passed"
+
+    resp = await analysis_mod.analyze(exercise, body.code, verify)
+    return JSONResponse(content=resp.model_dump(), headers={"X-Request-Id": request_id})
 
 
 # ---------------------------------------------------------------------------

@@ -1,0 +1,9 @@
+{
+  "learner": { "time": "O(n^2)", "space": "O(1)" },
+  "best": { "time": "O(n)", "space": "O(n)" },
+  "optimal": false,
+  "summary": "You passed! Your nested loop is O(n^2), but this can be done in O(n).",
+  "tip": "Remember the values you've already seen in a set so each check is instant.",
+  "betterSolution": "def has_pair(nums):\n    seen = set()\n    for x in nums:\n        if -x in seen:\n            return True\n        seen.add(x)\n    return False\n",
+  "aiGenerated": true
+}

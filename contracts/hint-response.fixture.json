@@ -1,0 +1,9 @@
+{
+  "level": 2,
+  "maxLevel": 3,
+  "feedback": "For raise_to_power(2, 3) your code returned 6, but 8 was expected, so it multiplies once instead of repeatedly.",
+  "hint": "Raising to a power is repeated multiplication; range() can control how many times you repeat it.",
+  "focus": "repeated multiplication",
+  "sources": [{ "title": "range()", "url": "https://docs.python.org/3/library/stdtypes.html#range" }],
+  "aiGenerated": true
+}

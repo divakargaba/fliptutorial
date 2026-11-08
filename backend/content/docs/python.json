@@ -1,0 +1,410 @@
+{
+ "language": "python",
+ "source": "Official Python documentation (docs.python.org), summarized",
+ "chunks": [
+  {
+   "id": "for-statement",
+   "title": "The for statement",
+   "url": "https://docs.python.org/3/reference/compound_stmts.html#the-for-statement",
+   "tags": [
+    "loops",
+    "for",
+    "iteration"
+   ],
+   "text": "The for statement iterates over the items of any sequence or iterable, in order. The loop body runs once per item, with the target variable bound to that item. Use break to leave the loop early and continue to skip to the next item.",
+   "nudge": "Think about which value needs to be visited once per step, and loop over exactly those values."
+  },
+  {
+   "id": "range",
+   "title": "range()",
+   "url": "https://docs.python.org/3/library/stdtypes.html#range",
+   "tags": [
+    "loops",
+    "range",
+    "for"
+   ],
+   "text": "range(stop) or range(start, stop[, step]) produces an immutable sequence of integers from start (default 0) up to but not including stop. It is commonly used to repeat a loop body a fixed number of times: for i in range(n) runs n times.",
+   "nudge": "If you need to repeat something a fixed number of times, range() gives you exactly that many iterations."
+  },
+  {
+   "id": "while-statement",
+   "title": "The while statement",
+   "url": "https://docs.python.org/3/reference/compound_stmts.html#the-while-statement",
+   "tags": [
+    "loops",
+    "while"
+   ],
+   "text": "The while statement repeats its body as long as an expression is true. Make sure something inside the loop changes the condition, or the loop never ends.",
+   "nudge": "Ask yourself what condition should keep the loop going, and what changes each time around so it eventually stops."
+  },
+  {
+   "id": "if-statement",
+   "title": "The if statement",
+   "url": "https://docs.python.org/3/reference/compound_stmts.html#the-if-statement",
+   "tags": [
+    "conditionals",
+    "if",
+    "elif",
+    "else"
+   ],
+   "text": "The if statement selects exactly one suite: it evaluates the conditions one by one until one is true, runs that suite, and skips the rest. elif adds further conditions; else runs when none matched. Order matters: put the most specific conditions first.",
+   "nudge": "Check the order of your conditions: the first branch that is true wins, so more specific checks must come first."
+  },
+  {
+   "id": "comparisons",
+   "title": "Comparisons",
+   "url": "https://docs.python.org/3/library/stdtypes.html#comparisons",
+   "tags": [
+    "conditionals",
+    "comparison",
+    "operators"
+   ],
+   "text": "Python has eight comparison operations: <, <=, >, >=, ==, !=, is and is not. Comparisons can be chained: a < b <= c means a < b and b <= c. Be careful at the boundaries: >= includes the boundary value, > does not.",
+   "nudge": "Look closely at your boundary values: does the edge case need >= or >, <= or <?"
+  },
+  {
+   "id": "numeric-ops",
+   "title": "Numeric operations",
+   "url": "https://docs.python.org/3/library/stdtypes.html#numeric-types-int-float-complex",
+   "tags": [
+    "arithmetic",
+    "operators",
+    "math"
+   ],
+   "text": "Numbers support x + y, x - y, x * y, x / y (true division, always a float), x // y (floor division), x % y (remainder), -x, abs(x), divmod(x, y), pow(x, y) and x ** y (x to the power y).",
+   "nudge": "Double-check which arithmetic operation the task actually asks for; adding, multiplying and raising to a power are easy to mix up."
+  },
+  {
+   "id": "power-operator",
+   "title": "The power operator",
+   "url": "https://docs.python.org/3/reference/expressions.html#the-power-operator",
+   "tags": [
+    "arithmetic",
+    "power",
+    "exponent",
+    "operators"
+   ],
+   "text": "The power operator ** raises its left operand to the power of its right operand. Repeated multiplication gives the same result: multiplying a value by itself n times equals that value ** n, and anything to the power 0 is 1.",
+   "nudge": "Raising to a power is just repeated multiplication. What should the running result start at so that zero repetitions still give the right answer?"
+  },
+  {
+   "id": "int-function",
+   "title": "int()",
+   "url": "https://docs.python.org/3/library/functions.html#int",
+   "tags": [
+    "types",
+    "conversion",
+    "int",
+    "casting"
+   ],
+   "text": "int(x) returns an integer built from a number or a string. int('42') is 42. input() always returns a string, so convert it with int() or float() before doing arithmetic; otherwise + concatenates strings.",
+   "nudge": "If your numbers come in as strings, '2' + '3' gives '23'. Convert them to numbers first."
+  },
+  {
+   "id": "float-function",
+   "title": "float()",
+   "url": "https://docs.python.org/3/library/functions.html#float",
+   "tags": [
+    "types",
+    "conversion",
+    "float",
+    "casting"
+   ],
+   "text": "float(x) returns a floating point number built from a number or a string such as '3.5'. Use it when values may contain a decimal point.",
+   "nudge": "Could the input contain decimals? If so, int() isn't enough."
+  },
+  {
+   "id": "str-function",
+   "title": "str()",
+   "url": "https://docs.python.org/3/library/stdtypes.html#str",
+   "tags": [
+    "types",
+    "conversion",
+    "strings"
+   ],
+   "text": "str(object) returns a string version of an object. To combine text with numbers, convert the number with str() or use an f-string.",
+   "nudge": "You can't add a number to a string directly; convert one side first."
+  },
+  {
+   "id": "fstrings",
+   "title": "Formatted string literals (f-strings)",
+   "url": "https://docs.python.org/3/reference/lexical_analysis.html#f-strings",
+   "tags": [
+    "strings",
+    "formatting"
+   ],
+   "text": "An f-string is a string literal prefixed with f, containing expressions in braces that are evaluated at run time: f'{name} is {age}'.",
+   "nudge": "An f-string lets you drop variables straight into text with {braces}."
+  },
+  {
+   "id": "str-methods",
+   "title": "String methods",
+   "url": "https://docs.python.org/3/library/stdtypes.html#string-methods",
+   "tags": [
+    "strings",
+    "methods",
+    "lower",
+    "upper",
+    "strip",
+    "split",
+    "join"
+   ],
+   "text": "Strings have methods such as lower(), upper(), strip(), split(sep) and sep.join(iterable). Strings are immutable: methods return a new string instead of changing the original.",
+   "nudge": "Look for a built-in string method that already does this transformation; remember it returns a new string."
+  },
+  {
+   "id": "str-slicing",
+   "title": "Sequence indexing and slicing",
+   "url": "https://docs.python.org/3/library/stdtypes.html#common-sequence-operations",
+   "tags": [
+    "strings",
+    "lists",
+    "indexing",
+    "slicing"
+   ],
+   "text": "s[i] is the item at index i (0-based, negative counts from the end); s[i:j] is the slice from i up to but not including j; s[::-1] is the sequence reversed.",
+   "nudge": "Indexes start at 0 and slices exclude their end; check whether you're off by one."
+  },
+  {
+   "id": "len",
+   "title": "len()",
+   "url": "https://docs.python.org/3/library/functions.html#len",
+   "tags": [
+    "builtins",
+    "len",
+    "lists",
+    "strings"
+   ],
+   "text": "len(s) returns the number of items in a sequence or collection such as a string, list, tuple, dict or set.",
+   "nudge": "len() tells you how many items you have; useful for bounds and averages."
+  },
+  {
+   "id": "def-function",
+   "title": "Defining functions",
+   "url": "https://docs.python.org/3/tutorial/controlflow.html#defining-functions",
+   "tags": [
+    "functions",
+    "def",
+    "return"
+   ],
+   "text": "def introduces a function definition. The function's body runs when it is called. return expression sends a value back to the caller; a function with no return statement returns None.",
+   "nudge": "Make sure your function returns the value instead of printing it; a function without return gives back None."
+  },
+  {
+   "id": "return-statement",
+   "title": "The return statement",
+   "url": "https://docs.python.org/3/reference/simple_stmts.html#the-return-statement",
+   "tags": [
+    "functions",
+    "return"
+   ],
+   "text": "return leaves the current function call with the given value, or None. Code after a return in the same block never runs, so a return inside a loop ends the whole function on the first iteration.",
+   "nudge": "Is your return inside the loop? It will stop the function on the very first pass."
+  },
+  {
+   "id": "lists",
+   "title": "Lists",
+   "url": "https://docs.python.org/3/tutorial/datastructures.html#more-on-lists",
+   "tags": [
+    "lists",
+    "append",
+    "data structures"
+   ],
+   "text": "Lists are mutable sequences. list.append(x) adds an item to the end, list.insert(i, x) inserts at a position, list.pop() removes and returns the last item, and x in list tests membership (a linear scan).",
+   "nudge": "Lists are great for collecting results as you go; append adds to the end."
+  },
+  {
+   "id": "list-comprehensions",
+   "title": "List comprehensions",
+   "url": "https://docs.python.org/3/tutorial/datastructures.html#list-comprehensions",
+   "tags": [
+    "lists",
+    "comprehension",
+    "loops"
+   ],
+   "text": "A list comprehension builds a list concisely: [expression for item in iterable if condition]. It is equivalent to a for loop that appends to a list.",
+   "nudge": "Building a new list from an old one? A comprehension can express 'transform each item, optionally filter' in one line."
+  },
+  {
+   "id": "sorted",
+   "title": "sorted() and sorting",
+   "url": "https://docs.python.org/3/howto/sorting.html",
+   "tags": [
+    "sorting",
+    "sorted",
+    "sort",
+    "lists"
+   ],
+   "text": "sorted(iterable) returns a new sorted list; list.sort() sorts in place. Both accept key= and reverse=. Python's sort is O(n log n).",
+   "nudge": "Would the problem become easier if the data were in order first?"
+  },
+  {
+   "id": "dicts",
+   "title": "Dictionaries",
+   "url": "https://docs.python.org/3/tutorial/datastructures.html#dictionaries",
+   "tags": [
+    "dict",
+    "hash map",
+    "data structures",
+    "lookup"
+   ],
+   "text": "A dictionary maps keys to values. d[key] looks up a value, d.get(key, default) avoids a KeyError, key in d tests membership in constant time on average, and d.items() iterates key-value pairs.",
+   "nudge": "If you keep searching for things you've already seen, a dictionary gives you constant-time lookups."
+  },
+  {
+   "id": "sets",
+   "title": "Sets",
+   "url": "https://docs.python.org/3/tutorial/datastructures.html#sets",
+   "tags": [
+    "set",
+    "hash set",
+    "data structures",
+    "membership"
+   ],
+   "text": "A set is an unordered collection with no duplicates. Membership tests (x in s) are constant time on average, and sets support union, intersection and difference.",
+   "nudge": "Need to know quickly whether you've seen a value before? A set answers that in constant time."
+  },
+  {
+   "id": "enumerate-zip",
+   "title": "enumerate() and zip()",
+   "url": "https://docs.python.org/3/library/functions.html#enumerate",
+   "tags": [
+    "loops",
+    "enumerate",
+    "zip",
+    "iteration"
+   ],
+   "text": "enumerate(iterable) yields (index, item) pairs; zip(a, b) yields pairs of items from two iterables in parallel.",
+   "nudge": "If you need both the position and the value while looping, enumerate gives you both."
+  },
+  {
+   "id": "min-max-sum",
+   "title": "min(), max() and sum()",
+   "url": "https://docs.python.org/3/library/functions.html#max",
+   "tags": [
+    "builtins",
+    "min",
+    "max",
+    "sum",
+    "aggregation"
+   ],
+   "text": "max(iterable) and min(iterable) return the largest and smallest items; sum(iterable, start=0) adds the items. Each scans the input once.",
+   "nudge": "There may be a built-in that already aggregates a whole sequence for you."
+  },
+  {
+   "id": "abs-round",
+   "title": "abs() and round()",
+   "url": "https://docs.python.org/3/library/functions.html#abs",
+   "tags": [
+    "builtins",
+    "arithmetic",
+    "abs",
+    "round"
+   ],
+   "text": "abs(x) returns the absolute value of a number; round(number, ndigits) rounds to a given precision.",
+   "nudge": "Negative inputs can behave differently; would the absolute value help?"
+  },
+  {
+   "id": "bool-logic",
+   "title": "Boolean operations",
+   "url": "https://docs.python.org/3/library/stdtypes.html#boolean-operations-and-or-not",
+   "tags": [
+    "conditionals",
+    "and",
+    "or",
+    "not",
+    "boolean"
+   ],
+   "text": "and, or and not combine conditions. x and y is true only if both are; x or y if either is. They short-circuit: the right side is evaluated only if needed.",
+   "nudge": "Does your condition need both parts to be true (and) or just one (or)?"
+  },
+  {
+   "id": "recursion",
+   "title": "Recursion (functions calling themselves)",
+   "url": "https://docs.python.org/3/tutorial/controlflow.html#defining-functions",
+   "tags": [
+    "recursion",
+    "functions"
+   ],
+   "text": "A function may call itself. Every recursive function needs a base case that returns without recursing, and each recursive call must move closer to that base case. Python limits recursion depth (about 1000 by default).",
+   "nudge": "What's the simplest input you can answer immediately? Start from that base case, then shrink the problem each call."
+  },
+  {
+   "id": "modulo",
+   "title": "Remainder and divisibility",
+   "url": "https://docs.python.org/3/reference/expressions.html#binary-arithmetic-operations",
+   "tags": [
+    "arithmetic",
+    "modulo",
+    "remainder",
+    "even",
+    "odd"
+   ],
+   "text": "x % y gives the remainder of x divided by y. A number n is even when n % 2 == 0 and divisible by k when n % k == 0.",
+   "nudge": "Divisibility questions usually come down to checking a remainder."
+  },
+  {
+   "id": "try-except",
+   "title": "Handling exceptions",
+   "url": "https://docs.python.org/3/tutorial/errors.html#handling-exceptions",
+   "tags": [
+    "errors",
+    "exceptions",
+    "try",
+    "except"
+   ],
+   "text": "A try statement runs a block and, if an exception is raised, the matching except clause handles it. Common built-in exceptions are ValueError (bad value, e.g. int('abc')), TypeError (wrong type) and ZeroDivisionError.",
+   "nudge": "Read the exception name in the error message: it usually tells you exactly which operation got a value it didn't expect."
+  },
+  {
+   "id": "none",
+   "title": "None and default values",
+   "url": "https://docs.python.org/3/library/constants.html#None",
+   "tags": [
+    "none",
+    "functions",
+    "return"
+   ],
+   "text": "None is the value used to represent the absence of a value. Functions that end without return give back None, which is why a missing return often shows up as None in output.",
+   "nudge": "Getting None back? Check that every path through your function returns something."
+  },
+  {
+   "id": "bisect",
+   "title": "bisect: binary search on sorted lists",
+   "url": "https://docs.python.org/3/library/bisect.html",
+   "tags": [
+    "binary search",
+    "bisect",
+    "sorting",
+    "log n"
+   ],
+   "text": "The bisect module finds insertion points in a sorted list in O(log n) using binary search: bisect_left(a, x) returns the leftmost position where x could be inserted while keeping a sorted.",
+   "nudge": "If the data is sorted, you can halve the search space each step instead of scanning everything."
+  },
+  {
+   "id": "collections-counter",
+   "title": "collections.Counter",
+   "url": "https://docs.python.org/3/library/collections.html#collections.Counter",
+   "tags": [
+    "counting",
+    "dict",
+    "hash map",
+    "frequency"
+   ],
+   "text": "Counter is a dict subclass for counting hashable objects: Counter('banana') gives counts per character, and most_common(n) returns the n most frequent items.",
+   "nudge": "Counting how often things appear? A dictionary of counts (or Counter) avoids rescanning the data."
+  },
+  {
+   "id": "time-complexity",
+   "title": "Time complexity of built-in operations",
+   "url": "https://wiki.python.org/moin/TimeComplexity",
+   "tags": [
+    "complexity",
+    "performance",
+    "big o"
+   ],
+   "text": "List indexing and append are O(1); x in list, list.index and list.count are O(n); sorting is O(n log n); dict and set lookups, inserts and membership tests are O(1) on average. A loop inside a loop over the same data is O(n^2).",
+   "nudge": "Look for repeated work: a scan inside a loop multiplies the cost."
+  }
+ ]
+}
