@@ -245,15 +245,35 @@ def _ratio(a: float, b: float) -> float | None:
     return a / b if b else None
 
 
+def pause_kinds(result: dict) -> dict:
+    """Planned kind of every pause: coding vs concept (MC) under the current rule (``planned_kind``)
+    and under the previous rule (concept_complete always got a concept question). Before generation:
+    an exercise that later fails generation or the sandbox verify still falls back to a concept question."""
+    from types import SimpleNamespace
+
+    from .service import planned_kind
+
+    c = {"coding": 0, "concept": 0, "coding_old": 0, "concept_old": 0}
+    for s in result.get("sections", []):
+        sec = SimpleNamespace(format=s.get("format", ""), language=str(s.get("language", "")).lower())
+        for p in s.get("pauses", []):
+            kind = planned_kind(sec, SimpleNamespace(trigger=p.get("trigger", "")))
+            c[kind] += 1
+            old = "concept" if p.get("trigger") == "concept_complete" else kind
+            c[f"{old}_old"] += 1
+    return c
+
+
 def summarize(labels: list[dict], results: dict) -> dict:
-    tot = {"tp": 0, "fp": 0, "fn": 0, "tn": 0, "tp_s": 0.0, "fp_s": 0.0, "fn_s": 0.0, "pauses": 0, "pauses_ok": 0}
+    tot = {"tp": 0, "fp": 0, "fn": 0, "tn": 0, "tp_s": 0.0, "fp_s": 0.0, "fn_s": 0.0, "pauses": 0, "pauses_ok": 0,
+           "coding": 0, "concept": 0, "coding_old": 0, "concept_old": 0}
     per = []
     verdict_ok = 0
     for lab in labels:
         res = results["videos"].get(lab["videoId"])
         if res is None:
             continue
-        c = score_video(lab, res)
+        c = {**score_video(lab, res), **pause_kinds(res)}
         for k in tot:
             tot[k] += c[k]
         coding = any(g["qualifies"] for g in lab["segments"])
@@ -310,6 +330,11 @@ def report(labels: list[dict], results: dict, extra: list[tuple[str, dict]] = ()
         f"| Video verdict accuracy (coding vs not_coding) | {_pct(s['verdict_accuracy'])} |",
         f"| Pauses inside labelled teaching, before a labelled answer | {_pct(s['pause_correct'])} "
         f"({t['pauses_ok']} / {t['pauses']}) |",
+        f"| Planned coding : concept (MC) pauses | **{t['coding']} : {t['concept']}** "
+        f"(previous rule, concept_complete always MC: {t['coding_old']} : {t['concept_old']}) |",
+        "",
+        "Planned kinds are before generation; a coding pause whose exercise fails generation or the "
+        "sandbox verify still falls back to a concept question.",
         "",
         f"Bar: auto-pause turns on when section precision >= {PRECISION_BAR}"
         + (" in every run" if others else "") + ". "
@@ -318,11 +343,12 @@ def report(labels: list[dict], results: dict, extra: list[tuple[str, dict]] = ()
     ]
     if others:
         lines += ["## Repeat runs (same labels, same captions)", "",
-                  "| Run | Precision | Recall | Time precision | Time recall | Verdict accuracy | Pauses ok |",
-                  "| --- | --- | --- | --- | --- | --- | --- |"]
+                  "| Run | Precision | Recall | Time precision | Time recall | Verdict accuracy | Pauses ok | Coding : MC |",
+                  "| --- | --- | --- | --- | --- | --- | --- | --- |"]
         for name, o in [(results.get("name", "results.json"), s), *others]:
             lines.append(f"| `{name}` | {_pct(o['precision'])} | {_pct(o['recall'])} | {_pct(o['precision_time'])} "
-                         f"| {_pct(o['recall_time'])} | {_pct(o['verdict_accuracy'])} | {_pct(o['pause_correct'])} |")
+                         f"| {_pct(o['recall_time'])} | {_pct(o['verdict_accuracy'])} | {_pct(o['pause_correct'])} "
+                         f"| {o['totals']['coding']} : {o['totals']['concept']} |")
         lines.append("")
     lines += [
         "## Per video",
@@ -376,7 +402,7 @@ def main(argv: list[str]) -> None:
     elif cmd == "score":
         labels = json.loads(LABELS.read_text(encoding="utf-8"))["videos"]
         paths = [Path(a) for a in args] or [RESULTS]
-        runs = [(p.name, json.loads(p.read_text(encoding="utf-8"))) for p in paths]
+        runs = [(p.name, {**json.loads(p.read_text(encoding="utf-8")), "name": p.name}) for p in paths]
         REPORT.write_text(report(labels, runs[0][1], runs[1:]), encoding="utf-8")
         print(REPORT.read_text(encoding="utf-8"))
     else:

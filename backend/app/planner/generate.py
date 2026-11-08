@@ -176,6 +176,9 @@ def coding_prompt(c: Clip, section: Section, pause: PauseSlot, tier: str, feedba
     if pause.trigger == "question_posed":
         how = ("The instructor just posed this task to the viewer and has not answered yet. Ask the learner "
                "to solve the same task as a function.")
+    elif pause.trigger == "concept_complete":
+        how = ("The instructor just finished explaining this idea. Write a small NEW coding problem that "
+               "applies it (implement or use the idea on a fresh input); do not copy the instructor's example.")
     else:
         how = ("The instructor demonstrated this idea. Write a NEW problem that uses the same idea in a "
                "different setting; do not copy the instructor's example.")

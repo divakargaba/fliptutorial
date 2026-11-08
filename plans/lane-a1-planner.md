@@ -84,3 +84,16 @@ Any YouTube video id → a cached, timestamped exercise plan before the learner 
   A2's `find_exercise` fallback gets the real language. Offline: `tests/test_planner_languages.py` 26/26. Live 2026-11-08: A2's
   runners at `8a8cacc` on ce.judge0.com verified JS/Java/C++ sum loops, a Java String and a C++ bool exercise; a Java known-wrong
   that does not compile was rejected. SQL is not planned (its exercises have a different shape).
+- [x] Coding first (lead 6717767247): `planned_kind` gives every pause in a code/mixed section in a gradable language a coding
+  exercise, including `concept_complete` (the coding prompt then asks for a NEW problem applying the idea). Concept questions
+  stay for theory, unsupported languages and generation/verify failures. Live eval run 3 (`results-run3.json`, 26 videos,
+  `claude-haiku-5-5`): precision 1.000 (79/79, lower bound 0.954), recall 0.814, pauses 74/74. Planned coding : MC is
+  **45 : 29** (20 : 54 under the old rule); runs 1/2 rescored give 50 : 30 and 45 : 31. These kinds are planned before
+  generation, so a verify fallback can still turn a coding pause into MC. Report: `backend/content/eval/REPORT.md`.
+- [x] Multi-language Test me (backend): `app.testme` writes Python, JavaScript, Java or C++ in one model call, using the
+  planner's per-language shapes and `check_coding`, and verifies non-Python through `app.planner.runner_verify` (A2 runners).
+  The `/v1/test-me` response keys are unchanged; only `exercise.language` differs. Non-Python is off until
+  `BREAKPOINT_TESTME_LANGUAGES=python,javascript,java,cpp` is set, because two things outside A1 still assume Python:
+  the extension's v1 `ExerciseSchema` (`language: z.literal('python')`, A3) and `/v1/submissions` (`grader.grade` is the
+  Python wrapper, lead's `main.py`). No `main.py` change was needed. The v1 shape cannot carry a concept question, so where
+  coding is impossible Test me still answers `NOT_PYTHON` / `GENERATOR_UNAVAILABLE`. Offline: `tests/test_testme_languages.py`.
