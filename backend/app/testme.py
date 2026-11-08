@@ -149,7 +149,7 @@ def build_prompt(clip: Clip, feedback: str | None = None) -> str:
         "wrong into wrongFailsOnArgsJson; check that its return value there really "
         "differs from expectedJson.\n"
         "- The function returns a value (no print, no input, no files, no imports).\n"
-        "- 1 or 2 examples (shown to the learner) and 3 to 8 hiddenTests covering edge "
+        "- 1 or 2 examples (shown to the learner) and 3 to 5 hiddenTests covering edge "
         "cases; inputs must all differ. Each argsJson is a JSON array of arguments and "
         "expectedJson a JSON value; use only integers, strings, booleans or null "
         "(no floats, lists or dicts).\n"
@@ -291,7 +291,10 @@ def check_output(out: GenOutput, clip: Clip, exercise_id: str) -> tuple[Approved
     except json.JSONDecodeError:
         fails_on = None
     if fails_on not in {json.dumps(a) for a, _ in hidden}:
-        raise _CheckFailed("wrongFailsOnArgsJson must be the args of one of the hidden tests")
+        # Only a hint: the Judge0 verify step is what proves the wrong solution
+        # fails a test. Rejecting here forced a second Gemini call that pushed
+        # live requests past the time budget.
+        logger.info("testme %s: wrongFailsOnArgsJson names no hidden test; relying on verify", exercise_id)
 
     tags = [t for t in out.conceptTags if t in CONCEPT_TAGS]
     if not tags:

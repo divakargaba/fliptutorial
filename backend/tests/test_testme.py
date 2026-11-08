@@ -163,8 +163,6 @@ BAD = [
     {"examples": [{"argsJson": json.dumps(["x" * 201, 1, 1]), "expectedJson": "1"}]},
     {"examples": [{"argsJson": "[1, 2]", "expectedJson": "3"}]},
     {"examples": [{"argsJson": "[0, 0, 0]", "expectedJson": "0"}]},
-    {"wrongFailsOnArgsJson": "[1, 2, 3]"},  # an example, not a hidden test
-    {"wrongFailsOnArgsJson": "nope"},
     {"conceptTags": ["made-up"]},
     {"conceptEvidenceCueIds": []},
     {"conceptEvidenceCueIds": ["c99999999"]},
@@ -178,6 +176,13 @@ def test_rule_and_concept_checks_reject(over):
 
     with pytest.raises(_CheckFailed):
         check_output(GenOutput.model_validate(_good(**over)), CLIP, "tm-x-1")
+
+
+@pytest.mark.parametrize("fails_on", ["[1, 2, 3]", "nope"])
+def test_wrong_fails_on_pointer_is_only_a_hint(fails_on):
+    # An off pointer must not reject the exercise; Judge0 verify enforces the rule.
+    ex, _ = check_output(GenOutput.model_validate(_good(wrongFailsOnArgsJson=fails_on)), CLIP, "tm-x-1")
+    assert ex.knownWrongSolution
 
 
 def test_bool_and_string_values_are_allowed():
