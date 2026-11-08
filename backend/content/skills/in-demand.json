@@ -15,6 +15,16 @@
       "title": "GitHub Octoverse 2025: a new developer joins GitHub every second as AI leads TypeScript to #1",
       "url": "https://github.blog/news-insights/octoverse/octoverse-a-new-developer-joins-github-every-second-as-ai-leads-typescript-to-1/",
       "published": "2025-10-28"
+    },
+    {
+      "id": "adzuna",
+      "title": "Adzuna Canada job postings",
+      "url": "https://www.adzuna.ca/"
+    },
+    {
+      "id": "wef-foj-2025",
+      "title": "World Economic Forum, Future of Jobs Report 2025 (fastest-growing skills)",
+      "url": "https://www.weforum.org/publications/the-future-of-jobs-report-2025/"
     }
   ],
   "skills": [
@@ -70,5 +80,470 @@
       "videoTitle": "Dynamic Programming - Learn to Solve Algorithmic Problems & Coding Challenges (freeCodeCamp)",
       "sourceIds": []
     }
-  ]
+  ],
+  "fields": [
+    {
+      "id": "energy-data",
+      "name": "Energy data analytics",
+      "summary": "Turn well, pipeline and production data into reports and forecasts that operations teams act on.",
+      "rising": true,
+      "wefSkill": "AI and big data",
+      "postings": {
+        "calgary": 40,
+        "alberta": 47,
+        "canada": 80,
+        "count": 40,
+        "where": "Calgary",
+        "scope": "city",
+        "searchUrl": "https://www.adzuna.ca/search?q=analyst+oil+gas&w=Calgary",
+        "titleContains": "analyst",
+        "mentions": "oil gas"
+      },
+      "skills": [
+        {
+          "name": "Excel",
+          "mentions": 46,
+          "share": 0.57,
+          "concepts": []
+        },
+        {
+          "name": "SQL",
+          "mentions": 15,
+          "share": 0.19,
+          "concepts": [
+            "sql-select",
+            "sql-joins"
+          ]
+        },
+        {
+          "name": "Power BI",
+          "mentions": 15,
+          "share": 0.19,
+          "concepts": []
+        },
+        {
+          "name": "Python",
+          "mentions": 11,
+          "share": 0.14,
+          "concepts": [
+            "loops",
+            "functions",
+            "lists",
+            "dicts",
+            "strings"
+          ]
+        },
+        {
+          "name": "Spotfire",
+          "mentions": 8,
+          "share": 0.1,
+          "concepts": []
+        }
+      ],
+      "alsoAskedFor": [
+        {
+          "name": "Degree",
+          "mentions": 55,
+          "share": 0.69
+        }
+      ],
+      "tutorials": [
+        {
+          "videoId": "vV12dGe_Fho",
+          "url": "https://www.youtube.com/watch?v=vV12dGe_Fho",
+          "title": "Time Series Forecasting with XGBoost - Use python and machine learning to predict energy consumption",
+          "channel": "Rob Mulla",
+          "codingChallenges": 4,
+          "firstChallenge": {
+            "atS": 327.9,
+            "title": "Extract the hour from a timestamp string"
+          },
+          "checkedAt": "2026-11-08"
+        }
+      ]
+    },
+    {
+      "id": "cybersecurity",
+      "name": "Cybersecurity",
+      "summary": "Watch systems for attacks, investigate alerts and harden networks, often in energy and finance.",
+      "rising": true,
+      "wefSkill": "Networks and cybersecurity",
+      "postings": {
+        "calgary": 17,
+        "alberta": 17,
+        "canada": 204,
+        "count": 17,
+        "where": "Calgary",
+        "scope": "city",
+        "searchUrl": "https://www.adzuna.ca/search?q=cyber&w=Calgary",
+        "titleContains": "cyber",
+        "mentions": null
+      },
+      "skills": [
+        {
+          "name": "Networking",
+          "mentions": 110,
+          "share": 0.54,
+          "concepts": []
+        },
+        {
+          "name": "SIEM / Splunk",
+          "mentions": 63,
+          "share": 0.31,
+          "concepts": []
+        },
+        {
+          "name": "Azure",
+          "mentions": 61,
+          "share": 0.3,
+          "concepts": []
+        },
+        {
+          "name": "Python",
+          "mentions": 38,
+          "share": 0.19,
+          "concepts": [
+            "loops",
+            "functions",
+            "lists",
+            "dicts",
+            "strings"
+          ]
+        },
+        {
+          "name": "PowerShell",
+          "mentions": 22,
+          "share": 0.11,
+          "concepts": []
+        }
+      ],
+      "alsoAskedFor": [
+        {
+          "name": "Degree",
+          "mentions": 114,
+          "share": 0.56
+        },
+        {
+          "name": "CISSP",
+          "mentions": 104,
+          "share": 0.51
+        },
+        {
+          "name": "CISM",
+          "mentions": 69,
+          "share": 0.34
+        },
+        {
+          "name": "Security clearance",
+          "mentions": 34,
+          "share": 0.17
+        }
+      ],
+      "tutorials": [
+        {
+          "videoId": "9rcdlnoEzPU",
+          "url": "https://www.youtube.com/watch?v=9rcdlnoEzPU",
+          "title": "Hackers Leave Logs… I Built Python to Catch Them",
+          "channel": "White Fortress Cyber Security",
+          "codingChallenges": 2,
+          "firstChallenge": {
+            "atS": 238.0,
+            "title": "Check whether one log line records a failed login"
+          },
+          "checkedAt": "2026-11-08"
+        },
+        {
+          "videoId": "HboO36rfEjU",
+          "url": "https://www.youtube.com/watch?v=HboO36rfEjU",
+          "title": "Lecture 23 : Python File Handling for Cybersecurity | Read & Analyze Log Files  | Python for Hackers",
+          "channel": "White Fortress Cyber Security",
+          "codingChallenges": 2,
+          "firstChallenge": {
+            "atS": 214.1,
+            "title": "Keep old log lines when adding a new entry"
+          },
+          "checkedAt": "2026-11-08"
+        }
+      ]
+    },
+    {
+      "id": "data-science",
+      "name": "Data science",
+      "summary": "Find patterns in business and operations data and build models that predict what happens next.",
+      "rising": true,
+      "wefSkill": "AI and big data",
+      "postings": {
+        "calgary": 14,
+        "alberta": 19,
+        "canada": 586,
+        "count": 14,
+        "where": "Calgary",
+        "scope": "city",
+        "searchUrl": "https://www.adzuna.ca/search?q=data+scientist&w=Calgary",
+        "titleContains": "data scientist",
+        "mentions": null
+      },
+      "skills": [
+        {
+          "name": "Python",
+          "mentions": 519,
+          "share": 0.89,
+          "concepts": [
+            "loops",
+            "functions",
+            "lists",
+            "dicts",
+            "strings"
+          ]
+        },
+        {
+          "name": "Machine learning",
+          "mentions": 446,
+          "share": 0.76,
+          "concepts": []
+        },
+        {
+          "name": "Statistics",
+          "mentions": 441,
+          "share": 0.75,
+          "concepts": []
+        },
+        {
+          "name": "SQL",
+          "mentions": 427,
+          "share": 0.73,
+          "concepts": [
+            "sql-select",
+            "sql-joins"
+          ]
+        },
+        {
+          "name": "AWS",
+          "mentions": 120,
+          "share": 0.2,
+          "concepts": []
+        }
+      ],
+      "alsoAskedFor": [
+        {
+          "name": "Degree",
+          "mentions": 297,
+          "share": 0.51
+        },
+        {
+          "name": "Master's",
+          "mentions": 188,
+          "share": 0.32
+        },
+        {
+          "name": "PhD",
+          "mentions": 151,
+          "share": 0.26
+        }
+      ],
+      "tutorials": [
+        {
+          "videoId": "xi0vhXFPegw",
+          "url": "https://www.youtube.com/watch?v=xi0vhXFPegw",
+          "title": "Exploratory Data Analysis with Pandas Python",
+          "channel": "Rob Mulla",
+          "codingChallenges": 4,
+          "firstChallenge": {
+            "atS": 645.7,
+            "title": "Drop one column name from a comma-separated list of column names"
+          },
+          "checkedAt": "2026-11-08"
+        }
+      ]
+    },
+    {
+      "id": "ml-engineering",
+      "name": "Machine learning engineering",
+      "summary": "Build, train and ship models into real products, from forecasting to language and vision systems.",
+      "rising": true,
+      "wefSkill": "AI and big data",
+      "postings": {
+        "calgary": 10,
+        "alberta": 23,
+        "canada": 433,
+        "count": 10,
+        "where": "Calgary",
+        "scope": "city",
+        "searchUrl": "https://www.adzuna.ca/search?q=machine+learning&w=Calgary",
+        "titleContains": "machine learning",
+        "mentions": null
+      },
+      "skills": [
+        {
+          "name": "Python",
+          "mentions": 310,
+          "share": 0.72,
+          "concepts": [
+            "loops",
+            "functions",
+            "lists",
+            "dicts",
+            "strings"
+          ]
+        },
+        {
+          "name": "PyTorch",
+          "mentions": 215,
+          "share": 0.5,
+          "concepts": []
+        },
+        {
+          "name": "TensorFlow",
+          "mentions": 145,
+          "share": 0.33,
+          "concepts": []
+        },
+        {
+          "name": "AWS",
+          "mentions": 130,
+          "share": 0.3,
+          "concepts": []
+        },
+        {
+          "name": "SQL",
+          "mentions": 86,
+          "share": 0.2,
+          "concepts": [
+            "sql-select",
+            "sql-joins"
+          ]
+        }
+      ],
+      "alsoAskedFor": [
+        {
+          "name": "Degree",
+          "mentions": 207,
+          "share": 0.48
+        },
+        {
+          "name": "PhD",
+          "mentions": 155,
+          "share": 0.36
+        },
+        {
+          "name": "Master's",
+          "mentions": 146,
+          "share": 0.34
+        }
+      ],
+      "tutorials": [
+        {
+          "videoId": "Hr06nSA-qww",
+          "url": "https://www.youtube.com/watch?v=Hr06nSA-qww",
+          "title": "Build Your First Machine Learning Project [Full Beginner Walkthrough]",
+          "channel": "Dataquest",
+          "codingChallenges": 4,
+          "firstChallenge": {
+            "atS": 839.4,
+            "title": "Build a regplot call string with x, y, and no confidence band"
+          },
+          "checkedAt": "2026-11-08"
+        }
+      ]
+    },
+    {
+      "id": "gis",
+      "name": "Geospatial / GIS analysis",
+      "summary": "Map land, pipelines and resources and analyse location data for planning and environmental work.",
+      "rising": false,
+      "wefSkill": null,
+      "postings": {
+        "calgary": 4,
+        "alberta": 6,
+        "canada": 50,
+        "count": 50,
+        "where": "Canada",
+        "scope": "country",
+        "searchUrl": "https://www.adzuna.ca/search?q=gis",
+        "titleContains": "gis",
+        "mentions": null
+      },
+      "skills": [
+        {
+          "name": "ArcGIS",
+          "mentions": 39,
+          "share": 0.78,
+          "concepts": []
+        },
+        {
+          "name": "Python",
+          "mentions": 26,
+          "share": 0.52,
+          "concepts": [
+            "loops",
+            "functions",
+            "lists",
+            "dicts",
+            "strings"
+          ]
+        },
+        {
+          "name": "FME",
+          "mentions": 17,
+          "share": 0.34,
+          "concepts": []
+        },
+        {
+          "name": "Remote sensing",
+          "mentions": 14,
+          "share": 0.28,
+          "concepts": []
+        },
+        {
+          "name": "SQL",
+          "mentions": 9,
+          "share": 0.18,
+          "concepts": [
+            "sql-select",
+            "sql-joins"
+          ]
+        }
+      ],
+      "alsoAskedFor": [
+        {
+          "name": "Degree",
+          "mentions": 39,
+          "share": 0.78
+        },
+        {
+          "name": "Driver's licence",
+          "mentions": 7,
+          "share": 0.14
+        }
+      ],
+      "tutorials": [
+        {
+          "videoId": "0mWgVVH_dos",
+          "url": "https://www.youtube.com/watch?v=0mWgVVH_dos",
+          "title": "Geospatial Python - Full Course for Beginners with Geopandas",
+          "channel": "Matt Forrest",
+          "codingChallenges": 17,
+          "firstChallenge": {
+            "atS": 1036.5,
+            "title": "Pick one value from a dict of equal-length lists"
+          },
+          "checkedAt": "2026-11-08"
+        },
+        {
+          "videoId": "IRJC67zm6nk",
+          "url": "https://www.youtube.com/watch?v=IRJC67zm6nk",
+          "title": "GeoSpatial Analysis With Python For Beginners || Use Python For GIS Analysis || The GIS Hub",
+          "channel": "The GIS Hub",
+          "codingChallenges": 8,
+          "firstChallenge": {
+            "atS": 1498.1,
+            "title": "Report the row and column count as a text summary"
+          },
+          "checkedAt": "2026-11-08"
+        }
+      ]
+    }
+  ],
+  "fieldsPulledAt": "2026-11-08",
+  "fieldsMethod": "Adzuna Canada postings pulled 2026-11-08, counted by job title: Calgary first, then Alberta, then Canada when a place has under 10. Skill and requirement shares are the Canada-wide postings in the field that also mention the keyword; requirements show only when at least 10% mention them. Rising = matches a WEF Future of Jobs 2025 fastest-growing skill."
 }
