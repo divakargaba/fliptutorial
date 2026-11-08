@@ -1,5 +1,6 @@
 import { useContext, useEffect, useRef, useState } from 'react';
 import { Check, ChevronDown, CircleAlert, ExternalLink, Gauge, Lightbulb, LoaderCircle, Pause, Play, Send, Sparkles, X } from 'lucide-react';
+import { LayoutSwitch, SuccessCelebration, WorkspaceContext } from './workspace';
 import { PracticeMore } from './PracticeMore';
 import { BrandMark } from './BrandMark';
 import type { Breakpoint, HintResponse, LastResult, SubmissionResponse } from '../contracts';
@@ -75,6 +76,10 @@ function Panel(props: PracticePanelProps & { draftKey: string }) {
   const [storageError, setStorageError] = useState(false);
   const [lastMode, setLastMode] = useState<'run' | 'submit' | null>(null);
   const heading = useRef<HTMLHeadingElement>(null);
+  const panelRef = useRef<HTMLElement>(null);
+  const workspace = useContext(WorkspaceContext);
+  const [hintOpen, setHintOpen] = useState(false);
+  const [instructionsOpen, setInstructionsOpen] = useState(workspace?.effectiveLayout !== 'side');
   const checking = attempt === 'checking';
   const solved = attempt === 'passed';
   const tooLarge = code !== null && new TextEncoder().encode(code).length > 16384;
@@ -86,6 +91,12 @@ function Panel(props: PracticePanelProps & { draftKey: string }) {
   const filename = { python: 'main.py', javascript: 'main.js', typescript: 'main.ts', java: 'Main.java', cpp: 'main.cpp', c: 'main.c', csharp: 'Main.cs', go: 'main.go', rust: 'main.rs', sql: 'query.sql', pseudocode: 'pseudocode.txt', unknown: 'code.txt' }[language];
   const value = (item: unknown) => language === 'python' ? formatValue(item) : JSON.stringify(item) ?? 'no output';
   const coach = useHints(props, code);
+  useEffect(() => { if (coach.hints.length) setHintOpen(true); }, [coach.hints.length]);
+  useEffect(() => { setInstructionsOpen(workspace?.effectiveLayout !== 'side'); }, [workspace?.effectiveLayout]);
+  const backToCode = () => {
+    setHintOpen(false);
+    panelRef.current?.querySelector<HTMLElement>('[role="textbox"]')?.focus({ preventScroll: true });
+  };
 
   useEffect(() => {
     let active = true;
@@ -103,13 +114,14 @@ function Panel(props: PracticePanelProps & { draftKey: string }) {
       active = false;
       void flushDraft(draftKey).catch(() => {});
       if (returnFocus?.isConnected) returnFocus.focus({ preventScroll: true });
+      else (root instanceof ShadowRoot ? root : document).querySelector<HTMLElement>('.bp-badge')?.focus({ preventScroll: true });
     };
   }, [draftKey, exercise.starterCode]);
 
   // Move screen-reader focus to the solved heading when the moment appears.
   useEffect(() => { if (solved) heading.current?.focus({ preventScroll: true }); }, [solved]);
 
-  const changeCode = (next: string) => { setCode(next); saveDraft(draftKey, next); };
+  const changeCode = (next: string) => { setHintOpen(false); setCode(next); saveDraft(draftKey, next); };
   const leave = (action: () => void) => {
     void flushDraft(draftKey).catch(() => {});
     action(); // Skip stays immediate even if storage or grading is unavailable.
@@ -118,29 +130,34 @@ function Panel(props: PracticePanelProps & { draftKey: string }) {
   const submit = () => { if (!blocked) { setLastMode('submit'); props.onSubmit(code!); } };
   const total = props.total ?? 1;
 
-  return <section className={`bp-panel${leaving ? ' bp-leaving' : ''}`} data-attempt={attempt}
+  return <section ref={panelRef} className={`bp-panel bp-workbench${leaving ? ' bp-leaving' : ''}`} data-attempt={attempt}
     aria-labelledby="bp-heading" inert={leaving || undefined}>
     <header className="bp-header">
-      <BrandMark size={16} />
+      <span className="bp-workspace-brand"><BrandMark size={18} /><span>Breakpoint</span></span>
       <span className="bp-paused"><Pause size={12} aria-hidden="true" />Paused at {formatTimestamp(props.breakpoint.pauseAtS)}</span>
-      {total > 1 && <span className="bp-step">Challenge {(props.index ?? 0) + 1} of {total}</span>}
+      {total > 1 && <span className="bp-step">{(props.index ?? 0) + 1} of {total}</span>}
+      <LayoutSwitch />
       <button type="button" className="bp-icon-button" aria-label="Close practice" onClick={() => leave(props.onClose)}>
         <X size={18} aria-hidden="true" />
       </button>
     </header>
 
-    {aiGenerated && <p className="bp-generated-label bp-generated-panel">AI-generated practice</p>}
-    {!!props.conceptLevels?.length && <div className="bp-v2 bp-v2-panel-levels">{props.conceptLevels.map(item => <LevelChip key={item.concept} {...item} />)}</div>}
-    {props.levelUp && <div className="bp-v2-panel-levels"><LevelUp {...props.levelUp} /></div>}
-
+    {props.levelUp && !props.progress && <LevelUp {...props.levelUp} />}
     {solved ? <><Solved heading={heading} result={result} canResume={props.canResume} ownsPause={props.ownsPause} manualResume={props.manualResume ?? false} analysis={props.analysis ?? null}
       resumeAtS={props.breakpoint.pauseAtS} holdMs={props.holdMs ?? SOLVED_HOLD_MS} onResume={props.onResume} />
       {props.progress && <div className="bp-v2-panel-levels"><ProgressCard award={props.progress} /></div>}</> : <>
-      <div className="bp-body">
-        <div className="bp-intro bp-stagger">
+      <div className="bp-body bp-workbench-body">
+        <aside className="bp-task">
+        <div className="bp-intro">
           <h2 id="bp-heading" ref={heading} tabIndex={-1}>{exercise.title}</h2>
-          <p className="bp-statement">{richText(exercise.statement)}</p>
         </div>
+        <div className="bp-task-meta">
+          {!!props.conceptLevels?.length && props.conceptLevels.map(item => <LevelChip key={item.concept} {...item} />)}
+          {aiGenerated && <small>AI-generated practice</small>}
+        </div>
+        <details className="bp-instructions" open={instructionsOpen} onToggle={event => setInstructionsOpen(event.currentTarget.open)}>
+          <summary>Instructions &amp; examples<ChevronDown size={14} aria-hidden="true" /></summary>
+          <p className="bp-statement">{richText(exercise.statement)}</p>
 
         <div className="bp-examples bp-stagger" role="group" aria-label="Examples">
           {exercise.examples.slice(0, 3).map((example, i) => stdio ? <div className="bp-example bp-example-stdio" key={i}>
@@ -153,7 +170,10 @@ function Panel(props: PracticePanelProps & { draftKey: string }) {
           </div>)}
         </div>
 
-        <div className="bp-editor-card bp-stagger">
+        </details>
+        </aside>
+        <div className="bp-code-column">
+        <div className="bp-editor-card">
           <div className="bp-editor-tab">
             <span className="bp-file"><span className="bp-file-dot" aria-hidden="true" />{filename}</span>
             <span id="bp-editor-help" className="bp-hint">
@@ -167,9 +187,9 @@ function Panel(props: PracticePanelProps & { draftKey: string }) {
         {tooLarge && <p className="bp-inline-error">Code must be at most 16 KiB.</p>}
         {storageError && <p className="bp-note">Draft saving is unavailable here — copy your code before leaving.</p>}
 
-        <HintsSection coach={coach} disabled={leaving || checking} />
-
         <Results attempt={attempt} lastMode={lastMode} result={result} error={error} coach={coach} value={value} />
+        {props.feedback && <div className="bp-workbench-feedback"><FeedbackCard feedback={props.feedback.result} code={props.feedback.submittedCode} /></div>}
+        </div>
       </div>
 
       {props.canResume && <div className="bp-resume-bar">
@@ -178,6 +198,7 @@ function Panel(props: PracticePanelProps & { draftKey: string }) {
       </div>}
 
       <footer className="bp-footer">
+        <HintsSection coach={coach} disabled={leaving || checking} open={hintOpen} onOpen={setHintOpen} onBack={backToCode} />
         <PracticeMore onLater={() => leave(props.onSkip)} />
         <button type="button" className="bp-button bp-secondary" disabled={blocked} aria-busy={checking && lastMode === 'run'}
           onClick={run} title={`Run examples (${MOD}+Enter)`}>
@@ -189,7 +210,7 @@ function Panel(props: PracticePanelProps & { draftKey: string }) {
         </button>
       </footer>
     </>}
-    {props.feedback && <div className="bp-v2-panel-feedback"><FeedbackCard feedback={props.feedback.result} code={props.feedback.submittedCode} /></div>}
+    {solved && props.feedback && <div className="bp-v2-panel-feedback"><FeedbackCard feedback={props.feedback.result} code={props.feedback.submittedCode} /></div>}
   </section>;
 }
 
@@ -268,10 +289,7 @@ function Solved({ heading, result, canResume, ownsPause, manualResume, resumeAtS
   // Auto-resume only once the review is back and says the solution is already efficient.
   const counting = !analysis || analysis.status === 'error' || (review?.optimal ?? false);
   return <div className="bp-solved" role="status">
-    <svg className="bp-check" viewBox="0 0 52 52" aria-hidden="true">
-      <circle className="bp-check-ring" cx="26" cy="26" r="24" />
-      <path className="bp-check-tick" d="M15.5 27.5l7 7 14-15" />
-    </svg>
+    <SuccessCelebration />
     <h2 id="bp-heading" ref={heading} tabIndex={-1}>Solved</h2>
     <p className="bp-solved-sub">{!result ? 'All tests passed' : result.totalCount === 1 ? '1 test passed' : `All ${result.totalCount} tests passed`}</p>
     {rows.length > 0 && <div className="bp-solved-dots" aria-hidden="true">
@@ -369,32 +387,43 @@ function CoachFeedback({ coach }: { coach: Coach }) {
   </div>;
 }
 
-function HintsSection({ coach, disabled }: { coach: Coach; disabled: boolean }) {
-  const [expanded, setExpanded] = useState<number | null>(null);
-  useEffect(() => setExpanded(coach.hints.length - 1), [coach.hints.length]);
+function HintsSection({ coach, disabled, open, onOpen, onBack }: {
+  coach: Coach; disabled: boolean; open: boolean; onOpen(open: boolean): void; onBack(): void;
+}) {
+  const [selected, setSelected] = useState(0);
+  const trigger = useRef<HTMLButtonElement>(null);
+  useEffect(() => setSelected(Math.max(0, coach.hints.length - 1)), [coach.hints.length]);
   if (!coach.available) return null;
   const used = coach.hints.length;
-  return <div className="bp-hints">
-    {coach.hints.map((h, i) => <div className="bp-hint-card" key={i}>
-      <button type="button" className="bp-hint-head bp-hint-toggle" aria-expanded={expanded === i}
-        aria-controls={`bp-hint-content-${i}`} onClick={() => setExpanded(current => current === i ? null : i)}>
-        <Lightbulb size={13} aria-hidden="true" />Hint {i + 1} of 3<span>· {h.focus}</span><ChevronDown size={13} aria-hidden="true" />
-      </button>
-      <div className="bp-hint-content" id={`bp-hint-content-${i}`} hidden={expanded !== i}>
-        <p>{h.hint}</p>
-        {h.sources.length > 0 && <div className="bp-hint-sources">
-          {h.sources.map(src => <a key={src.url} href={src.url} target="_blank" rel="noopener noreferrer">
-            {src.title}<ExternalLink size={11} aria-hidden="true" /></a>)}
-        </div>}
+  const hint = coach.hints[selected];
+  const request = () => { onOpen(true); coach.next(); };
+  const close = () => { onOpen(false); trigger.current?.focus({ preventScroll: true }); };
+  return <div className="bp-hints bp-help" onKeyDown={event => {
+    if (event.key === 'Escape' && open) { event.stopPropagation(); close(); }
+  }}>
+    <button ref={trigger} type="button" className="bp-button bp-hint-button" aria-expanded={open} aria-controls="bp-hint-drawer"
+      aria-label={used ? `Hints (${used} of 3)` : 'Stuck? Get a hint'} disabled={disabled || coach.loading}
+      onClick={() => used ? onOpen(!open) : request()}>
+      <span aria-hidden="true">💡</span>{coach.loading ? 'Finding a hint…' : used ? `Hints · ${used}` : 'Get a hint'}
+    </button>
+    {open && <section id="bp-hint-drawer" className="bp-help-popover" aria-label="Practice hints">
+      <header><strong>{hint ? `Hint ${selected + 1} of 3` : 'A little guidance'}</strong>
+        <button type="button" className="bp-icon-button" aria-label="Close hints" onClick={close}><X size={16} /></button></header>
+      {used > 1 && <div className="bp-help-history" role="group" aria-label="Previous hints">
+        {coach.hints.map((_, i) => <button key={i} type="button" aria-pressed={selected === i} onClick={() => setSelected(i)}>Hint {i + 1}</button>)}
+      </div>}
+      <div className="bp-help-content" aria-live="polite">
+        {hint && <article className="bp-hint-card"><p className="bp-help-focus">{hint.focus}</p><p>{hint.hint}</p>
+          {!!hint.sources.length && <div className="bp-hint-sources">{hint.sources.map(src => <a key={src.url} href={src.url} target="_blank" rel="noopener noreferrer">{src.title}<ExternalLink size={12} aria-hidden="true" /></a>)}</div>}
+        </article>}
+        {coach.loading && <p role="status">Finding a helpful nudge…</p>}
+        {coach.error && <p className="bp-inline-error" role="alert">{coach.error}</p>}
       </div>
-    </div>)}
-    {coach.error && <p className="bp-inline-error">{coach.error}</p>}
-    {used < 3 ? <button type="button" className="bp-hint-button" onClick={coach.next} disabled={disabled || coach.loading}
-      aria-busy={coach.loading || undefined}>
-      {coach.loading ? <LoaderCircle size={14} className="bp-spin" aria-hidden="true" /> : <Lightbulb size={14} aria-hidden="true" />}
-      {coach.loading ? 'Finding a hint…' : used === 0 ? 'Stuck? Get a hint' : `Next hint (${used + 1} of 3)`}
-    </button> : <p className="bp-note">That's every hint. The outline above walks through the whole approach.</p>}
-    {used === 0 && <p className="bp-note">Hints point you to the right idea and the official docs. They never give the answer.</p>}
+      <footer><button type="button" className="bp-text-button" onClick={onBack}>Back to code</button>
+        {used < 3 ? <button type="button" className="bp-button bp-secondary" disabled={disabled || coach.loading} onClick={request}>
+          {used ? `Next hint (${used + 1} of 3)` : 'Try again'}</button> : <span className="bp-note">All 3 hints saved</span>}
+      </footer>
+    </section>}
   </div>;
 }
 

@@ -19,17 +19,15 @@ for (const zoom of [1, 1.5]) test(`editor survives three long hints and failure 
   app.hintText = 'Track how the accumulator changes at each step before the next repetition. '.repeat(60);
   for (let level = 1; level <= 3; level++) {
     await page.getByRole('button', { name: level === 1 ? 'Stuck? Get a hint' : `Next hint (${level} of 3)`, exact: true }).click();
-    await expect(page.locator('.bp-hint-card')).toHaveCount(level);
+    await expect(page.locator('.bp-hint-card')).toHaveCount(1);
   }
-  const toggles = page.locator('.bp-hint-toggle');
-  await expect(toggles.nth(0)).toHaveAttribute('aria-expanded', 'false');
-  await expect(toggles.nth(1)).toHaveAttribute('aria-expanded', 'false');
-  await expect(toggles.nth(2)).toHaveAttribute('aria-expanded', 'true');
-  // Older hints stay available to keyboard users, with the full text intact.
-  await toggles.first().focus();
+  const history = page.getByRole('group', { name: 'Previous hints' });
+  await expect(history.getByRole('button', { name: 'Hint 3', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await history.getByRole('button', { name: 'Hint 1', exact: true }).focus();
   await page.keyboard.press('Enter');
-  await expect(toggles.first()).toHaveAttribute('aria-expanded', 'true');
-  await expect(page.locator('.bp-hint-content').first()).toContainText(app.hintText);
+  await expect(page.locator('.bp-help-content')).toContainText(app.hintText);
+  await page.getByRole('button', { name: 'Back to code', exact: true }).click();
+  await expect(page.locator('.bp-help-popover')).toHaveCount(0);
   const editor = page.getByRole('textbox', { name: 'Python code' });
   const code = 'def raise_to_power(base, exponent):\n    return base * exponent';
   await editor.fill(code);
@@ -38,7 +36,7 @@ for (const zoom of [1, 1.5]) test(`editor survives three long hints and failure 
   await expect(page.getByText('What went wrong', { exact: true })).toBeVisible();
   const card = page.locator('.bp-editor-card');
   expect(await card.evaluate(node => node.getBoundingClientRect().height)).toBeGreaterThanOrEqual(210);
-  expect(await page.locator('.bp-body').evaluate(node => node.scrollHeight > node.clientHeight)).toBe(true);
+  await expect(page.locator('.bp-help-popover')).toHaveCount(0);
   await editor.scrollIntoViewIfNeeded();
   await editor.press('End');
   await editor.pressSequentially(' # still editable');
@@ -56,9 +54,10 @@ test('a long hint remains valid input for Next hint', async ({ app }) => {
   await app.page.getByRole('button', { name: 'Stuck? Get a hint', exact: true }).click();
   await expect(app.page.locator('.bp-hint-card')).toHaveCount(1);
   await app.page.getByRole('button', { name: 'Next hint (2 of 3)', exact: true }).click();
-  await expect(app.page.locator('.bp-hint-card')).toHaveCount(2);
+  await expect(app.page.getByRole('button', { name: 'Hint 2', exact: true })).toHaveAttribute('aria-pressed', 'true');
   expect(app.hints[1]?.previousHints).toEqual([Array.from(`Hint 1: ${app.hintText}`).slice(0, 400).join('')]);
-  await expect(app.page.locator('.bp-hint-card').first().locator('p')).toHaveText(`Hint 1: ${app.hintText}`);
+  await app.page.getByRole('button', { name: 'Hint 1', exact: true }).click();
+  await expect(app.page.locator('.bp-help-content')).toContainText(`Hint 1: ${app.hintText}`);
   await expect(app.page.locator('.bp-hints .bp-inline-error')).toHaveCount(0);
   expect(await app.page.locator('video').evaluate(video => video.paused)).toBe(true);
 });
@@ -77,20 +76,21 @@ test('wrong Run explains the failure and hints stop at three', async ({ app }, i
   await page.screenshot({ path: info.outputPath('failed-feedback.png'), animations: 'disabled' });
   for (let level = 1; level <= 3; level++) {
     await page.getByRole('button', { name: level === 1 ? 'Stuck? Get a hint' : `Next hint (${level} of 3)`, exact: true }).click();
-    await expect(page.locator('.bp-hint-card')).toHaveCount(level);
+    await expect(page.locator('.bp-hint-card')).toHaveCount(1);
     expect(app.hints[level]).toMatchObject({ exerciseId: 'samplevid01-exponent', revision: 'demo-1', code, level,
       previousHints: Array.from({ length: level - 1 }, (_, i) => `Hint ${i + 1}: ${hintFixture.hint}`) });
   }
-  await expect(page.getByText("That's every hint.", { exact: false })).toBeVisible();
+  await expect(page.getByText('All 3 hints saved', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: /Get a hint|Next hint/ })).toHaveCount(0);
   const sources = page.locator('.bp-hint-sources a');
-  await expect(sources).toHaveCount(3);
+  await expect(sources).toHaveCount(1);
   await expect(sources.first()).toHaveAttribute('href', hintFixture.sources[0]!.url);
   expect(app.hints.map(h => h.level)).toEqual([0, 1, 2, 3]);
   expect(app.analyses).toHaveLength(0);
   expect(await page.locator('video').evaluate(v => v.paused)).toBe(true);
   await page.locator('.bp-hints').scrollIntoViewIfNeeded();
   await page.screenshot({ path: info.outputPath('hints-three.png'), animations: 'disabled' });
+  await page.getByRole('button', { name: 'Back to code', exact: true }).click();
   await page.getByRole('button', { name: 'More', exact: true }).click();
   await page.getByRole('button', { name: 'Practice later', exact: true }).click();
   await expectPlaying(page);

@@ -407,3 +407,5 @@
 }
 .breakpoint-shell[data-theme='dark'], .breakpoint-shell { --bp-warn: #f2c94c; }
 .breakpoint-shell[data-theme='light'] { --bp-warn: #b7791f; }
+
+@import './workspace.css';

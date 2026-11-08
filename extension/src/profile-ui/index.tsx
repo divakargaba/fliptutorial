@@ -1,12 +1,13 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
 import { AnimatePresence, motion, MotionConfig } from 'motion/react';
-import { ArrowLeft, Check, ChevronDown, ChevronRight, Copy, ExternalLink, Info, Settings2, TrendingDown, TrendingUp, X } from 'lucide-react';
+import { ArrowLeft, BarChart3, ShieldCheck, Layers3, Check, ChevronDown, ChevronRight, Copy, ExternalLink, Info, Settings2, TrendingDown, TrendingUp, X } from 'lucide-react';
 import { BrandMark } from '../ui/BrandMark';
 import '@fontsource-variable/inter';
 import type { PublicProfile } from '../v2/types';
 import levels from '../../../contracts/v2/levels.json';
 import { conceptName, defaultSettings, type LearnerSettingsValue } from '../ui/v2';
 import { z } from 'zod';
+import type { PracticeLayout } from '../ui/workspace-preference';
 
 const accountSchema = z.object({ accountId: z.string().min(1), displayName: z.string(), public: z.boolean().optional() });
 const profileSchema = z.object({
@@ -17,8 +18,10 @@ const profileSchema = z.object({
   complements: z.array(z.object({ accountId: z.string(), displayName: z.string(), why: z.string() })),
 });
 export type LocalAccount = { accountId: string; displayName: string; public?: boolean };
-type Preferences = Pick<typeof import('../plan/preferences'), 'loadLearnerSettings' | 'saveLearnerSettings' | 'loadActiveAccount' | 'setActiveAccount'>;
+type Preferences = Pick<typeof import('../plan/preferences'), 'loadLearnerSettings' | 'saveLearnerSettings' | 'loadActiveAccount' | 'setActiveAccount'> & Partial<Pick<typeof import('../ui/workspace-preference'), 'loadPracticeLayout' | 'savePracticeLayout'>>;
 const preferences: Preferences = {
+  loadPracticeLayout: async () => (await import('../ui/workspace-preference')).loadPracticeLayout(),
+  savePracticeLayout: async value => (await import('../ui/workspace-preference')).savePracticeLayout(value),
   loadLearnerSettings: async () => (await import('../plan/preferences')).loadLearnerSettings(),
   saveLearnerSettings: async value => (await import('../plan/preferences')).saveLearnerSettings(value),
   loadActiveAccount: async () => (await import('../plan/preferences')).loadActiveAccount(),
@@ -192,8 +195,11 @@ function useFields(accountId: string) {
 function FieldRow({ field, pulledAt }: { field: Field; pulledAt: string | null }) {
   const p = field.postings;
   const local = p.scope === 'city' ? `${num(p.calgary)} open in Calgary` : p.scope === 'province' ? `${num(p.alberta)} open in Alberta` : `${num(p.canada)} open in Canada`;
-  return <li className="bp-pf-field"><details>
+  const tone = /energy/i.test(field.name) ? 'teal' : /cyber|security/i.test(field.name) ? 'blue' : 'violet';
+  const Icon = tone === 'teal' ? BarChart3 : tone === 'blue' ? ShieldCheck : Layers3;
+  return <li className="bp-pf-field" data-tone={tone}><details>
     <summary>
+      <span className="bp-pf-field-icon" aria-hidden="true"><Icon size={20} strokeWidth={1.7} /></span>
       <span className="bp-pf-linkrow-text">
         <span className="bp-pf-row-title">{field.name}{field.rising && <span className="bp-pf-rising" title={field.wefSkill ? `WEF Future of Jobs 2025 fastest-growing skill: ${field.wefSkill}` : undefined}><TrendingUp size={14} aria-hidden="true" />Rising</span>}</span>
         <span className="bp-pf-sub">{local}{p.scope !== 'country' ? ` · ${num(p.canada)} across Canada` : ''}</span>
@@ -427,7 +433,7 @@ function Skeleton() {
 
 // ---------- settings sheet ----------
 const FREQUENCIES: { value: LearnerSettingsValue['frequency']; label: string }[] = [{ value: 'few', label: 'Fewer' }, { value: 'normal', label: 'Normal' }, { value: 'many', label: 'More' }];
-function SettingsSheet({ settings, onChange, onClose }: { settings: LearnerSettingsValue; onChange(value: LearnerSettingsValue): void; onClose(): void }) {
+function SettingsSheet({ settings, onChange, onClose, layout, onLayout }: { settings: LearnerSettingsValue; onChange(value: LearnerSettingsValue): void; onClose(): void; layout: PracticeLayout; onLayout(value: PracticeLayout): void }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
@@ -453,6 +459,15 @@ function SettingsSheet({ settings, onChange, onClose }: { settings: LearnerSetti
       <div className="bp-pf-setting is-stacked"><span><span className="bp-pf-row-title" id="freq-label">Pause frequency</span><span className="bp-pf-sub">How often Breakpoint stops the video.</span></span>
         <div className="bp-pf-segmented" role="radiogroup" aria-labelledby="freq-label">{FREQUENCIES.map(option =>
           <button key={option.value} type="button" role="radio" aria-checked={settings.frequency === option.value} onClick={() => onChange({ ...settings, frequency: option.value })}>{option.label}</button>)}</div></div>
+      <div className="bp-pf-setting is-stacked"><span><span className="bp-pf-row-title" id="layout-label">Practice placement</span><span className="bp-pf-sub">Your workspace, beside or below the video.</span></span>
+        <div className="bp-pf-segmented" role="group" aria-labelledby="layout-label">
+          <button type="button" aria-pressed={layout === 'side'} onClick={() => onLayout('side')}>Side panel</button>
+          <button type="button" aria-pressed={layout === 'below'} onClick={() => onLayout('below')}>Below video</button>
+        </div><p className="bp-pf-caption">Side placement adapts below on smaller windows. Your draft stays with you.</p></div>
+      {!!settings.disabledVideos.length && <details className="bp-pf-paused-videos"><summary>Paused videos ({settings.disabledVideos.length})</summary>
+        <p className="bp-pf-sub">Automatic practice is off for these videos.</p>
+        {settings.disabledVideos.map(id => <div key={id}><span>{id}</span><button type="button" onClick={() => onChange({ ...settings, disabledVideos: settings.disabledVideos.filter(video => video !== id) })}>Enable practice</button></div>)}
+      </details>}
     </motion.div>
   </motion.div>;
 }
@@ -467,8 +482,14 @@ export function ProfilePage({ preferences: prefs = preferences }: { preferences?
   const [retry, setRetry] = useState(0);
   const [settings, setSettings] = useState<LearnerSettingsValue>(defaultSettings);
   const [storageReady, setStorageReady] = useState(false);
+  const [layout, setLayout] = useState<PracticeLayout>('below');
+  useEffect(() => { let active = true; void prefs.loadPracticeLayout?.().then(value => { if (active) setLayout(value); }).catch(() => {}); return () => { active = false; }; }, [prefs]);
+  const saveLayout = (value: PracticeLayout) => {
+    void persist(() => prefs.savePracticeLayout?.(value) ?? Promise.resolve()).then(() => { setLayout(value); setSavingError(''); }).catch(() => setSavingError('Placement could not be saved.'));
+  };
   const [viewing, setViewing] = useState<string | null>(null);
   const [sheet, setSheet] = useState(false);
+  const closeSettings = useCallback(() => setSheet(false), []);
   const [reload, setReload] = useState(0);
   const [busy, setBusy] = useState(false);
   useEffect(() => {
@@ -531,6 +552,6 @@ export function ProfilePage({ preferences: prefs = preferences }: { preferences?
       : profile ? <ProfileView profile={profile} accountIds={accounts.map(item => item.accountId)} onViewProfile={setViewing} toggle={toggle} />
       : <div className="bp-pf-page"><Skeleton /></div>}
     {savingError && <p role="alert" className="bp-pf-body bp-pf-gutter">{savingError}</p>}
-    <AnimatePresence>{sheet && <SettingsSheet settings={settings} onChange={saveSettings} onClose={() => setSheet(false)} />}</AnimatePresence>
+    <AnimatePresence>{sheet && <SettingsSheet layout={layout} onLayout={saveLayout} settings={settings} onChange={saveSettings} onClose={closeSettings} />}</AnimatePresence>
   </main></MotionConfig>;
 }

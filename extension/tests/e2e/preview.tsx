@@ -8,6 +8,9 @@ import { Badge } from '../../src/ui/Badge';
 import { PracticePanel, type PracticePanelProps } from '../../src/ui/PracticePanel';
 import { TestMeContext } from '../../src/test-me';
 import { TestMeControls } from '../../src/ui/TestMeControls';
+import { HintsContext } from '../../src/hints';
+import { WorkspaceContext } from '../../src/ui/workspace';
+import type { PracticeLayout } from '../../src/ui/workspace-preference';
 import generated from '../../../contracts/testme-response.fixture.json';
 
 const local = {
@@ -34,7 +37,12 @@ mount.className = 'breakpoint-shell';
 mount.dataset.theme = new URLSearchParams(location.search).get('theme') ?? 'dark';
 shadow.append(mount);
 
+const workbench = new URLSearchParams(location.search).has('workspace');
+if (workbench) { host.style.width = 'min(960px,calc(100% - 32px))'; mount.style.containerType = 'inline-size'; }
 function Preview() {
+  const [layout, setLayout] = useState<PracticeLayout>('below');
+  const changeLayout = (value: PracticeLayout) => { setLayout(value); host.style.width = `min(${value === 'side' ? 420 : 960}px,calc(100% - 32px))`; };
+  mount.dataset.placement = layout;
   const [open, setOpen] = useState(true);
   const [attempt, setAttempt] = useState<PracticePanelProps['attempt']>('editing');
   const [result, setResult] = useState<PracticePanelProps['result']>(null);
@@ -56,14 +64,14 @@ function Preview() {
       if (passed && mode === 'submit') setCanResume(true);
     }, 250);
   };
-  return <><Badge state="ready" total={1} remaining={open ? 0 : 1} solved={0} active={open} nextAtS={fixture.breakpoints[0].pauseAtS}
-    onOpen={() => setOpen(true)} />
+  return <WorkspaceContext.Provider value={workbench ? { layout, effectiveLayout: layout, onChange: changeLayout } : null}><HintsContext.Provider value={workbench ? { requestHint: async input => ({ ok: true, data: { level: input.level, hint: "Start with a running total of 1. Multiply it by the base once for each repetition, then return the total.", focus: "Building a running total", feedback: null, sources: [], aiGenerated: true } }) } : null}><div hidden={open}><Badge state="ready" total={1} remaining={open ? 0 : 1} solved={0} active={open} nextAtS={fixture.breakpoints[0].pauseAtS}
+    onOpen={() => setOpen(true)} /></div>
     <div style={{ height: 12 }} />
     {open && <PracticePanel videoId={fixture.videoId} revision={new URLSearchParams(location.search).get('revision') ?? fixture.revision}
       breakpoint={fixture.breakpoints[0]} attempt={attempt} result={result} error={error} canResume={canResume} ownsPause={true}
       onRun={code => grade('run', code)} onSubmit={code => grade('submit', code)}
       onSkip={close} onClose={close} onResume={close} />}
-  </>;
+  </HintsContext.Provider></WorkspaceContext.Provider>;
 }
 // Component-only T6 harness: worker/player integration remains a separate MV3 gate.
 function TestMePreview() {

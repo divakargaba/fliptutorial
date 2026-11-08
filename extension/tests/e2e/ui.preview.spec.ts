@@ -8,7 +8,7 @@ test('shadow theme, keyboard isolation, grading and resume controls', async ({ p
   await expect(page.getByRole('heading', { name: 'Raise a number to a power' })).toBeFocused();
   const panel = page.locator('.bp-panel');
   expect(await panel.evaluate(el => getComputedStyle(el).fontSize)).toBe('14px');
-  expect(await page.locator('.bp-body').evaluate(el => getComputedStyle(el).paddingLeft)).toBe('16px');
+  expect(await page.locator('.bp-body').evaluate(el => getComputedStyle(el).paddingLeft)).toBe('20px');
   expect(await panel.evaluate(el => getComputedStyle(el).borderTopWidth)).toBe('1px');
   await page.screenshot({ path: info.outputPath('editing.png') });
   await editor.fill('jklf ');
