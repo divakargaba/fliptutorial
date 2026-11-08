@@ -29,7 +29,7 @@ can also authorize a handoff. Check the actual comment author's GitHub login.
 
 | Lane | Human | Owned paths (full list in `plans/lane-*.md`) |
 | --- | --- | --- |
-| Lead: contracts, merges, shared entry points | @divakargaba | `contracts/`, `docs/`, `PLAN.md`, `AGENTS.md`, `tools/`, `backend/app/main.py`, `backend/requirements.txt`, `extension/src/v2/`, root config |
+| Lead: contracts, shared entry points | @divakargaba | `contracts/`, `docs/`, `PLAN.md`, `AGENTS.md`, `tools/`, `backend/app/main.py`, `backend/requirements.txt`, `extension/src/v2/`, root config |
 | A1 Planner | @abdullahwarraichh | `backend/app/planner/`, `testme.py`, `transcripts.py`, `prepare.py`, `backend/content/` (except `docs/`) |
 | A2 Feedback | @divakargaba (agent) | `backend/app/feedback/`, `backend/app/runners/`, `grader.py`, `hints.py`, `analysis.py`, `backend/content/docs/` |
 | A3 Runtime | @abdullahwarv2 | `extension/entrypoints/` (except `popup/`), `src/playback.ts`, `src/api.ts`, `src/contracts.ts`, `src/progress.ts`, `src/plan/`, `tests/unit/`, extension package/config |
@@ -46,8 +46,9 @@ human explicitly requests them or the agreed plan calls for them.
 
 ## Lanes, branches and PRs (roadmap v2)
 
-- Work only on your lane branch `lane/<lane>` (start your listener with `AUTOPILOT_LANE=<lane>`). Never push to `main`.
-- The runner merges `main` into your branch before each run and opens/updates your PR; @divakargaba merges after CI passes.
+- Develop on your lane branch `lane/<lane>` (start your listener with `AUTOPILOT_LANE=<lane>`) and publish through a PR to `main` by default.
+- The runner merges `main` into your branch before each run and opens/updates your PR. Any collaborator or agent with permission may merge human-authorized work; no approval or merge action from @divakargaba or another agent is required. A human request to publish or merge authorizes completing that action without another permission question. Earlier lead-only board instructions do not reinstate a merge gate over that authorization.
+- Before merging, sync current `main`, resolve conflicts without discarding teammate work, run relevant checks, and disclose validation limits. Respect GitHub-enforced branch protections; do not force-push or bypass them. If CI cannot run because of infrastructure or billing, report that accurately and use available local checks; do not claim CI passed.
 - One owner per file. Need a change in someone else's file (including `extension/package.json`, `backend/requirements.txt`,
   `backend/app/main.py`)? Ask its owner on the board with the exact change.
 - Contracts in `contracts/v2/` and `extension/src/v2/types.ts` are frozen; build against their fixtures, not another lane's code.
