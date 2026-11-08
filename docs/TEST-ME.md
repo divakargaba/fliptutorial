@@ -103,7 +103,7 @@ Time budget: the extension waits 20 s, so the backend budget is 18 s end to end
 - Rule checks (no code is executed locally): Python only; identifier function name;
   starter, reference and wrong solution compile (`compile()` only) and define the
   function; starter ≠ reference ≠ wrong; 1–2 visible examples, 3–8 hidden tests, no
-  duplicate inputs; args/expected are int/str/bool/None (no floats, ≤200-char
+  duplicate inputs, same argument count in every case; args/expected are int/str/bool/None (no floats, ≤200-char
   strings); code ≤4 KiB; no `input(`, `open(`, `eval(`, `exec(`, `__import__`,
   `import os|sys|subprocess|socket`; title ≤80 and statement ≤600 chars.
 - Concept checks: ≥1 concept tag from the PRD list; ≥1 evidence cue id, all present
@@ -116,7 +116,18 @@ Time budget: the extension waits 20 s, so the backend budget is 18 s end to end
   requests for the same key share one generation. `get_set(setId)` returns the
   private set or `None` after expiry (→ `SET_EXPIRED`).
 - Rate limit: 10 new sets per rolling 60 s (cache hits don't count) → `BUSY`.
-- Model: `GEMINI_TESTME_MODEL`, else `gemini-2.5-flash`, temperature 0.2, no thinking.
+- Model: `GEMINI_TESTME_MODEL`, else `gemini-flash-latest`, temperature 0.2, thinking
+  budget `GEMINI_TESTME_THINKING` (default 1024; -1 leaves it to the model). With
+  thinking off, live runs gave wrong solutions with syntax errors, or ones that
+  passed every test. `gemini-2.5-flash` on the team key is capped at 20 requests/day.
+- Live results 2026-11-08 (`eWRfhZUzrAc`, never prepared): Judge0-verified sets in
+  13.1 s and 18.4 s (2.5-flash). `gemini-flash-latest` latency varied from 3.1 s to
+  over 200 s with 503 "high demand" errors, so many requests end in
+  `GENERATOR_TIMEOUT`. This latency is the main risk for T7.
+- The output also names the wrong solution's mistake (`wrongMistake`) and a hidden
+  test it fails (`wrongFailsOnArgsJson`, which must match one of the hidden tests).
+- A provider 429 (quota) maps to `BUSY`. The team key's free tier allows **5
+  requests/min per model** on `gemini-2.5-flash`, which is below the 10 sets/min cap.
 
 ## UI (T5 @abdullahwarv2, T6 @reyanshBadhwar26)
 
