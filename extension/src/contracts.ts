@@ -68,7 +68,11 @@ export const LastResultSchema = z.object({
 export const HintMessageSchema = z.object({
   type: z.literal('hint'), exerciseId: text, revision: text, code: z.string().max(16384),
   level: z.number().int().min(0).max(3), lastResult: LastResultSchema.optional(),
-  previousHints: z.array(z.string().max(400)).max(6).optional(),
+  // Responses may contain longer hints, which the panel sends back verbatim.
+  // Match the backend's h[:400] context limit instead of rejecting the next
+  // request. Iterate code points so Python and JS agree on non-BMP characters;
+  // normalization creates a new value and leaves the displayed hint intact.
+  previousHints: z.array(z.string().transform(hint => Array.from(hint).slice(0, 400).join(''))).max(6).optional(),
 }).strict();
 export const AnalyzeMessageSchema = z.object({
   type: z.literal('analyze'), exerciseId: text, revision: text, code: z.string().min(1).max(16384),

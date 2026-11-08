@@ -127,6 +127,41 @@ describe('extension API boundary', () => {
 });
 
 describe('hint and analysis contracts (H1/H2)', () => {
+  it('lets a valid long hint advance by bounding history only in the outgoing request', async () => {
+    const longHint = 'Think about how the accumulated value changes after each repetition. '.repeat(9);
+    const received = HintResponseSchema.parse({ ...hintFixture, level: 1, hint: longHint });
+    const message = { type: 'hint', exerciseId: 'exponent', revision: 'r1', code: 'pass',
+      level: 2, previousHints: [received.hint!] } as const;
+    const fetcher = vi.fn(async () => Response.json(hintFixture));
+
+    expect(await requestApi(message, base, fetcher)).toEqual({ ok: true, data: hintFixture });
+    expect(fetcher).toHaveBeenCalledWith(`${base}/v1/hints`, expect.objectContaining({
+      method: 'POST', body: JSON.stringify({ exerciseId: 'exponent', revision: 'r1', code: 'pass',
+        level: 2, previousHints: [longHint.slice(0, 400)] }),
+    }));
+    // Request normalization must not truncate the response the panel displays.
+    expect(received.hint).toBe(longHint);
+    expect(message.previousHints).toEqual([longHint]);
+  });
+
+  it('counts hint history like the backend without splitting Unicode characters', () => {
+    const previous = 'a'.repeat(399) + '💡' + ' trailing context';
+    const parsed = WorkerMessageSchema.parse({ type: 'hint', exerciseId: 'e', revision: 'r',
+      code: 'pass', level: 2, previousHints: ['Short hint.', previous] });
+    expect(parsed.type).toBe('hint');
+    if (parsed.type !== 'hint') throw new Error('Expected hint request');
+    expect(parsed.previousHints).toEqual(['Short hint.', 'a'.repeat(399) + '💡']);
+  });
+
+  it('still rejects invalid hint history before contacting the API', async () => {
+    const fetcher = vi.fn(async () => Response.json(hintFixture));
+    for (const previousHints of [['x', 42], Array(7).fill('x'), 'not an array']) {
+      expect((await requestApi({ type: 'hint', exerciseId: 'e', revision: 'r', code: 'pass',
+        level: 2, previousHints }, base, fetcher)).ok).toBe(false);
+    }
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
   it('parses the shared fixtures', () => {
     expect(HintResponseSchema.parse(hintFixture).level).toBe(2);
     expect(AnalysisResponseSchema.parse(analysisFixture).optimal).toBe(false);
