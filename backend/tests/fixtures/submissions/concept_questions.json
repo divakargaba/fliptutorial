@@ -1,0 +1,98 @@
+{
+  "questions": [
+    {
+      "id": "q-mc-2d-list",
+      "revision": "r1",
+      "title": "Reading a 2D list",
+      "style": "multiple_choice",
+      "prompt": "grid = [[1, 2], [3, 4]]. What does grid[1][0] give?",
+      "concepts": ["lists"],
+      "level": "beginner-1",
+      "choices": [
+        {"id": "a", "text": "1"},
+        {"id": "b", "text": "2"},
+        {"id": "c", "text": "3"},
+        {"id": "d", "text": "4"}
+      ],
+      "correctAnswer": "c",
+      "tests": [
+        {"answer": "c", "expectedCorrect": true, "description": "Correct: grid[1] is [3,4], then [0] is 3"},
+        {"answer": "a", "expectedCorrect": false, "description": "Wrong: that would be grid[0][0]"},
+        {"answer": "d", "expectedCorrect": false, "description": "Wrong: that would be grid[1][1]"},
+        {"answer": "b", "expectedCorrect": false, "description": "Wrong: that would be grid[0][1]"}
+      ]
+    },
+    {
+      "id": "q-predict-loop",
+      "revision": "r1",
+      "title": "Loop output",
+      "style": "predict_output",
+      "prompt": "What does this print?\nfor i in range(3):\n    print(i, end=' ')",
+      "concepts": ["loops"],
+      "level": "beginner-1",
+      "correctAnswer": "0 1 2",
+      "tests": [
+        {"answer": "0 1 2", "expectedCorrect": true, "description": "Correct output"},
+        {"answer": "0 1 2 ", "expectedCorrect": true, "description": "Trailing space is OK"},
+        {"answer": "1 2 3", "expectedCorrect": false, "description": "Wrong: range starts at 0"},
+        {"answer": "0 1 2 3", "expectedCorrect": false, "description": "Wrong: range(3) excludes 3"}
+      ]
+    },
+    {
+      "id": "q-mc-dict",
+      "revision": "r1",
+      "title": "Dictionary access",
+      "style": "multiple_choice",
+      "prompt": "d = {'a': 1, 'b': 2}. What does d.get('c', 0) return?",
+      "concepts": ["dicts"],
+      "level": "beginner-2",
+      "choices": [
+        {"id": "a", "text": "None"},
+        {"id": "b", "text": "0"},
+        {"id": "c", "text": "KeyError"},
+        {"id": "d", "text": "''"}
+      ],
+      "correctAnswer": "b",
+      "tests": [
+        {"answer": "b", "expectedCorrect": true, "description": "Correct: .get() returns default 0"},
+        {"answer": "a", "expectedCorrect": false, "description": "Wrong: that's get without a default"},
+        {"answer": "c", "expectedCorrect": false, "description": "Wrong: get doesn't raise KeyError"}
+      ]
+    },
+    {
+      "id": "q-predict-string",
+      "revision": "r1",
+      "title": "String slicing",
+      "style": "predict_output",
+      "prompt": "What does 'hello'[1:4] produce?",
+      "concepts": ["strings"],
+      "level": "beginner-1",
+      "correctAnswer": "ell",
+      "tests": [
+        {"answer": "ell", "expectedCorrect": true, "description": "Correct: indices 1,2,3"},
+        {"answer": "hell", "expectedCorrect": false, "description": "Wrong: start is inclusive, end exclusive"},
+        {"answer": "ello", "expectedCorrect": false, "description": "Wrong: goes up to index 4 exclusive"}
+      ]
+    },
+    {
+      "id": "q-mc-recursion",
+      "revision": "r1",
+      "title": "Recursion base case",
+      "style": "multiple_choice",
+      "prompt": "What happens if a recursive function has no base case?",
+      "concepts": ["recursion"],
+      "level": "beginner-3",
+      "choices": [
+        {"id": "a", "text": "It returns None"},
+        {"id": "b", "text": "Stack overflow / RecursionError"},
+        {"id": "c", "text": "It loops forever silently"},
+        {"id": "d", "text": "It returns 0"}
+      ],
+      "correctAnswer": "b",
+      "tests": [
+        {"answer": "b", "expectedCorrect": true, "description": "Correct: infinite recursion causes stack overflow"},
+        {"answer": "c", "expectedCorrect": false, "description": "Wrong: recursion uses stack space"}
+      ]
+    }
+  ]
+}

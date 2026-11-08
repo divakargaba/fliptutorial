@@ -1,0 +1,61 @@
+{
+  "language": "cpp",
+  "exercise": {
+    "id": "test-cpp-sum-array",
+    "revision": "r1",
+    "title": "Sum an array",
+    "language": "cpp",
+    "statement": "Write sumArray that takes a vector<int> and returns the sum of all elements.",
+    "functionName": "sumArray",
+    "starterCode": "#include <vector>\nusing namespace std;\n\nint sumArray(vector<int> arr) {\n    // your code here\n    return 0;\n}\n",
+    "concepts": ["loops", "lists"],
+    "level": "beginner-1",
+    "examples": [
+      {"args": [[1, 2, 3]], "expected": 6},
+      {"args": [[10, -5, 3]], "expected": 8}
+    ],
+    "hiddenTests": [
+      {"args": [[]], "expected": 0},
+      {"args": [[100]], "expected": 100},
+      {"args": [[1, 1, 1, 1, 1]], "expected": 5}
+    ],
+    "referenceSolution": "#include <vector>\nusing namespace std;\n\nint sumArray(vector<int> arr) {\n    int total = 0;\n    for (int x : arr) total += x;\n    return total;\n}\n"
+  },
+  "submissions": [
+    {
+      "id": "cpp-pass-1",
+      "code": "#include <vector>\nusing namespace std;\n\nint sumArray(vector<int> arr) {\n    int total = 0;\n    for (int i = 0; i < arr.size(); i++) {\n        total += arr[i];\n    }\n    return total;\n}\n",
+      "expectedOutcome": "passed",
+      "expectedMisconception": null,
+      "description": "Correct index-based loop"
+    },
+    {
+      "id": "cpp-pass-2",
+      "code": "#include <vector>\nusing namespace std;\n\nint sumArray(vector<int> arr) {\n    int total = 0;\n    for (int x : arr) total += x;\n    return total;\n}\n",
+      "expectedOutcome": "passed",
+      "expectedMisconception": null,
+      "description": "Correct range-for loop"
+    },
+    {
+      "id": "cpp-fail-off-by-one",
+      "code": "#include <vector>\nusing namespace std;\n\nint sumArray(vector<int> arr) {\n    int total = 0;\n    for (int i = 0; i <= arr.size(); i++) {\n        total += arr[i];\n    }\n    return total;\n}\n",
+      "expectedOutcome": "runtime_error",
+      "expectedMisconception": "off-by-one",
+      "description": "Uses <= instead of <; accesses arr[size()] which is out of bounds"
+    },
+    {
+      "id": "cpp-fail-wrong-op",
+      "code": "#include <vector>\nusing namespace std;\n\nint sumArray(vector<int> arr) {\n    int total = 1;\n    for (int x : arr) total *= x;\n    return total;\n}\n",
+      "expectedOutcome": "wrong_answer",
+      "expectedMisconception": "wrong-operator",
+      "description": "Multiplies instead of adding"
+    },
+    {
+      "id": "cpp-fail-syntax",
+      "code": "#include <vector>\nusing namespace std;\n\nint sumArray(vector<int> arr) {\n    int total = 0\n    for (int x : arr) total += x;\n    return total;\n}\n",
+      "expectedOutcome": "syntax_error",
+      "expectedMisconception": "syntax-error",
+      "description": "Missing semicolon after variable declaration"
+    }
+  ]
+}
