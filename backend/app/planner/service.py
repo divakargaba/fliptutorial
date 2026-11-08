@@ -30,17 +30,16 @@ from typing import Any, Awaitable, Callable
 
 from pydantic import BaseModel, ValidationError
 
-from ..catalog import ApprovedExercise
 from ..transcripts import Transcript, TranscriptError
 from .classify import (
     Block, Evidence, Numberer, PauseSlot, Section, WindowOut, build_prompt, make_blocks, validate_window, windows,
 )
 from .grading import register_item
 from .generate import (
-    GenerationFailed, ModelCall, PrivateExercise, PrivateQuestion, Verify, generate_coding, generate_question,
-    public_exercise,
+    GenerationFailed, ModelCall, PlannedExercise, PrivateExercise, PrivateQuestion, Verify, generate_coding,
+    generate_question, public_exercise,
 )
-from .vocab import CODING_LANGUAGES, DEFAULT_LEVEL, concept_ids, tier_of
+from .vocab import DEFAULT_LEVEL, coding_languages, concept_ids, tier_of
 
 logger = logging.getLogger("breakpoint.planner")
 
@@ -115,7 +114,7 @@ class VideoState:
 
 
 def planned_kind(section: Section, slot: PauseSlot) -> str:
-    if section.language in CODING_LANGUAGES and section.format in ("code", "mixed") and slot.trigger != "concept_complete":
+    if section.language in coding_languages() and section.format in ("code", "mixed") and slot.trigger != "concept_complete":
         return "coding"
     return "concept"
 
@@ -161,7 +160,7 @@ def _load_state(d: dict) -> VideoState:
             it = Item(v["kind"], v.get("status", "pending"))
             if "exercise" in v:
                 e = v["exercise"]
-                it.exercise = PrivateExercise(ApprovedExercise.model_validate(e["exercise"]), e["revision"],
+                it.exercise = PrivateExercise(PlannedExercise.model_validate(e["exercise"]), e["revision"],
                                               e["concepts"], e["level"], e["language"])
             if "question" in v:
                 it.question = PrivateQuestion.load(v["question"])
