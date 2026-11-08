@@ -74,3 +74,7 @@ pytest driven by `practice-events.fixture.json` + generated event streams: level
   coding:concept 59:15 (was 45:29), precision 1.000 unchanged; the 15 left are C#/TypeScript/C/Go code.
 - [x] Generic stdin/stdout runner (app/runners/stdio_runner.py): TypeScript, C, C#, Go, Rust code sections get verified
   whole-program coding exercises; live grade + generate checked per language.
+- [x] Feedback handoff (1) #41: diagnosis schema 400 fixed (+ refresher), syntax errors labelled, what/why/how-to-fix feedback.
+- [x] Feedback handoff (2) backend: `GET /v2/profile/{accountId}/award/{eventId}` -> what one delivered event earned per
+  concept (xpGained, xpBefore/xp, levelBefore/level/nextLevel, xpToNext, progress 0-1, leveledUp); 404 EVENT_NOT_FOUND
+  until delivered. Extension display (progress card after a pass) goes through the lead.

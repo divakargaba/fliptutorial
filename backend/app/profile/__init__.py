@@ -9,6 +9,8 @@ Endpoints (all under /v2):
   GET  /profile/{accountId}             -> public-profile shape (watch history never included)
   GET  /profile/{accountId}/level/{concept} -> {accountId, concept, level, levelName, rank, xp, strength}
                                            (unknown -> beginner-1; ?detail=true adds private per-concept stats)
+  GET  /profile/{accountId}/award/{eventId} -> what that event earned: XP gained, level before/after,
+                                           progress to the next level per concept (404 until delivered)
   GET  /profile/{accountId}/levels      -> {accountId, levels: {conceptId: levelId}}
   POST /profile/{accountId}/public      {public: bool} -> {accountId, displayName, public}  (opt-in toggle)
   GET  /refresher/{accountId}           -> {accountId, concept, conceptName, strength, reason, question} or 204
@@ -195,6 +197,19 @@ def level(
             },
         })
     return JSONResponse(body)
+
+
+@router.get("/profile/{account_id}/award/{event_id}")
+def award(account_id: str, event_id: str) -> JSONResponse:
+    """What one delivered practice event earned (private to the learner's extension):
+    `{accountId, eventId, type, totalXpGained, leveledUp, awards: [{concept, conceptName, primary, xpGained,
+    xpBefore, xp, levelBefore, level, nextLevel, xpToNext, progress, leveledUp}]}`.
+    404 EVENT_NOT_FOUND until the event has been delivered, so the extension can retry briefly."""
+    store = get_store()
+    result = engine.award(store.events_for(account_id), event_id) if store.get_account(account_id) else None
+    if result is None:
+        return _error(404, "EVENT_NOT_FOUND", "event not delivered yet")
+    return JSONResponse({"accountId": account_id, **result})
 
 
 @router.get("/profile/{account_id}/levels")

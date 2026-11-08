@@ -508,3 +508,41 @@ def test_broader_matching_applies_group_pair_bonuses(empty):
     ms = empty.get("/v2/matches/test-x", params=NOW_Q).json()["matches"]
     assert ms and ms[0]["accountId"] == "test-y"
     assert ms[0]["score"] > 0
+
+
+# --- award: what one event earned (progress after a pass) ------------------------------------------
+
+
+def test_award_for_a_first_try_pass_shows_progress_without_level_up(empty):
+    ev = {**_pass(1, "recursion", NOW), "concepts": ["recursion", "functions", "conditionals"]}
+    empty.post("/v2/events", json={"events": [ev]})
+    a = empty.get(f"/v2/profile/test-x/award/{ev['id']}").json()
+    assert a["type"] == "passed" and a["leveledUp"] is False
+    rec, fn, cond = a["awards"]
+    assert rec["concept"] == "recursion" and rec["primary"] is True
+    assert rec["xpGained"] == 37.5 and rec["xpBefore"] == 0 and rec["xp"] == 37.5  # 30 x 1.25 first try
+    assert rec["level"]["levelName"] == "Beginner I" and rec["nextLevel"]["levelName"] == "Beginner II"
+    assert rec["xpToNext"] == 2.5 and rec["progress"] == 0.938  # 37.5 of 40
+    assert fn["xpGained"] == cond["xpGained"] == 18.8 and fn["primary"] is False  # secondary concepts: half
+    assert a["totalXpGained"] == 75.1
+
+
+def test_award_reports_level_up_and_ignores_later_events(empty):
+    first, second = _pass(1, "loops", NOW), _pass(2, "loops", NOW + timedelta(minutes=5))
+    third = _pass(3, "loops", NOW + timedelta(minutes=10))
+    empty.post("/v2/events", json={"events": [first, second, third]})
+    a = empty.get(f"/v2/profile/test-x/award/{second['id']}").json()["awards"][0]
+    assert a["leveledUp"] is True and a["levelBefore"]["levelName"] == "Beginner I"
+    assert a["level"]["levelName"] == "Beginner II" and a["xpBefore"] == 37.5 and a["xp"] == 75.0
+    assert a["nextLevel"]["levelName"] == "Beginner III" and a["xpToNext"] == 25.0
+    assert a["progress"] == round((75 - 40) / (100 - 40), 3)
+
+
+def test_award_for_a_failure_is_small_and_unknown_event_is_404(empty):
+    fail = {**_pass(1, "loops", NOW), "id": "f1", "type": "failed", "misconception": "off-by-one"}
+    empty.post("/v2/events", json={"events": [fail]})
+    a = empty.get("/v2/profile/test-x/award/f1").json()
+    assert a["awards"][0]["xpGained"] == engine.FAIL_XP and a["leveledUp"] is False
+    missing = empty.get("/v2/profile/test-x/award/not-delivered-yet")
+    assert missing.status_code == 404 and missing.json()["error"]["code"] == "EVENT_NOT_FOUND"
+    assert empty.get("/v2/profile/nobody/award/f1").status_code == 404  # other accounts never see it
