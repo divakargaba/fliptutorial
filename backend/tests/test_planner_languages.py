@@ -11,7 +11,7 @@ from dataclasses import dataclass
 import pytest
 
 from app import planner as planner_api
-from app.planner import service, vocab
+from app.planner import generate, service, vocab
 from app.planner.generate import GenerationFailed, PlannedExercise, check_coding
 from app.testme import GenOutput, _CheckFailed
 from app.transcripts import Clip, Cue
@@ -63,6 +63,7 @@ def js_window() -> dict:
 @pytest.fixture
 def runners_present(monkeypatch):
     monkeypatch.setattr(service, "coding_languages", lambda: ALL_CODING)
+    monkeypatch.setattr(generate, "coding_languages", lambda: ALL_CODING)  # planned_kind reads it here
 
 
 # ---------------------------------------------------------------------------
@@ -97,10 +98,12 @@ def test_javascript_section_gets_verified_coding_pause(tmp_path, runners_present
 
 
 def test_javascript_falls_back_to_concept_without_runners(tmp_path, monkeypatch):
-    monkeypatch.setattr(service, "coding_languages", lambda: ("python",))
+    monkeypatch.setattr(generate, "coding_languages", lambda: ("python",))
     model = StubModel(window=js_window, exercise=JS_EXERCISE)
     _, plan = asyncio.run(run_to_ready(make_planner(tmp_path, model=model)))
-    assert plan["pauses"][0]["kind"] == "concept" and model.count("GenOutput") == 0
+    # No coding attempt for the JS section (only the theory section tries one, in Python).
+    assert plan["pauses"][0]["kind"] == "concept"
+    assert not any("Section: JS loops" in pr for n, pr in model.calls if n == "GenOutput")
 
 
 def test_failed_runner_verify_falls_back_to_concept(tmp_path, runners_present):

@@ -306,13 +306,11 @@ class AnswerRequest(BaseModel):
     learnerLevel: str = "beginner-1"
 
 
-def _planner_explanation(question_id: str) -> str | None:
-    """The planner's stored "why this is right" text for one of its questions, if any."""
+def _planner_private(question_id: str) -> Any:
+    """The planner's private record for one of its questions (explanation, choice notes, retry hint), if any."""
     try:
         from ..planner import find_question as planner_find_question
-        priv = planner_find_question(question_id)
-        text = (getattr(priv, "explanation", "") or "").strip() if priv is not None else ""
-        return text or None
+        return planner_find_question(question_id)
     except Exception:
         return None
 
@@ -388,7 +386,9 @@ async def answer(body: AnswerRequest) -> JSONResponse:
 
     # The curated "why it's right" text: refresher explanation, else the planner's stored one
     # (planner questions reach the store via register_question, which carries no explanation).
-    stored_explanation = refresher_explanation or _planner_explanation(body.questionId)
+    priv = _planner_private(body.questionId)
+    planner_explanation = (getattr(priv, "explanation", "") or "").strip() or None
+    stored_explanation = refresher_explanation or planner_explanation
 
     wrong = None
     if result.correct:
@@ -404,6 +404,8 @@ async def answer(body: AnswerRequest) -> JSONResponse:
             choices=question.choices,
             concept_name=concept_name,
             learner_level=body.learnerLevel,
+            choice_notes=getattr(priv, "choice_notes", None) or None,
+            retry_hint=getattr(priv, "retry_hint", "") or "",
         )
         explanation_text = wrong.whyWrong
 

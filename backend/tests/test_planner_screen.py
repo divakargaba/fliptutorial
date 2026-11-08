@@ -136,7 +136,7 @@ def test_answer_on_screen_throughout_becomes_new_problem(tmp_path):
     plan = asyncio.run(ready(p))
     q = q_pause(plan)
     assert q["pauseAtS"] == 415.0  # same time, but a new problem on the same idea
-    gen = [pr for n, pr in model.calls if n == GenOutput.__name__]
+    gen = [pr for n, pr in model.calls if n == GenOutput.__name__ and "sum the numbers 1..n" in pr]
     assert gen and all("NEW problem" in pr for pr in gen)
     assert not any("posed this task" in pr for pr in gen)
     assert model.count(QuestionOut.__name__) >= 1

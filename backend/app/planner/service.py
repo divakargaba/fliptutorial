@@ -37,8 +37,8 @@ from .classify import (
 from .grading import register_item
 from .screen import ScreenCheck
 from .generate import (
-    GenerationFailed, ModelCall, PlannedExercise, PrivateExercise, PrivateQuestion, Verify, generate_coding,
-    generate_question, public_exercise,
+    GenerationFailed, ModelCall, PlannedExercise, PrivateExercise, PrivateQuestion, Verify, coding_language_for,
+    generate_coding, generate_question, public_exercise,
 )
 from .vocab import DEFAULT_LEVEL, coding_languages, concept_ids, tier_of
 
@@ -121,12 +121,12 @@ class VideoState:
 
 
 def planned_kind(section: Section, slot: PauseSlot) -> str:
-    """Coding first wherever the section shows code in a language we can grade (any trigger,
-    including concept_complete). Concept questions stay for theory, unsupported languages and,
-    in ``_one``, exercises that fail generation or the sandbox verify."""
-    if section.language in coding_languages() and section.format in ("code", "mixed"):
-        return "coding"
-    return "concept"
+    """Coding first: code in a gradable language is practised in that language, and theory (or
+    language-neutral pseudocode) by implementing the idea in Python (any trigger, including
+    concept_complete). Concept questions, which ask the learner to apply the idea to a new input,
+    stay for code in a language we cannot grade yet and, in ``_one``, for ideas the generator finds
+    not codeable or exercises that fail the sandbox verify."""
+    return "coding" if coding_language_for(section) is not None else "concept"
 
 
 # ---------------------------------------------------------------------------
