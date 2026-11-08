@@ -19,4 +19,17 @@ Keep today's prepared-video flow and Test me working.
 Vitest for scheduling by rank/frequency, controls, watch-time segments and event queueing; MV3 E2E against `exercise-plan.fixture.json` and `exercise-plan-not-coding.fixture.json` through a fixture API.
 
 ## Status
-- [ ] Not started
+- [x] Runtime core implemented on `lane/a3-runtime`: strict v2 validation, ready/rank scheduling, cancellable polling, settings/account observation, per-account solves, honest watch intervals and durable event delivery.
+- [x] Level-aware planning uses `/v2/profile/{id}/levels`; polls repeat the exact idempotent POST body (A1 clarification 6716434820), so another account's latest GET cannot replace this learner's map. Submit/answer/hint read the active concept level with beginner fallback.
+- [x] Shared popup helpers: `src/plan/preferences.ts` exports `loadLearnerSettings`, `saveLearnerSettings`, `loadActiveAccount`, `setActiveAccount`. Save failures propagate to the UI. Constants follow `src/v2/types.ts`.
+- [x] Unit/typecheck validation: 74 Vitest tests pass. Includes scheduler readiness/ranks, controls, navigation cancellation, account/revision storage isolation, watch segments, offline/restart/partial-ACK event delivery, and API identity checks.
+- [x] Existing prepared/Test me integration: 54 opt-in MV3 checks passed on desktop/narrow (plus two default-off checks in a separate default build). No live-provider calls or manual Chrome claims.
+- [x] Merged B2/B1 main through ba1666e. Runtime uses B2's `conceptLevels`, `feedback: {result, submittedCode}`, and `manualResume`; removed the duplicate adjacent FeedbackCard. Concept errors/rejected resume and TopicNotAvailable use the real components.
+- [x] Watch-page Practice settings mounts B2's controlled settings view with videoId, enabling Never pause on this video. Writes use A3's preference helper and report storage errors; the shared storage observer enforces changes across tabs.
+- [x] Eight additional isolated built-MV3 desktop/narrow probes passed: coding and concept submission, exactly one feedback view, explicit Resume, passed-event emission, not-coding dismissal, and per-video opt-out. 74 unit tests, typecheck, default build and diff check pass after integration. The temporary probes were removed; permanent plan E2E remains B2-owned.
+- [x] Merged main through 2bd68c4 per lead request 6716821430, including A1 planner registration/languages and B2 account-aware drafts/language labels. The wired accountId/language props now reach those components. Rechecked 74 unit tests, typecheck, default build, ten desktop/narrow account-draft and language presentation checks, and 51 planner tests (one skipped).
+- [ ] B2 still configures the installed non-Python parser modes and fixes editor collapse. Refresher orchestration and timeline markers remain separate follow-up work; timeline work starts after PR #5 lands (6716740412).
+- [x] Added B2-requested pinned JavaScript/Java/C++/SQL/Rust/legacy CodeMirror parser dependencies (6716718913) to the owned package/lockfile and wired the optional exercise.language prop. B2 configures parser modes in its editor; no B2 files changed.
+- [ ] User's hint/editor-collapse bug is confirmed in live Edge and reported in 6716739252: on the prepared exponent challenge at 2:43:23, three hints reduce the editor card from 211.33px to 1.33px (scrollHeight 210px). B2 owns the CSS fix. Before/after screenshots captured; no user code/draft changed and no grading performed. This is Edge evidence, not manual Chrome acceptance or full live v2 acceptance.
+
+The long-hint fix shipped separately as 02172aa (PR #2), merged by Divakar with green CI. The app watcher is the sole listener, explicitly authorized by the human; no CLI watcher is needed.
