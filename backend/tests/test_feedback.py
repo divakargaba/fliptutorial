@@ -225,7 +225,9 @@ async def test_diagnose_with_stub_model():
     model_response = json.dumps({
         "misconceptionId": "off-by-one",
         "misconceptionName": "Off by one",
-        "explanation": "The loop runs one too few times.",
+        "whatWentWrong": "For f(5) the loop stops before adding 5.",
+        "why": "range(n) stops one short of n.",
+        "howToFix": "Make the range include n.",
         "lines": [{"line": 3, "note": "range should include n"}],
     })
 
