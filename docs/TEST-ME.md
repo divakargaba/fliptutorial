@@ -1,11 +1,11 @@
-# "Test me" — spec (stretch scope, off by default)
+# "Test me" — spec (enabled by default)
 
 Status: approved by @divakargaba on 2026-11-07 (board #6714669105). Tasks T1–T9 and
 owners are in `PLAN.md` → "Test me" feature; wire contract in `contracts/README.md`.
 
 ## What it is
 
-A **Test me** button next to the Breakpoint badge on any captioned Python tutorial,
+A **Test me** button next to the Breakpoint badge on captioned tutorials in a supported coding language,
 including videos we never prepared. Pressing it pauses the video. The backend takes
 the captions spoken up to that moment, has Claude (Anthropic API) write one coding exercise about
 what was just taught, checks it, and serves it in the same practice panel. Grading
@@ -15,7 +15,7 @@ quiz is phase 2 (T8/T9) and starts only after T7 passes.
 ## Decisions
 
 1. Stretch scope beyond the PRD's "live preparation of arbitrary videos" exclusion,
-   behind a setting that is **off by default**.
+   enabled by default. Set `WXT_TESTME_ENABLED=false` at build time or `BREAKPOINT_TESTME=false` on the backend only to opt out.
 2. A generated exercise is served only if its reference solution passes **every**
    test and its known-wrong solution fails **at least one**. Both checks run in
    Judge0, never on our machine (generated code is untrusted).
@@ -32,13 +32,13 @@ quiz is phase 2 (T8/T9) and starts only after T7 passes.
 content script ──testMe{videoId,timestampS}──▶ background (20 s timeout)
   │ pauses video, shows loading                       │
   │                                                   ▼
-  │                                  POST /v1/test-me (setting must be on)
+  │                                  POST /v1/test-me (enabled by default)
   │                                                   │
   │              transcripts.get(videoId)  ── cache (6 h hit / 10 min no-captions)
   │                     │  innertube player → English track (uploader > ASR) → json3
   │                     ▼
   │              transcripts.clip(t, timestampS)  ── only speech before the moment,
-  │                     │                           ≥180 s, ≤900 s / 12k chars lookback
+  │                     │                           past context, ≤900 s / 12k chars lookback
   │                     ▼
   │              testme.generate(clip, verify)   ── set cache (videoId + last cue id)
   │                     │  rate limit 10/min → Claude structured output
@@ -65,7 +65,7 @@ Errors (API error shape `{ error: { code, message, retryable }, requestId }`):
 | --- | --- | --- | --- |
 | `NO_CAPTIONS` | 404 | no | No English caption track, or it is empty |
 | `NOT_PYTHON` | 422 | no | The tutorial so far is not Python code |
-| `TOO_EARLY` | 422 | no | Under 180 s of transcript before `timestampS` |
+| `TOO_EARLY` | 422 | no | No past captions or no codeable concept taught at `timestampS` |
 | `GENERATOR_UNAVAILABLE` | 503 | yes | No key, Anthropic/YouTube error, no valid exercise after retry, Judge0 check unavailable |
 | `GENERATOR_TIMEOUT` | 504 | yes | The whole generation (model call + Judge0 checks) exceeded its budget |
 | `SET_EXPIRED` | 410 | no | `/v1/submissions` for a set past its TTL |
@@ -89,7 +89,7 @@ Time budget: the extension waits 20 s, so the backend budget is 18 s end to end
 - Cache in memory: 6 h for transcripts, 10 min for `NO_CAPTIONS`, 64 videos (oldest
   evicted). Network failures are not cached. Concurrent requests share one fetch.
 - `clip(transcript, timestampS)`: cues starting before the moment, last cue end trimmed
-  to the moment; `TOO_EARLY` under 180 s; keeps the most recent ≤900 s / 12,000 chars.
+  to the moment; `TOO_EARLY` when no past captions exist (the generator can also return it when nothing codeable has been taught); keeps the most recent ≤900 s / 12,000 chars.
 - Caption text is never logged.
 
 ## Generator (`backend/app/testme.py`, T2)
@@ -134,8 +134,9 @@ Time budget: the extension waits 20 s, so the backend budget is 18 s end to end
 
 ## UI (T5 @abdullahwarv2, T6 @reyanshBadhwar26)
 
-"Test me" button near the badge, shown only when the setting is on and no prepared
-breakpoint is active. Press → pause → loading state in the panel → exercise with the
+"Test me" is a compact Bonus action beside the badge, enabled by default and hidden
+while an exercise is active. It accepts the current position, including the end of
+the video; ads, fullscreen, seeking and an unready player remain guarded. Press → pause → loading state in the panel → exercise with the
 "AI-generated practice" label on every generated screen (statement, results, solved).
 Error states for every code above keep playback paused with Close/Resume reachable;
 retryable codes offer "Try again".
@@ -151,6 +152,6 @@ retryable codes offer "Try again".
   success, verify failure, cache hit without a model call, TTL expiry, rate limit,
   hidden data absent from the public shape.
 - T3/T4 (@divakargaba): Judge0 check method, endpoint error codes, `SET_EXPIRED`,
-  setting off by default, fixture.
+  enabled by default with explicit opt-out, fixture.
 - T7: real YouTube, 2 unprepared videos, 1× and 2×, 3 clean runs, times in
   PLAN.md Measured results.

@@ -49,7 +49,7 @@ through failure and Solved, rejected-resume recovery, six API generation errors,
 explicit retries, cancellation/navigation/native playback during generation, and
 expired-set draft recovery through Chrome storage. They use a local fixture API,
 not FastAPI, captions, the Anthropic API or Judge0. The normal suite skips these opt-in cases
-and checks that the default build hides Test me. T7 owns live provider validation.
+and checks that an explicit `WXT_TESTME_ENABLED=false` build hides Test me. The normal build enables it. T7 owns live provider validation.
 
 The already-paused cases start real media, pause it with the native media method,
 then open Test me and pass Submit. Both efficient and inefficient reviews must
