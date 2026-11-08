@@ -7,7 +7,9 @@ Endpoints (all under /v2):
   POST /events                          {events: [...]} -> {accepted, duplicates, rejected[]}  (idempotent by id)
   GET  /accounts                        -> {accounts: [{accountId, displayName, public}]}
   GET  /profile/{accountId}             -> public-profile shape (watch history never included)
-  GET  /profile/{accountId}/level/{concept} -> level for lanes A2/A3 (+ private per-concept stats)
+  GET  /profile/{accountId}/level/{concept} -> {accountId, concept, level, levelName, rank, xp, strength}
+                                           (unknown -> beginner-1; ?detail=true adds private per-concept stats)
+  GET  /profile/{accountId}/levels      -> {accountId, levels: {conceptId: levelId}}
   GET  /refresher/{accountId}           -> {accountId, concept, conceptName, strength, reason, question} or 204
   GET  /skills/in-demand                -> {asOf, method, skills[]}   (?accountId= personalises the top 3)
   GET  /matches/{accountId}             -> {accountId, matches: [{accountId, displayName, why, score, fullStack}]}
@@ -134,40 +136,58 @@ def profile(account_id: str, now: str | None = Query(default=None)) -> JSONRespo
     return JSONResponse(build_profile(store, acct, when))
 
 
+def _replay_if_known(store: ProfileStore, account_id: str, now: datetime) -> engine.Replay:
+    """Unknown accounts read as brand-new learners (everyone starts at beginner-1)."""
+    if store.get_account(account_id) is None:
+        return engine.Replay({}, {})
+    return _replay(store, account_id, now)
+
+
 @router.get("/profile/{account_id}/level/{concept}")
-def level(account_id: str, concept: str, now: str | None = Query(default=None)) -> JSONResponse:
-    store = get_store()
-    acct = _account_or_404(store, account_id)
-    if isinstance(acct, JSONResponse):
-        return acct
-    if concept not in engine.CONCEPTS:
-        return _error(404, "UNKNOWN_CONCEPT", f"unknown concept {concept!r} (see contracts/v2/concepts.json)")
+def level(
+    account_id: str, concept: str, now: str | None = Query(default=None), detail: bool = Query(default=False)
+) -> JSONResponse:
+    """LevelInfo `{accountId, concept, level, levelName, rank, xp, strength}` exactly (contract §4);
+    unknown account or concept -> beginner-1, rank 1, xp 0, strength 0. `?detail=true` adds private extras."""
     try:
         when = _now(now)
     except ValueError:
         return _bad_now()
-    rep = _replay(store, account_id, when)
+    rep = _replay_if_known(get_store(), account_id, when)
     st = rep.concepts.get(concept) or engine.ConceptState(concept)
-    lv, nxt = st.level, engine.next_level(st.level)
+    lv = st.level
     strength = st.strength(when)
-    return JSONResponse({
-        "accountId": account_id,
-        "concept": concept,
-        "conceptName": engine.CONCEPTS[concept]["name"],
-        "level": lv["id"],
-        "levelName": lv["name"],
-        "tier": lv["tier"],
-        "rank": lv["rank"],
-        "xp": int(st.xp),
-        "nextLevel": {"level": nxt["id"], "levelName": nxt["name"], "minXp": nxt["minXp"]} if nxt else None,
-        "strength": strength,
-        "refresherDue": st.active and strength < engine.REFRESHER_THRESHOLD,
-        # Private to the learner's own extension; never part of the public profile.
-        "stats": {
-            "watchedS": rep.watched_for(st), "practiced": st.practiced, "passed": st.passed,
-            "failed": st.failed, "skipped": st.skipped, "hintsUsed": st.hints_used, "refreshers": st.refreshers,
-        },
-    })
+    body = {
+        "accountId": account_id, "concept": concept, "level": lv["id"], "levelName": lv["name"],
+        "rank": lv["rank"], "xp": int(st.xp), "strength": strength,
+    }
+    if detail:
+        nxt = engine.next_level(lv)
+        body.update({
+            "conceptName": engine.CONCEPTS.get(concept, {}).get("name"),
+            "tier": lv["tier"],
+            "nextLevel": {"level": nxt["id"], "levelName": nxt["name"], "minXp": nxt["minXp"]} if nxt else None,
+            "refresherDue": st.active and strength < engine.REFRESHER_THRESHOLD,
+            # Private to the learner's own extension; never part of the public profile.
+            "stats": {
+                "watchedS": rep.watched_for(st), "practiced": st.practiced, "passed": st.passed,
+                "failed": st.failed, "skipped": st.skipped, "hintsUsed": st.hints_used, "refreshers": st.refreshers,
+            },
+        })
+    return JSONResponse(body)
+
+
+@router.get("/profile/{account_id}/levels")
+def levels(account_id: str, now: str | None = Query(default=None)) -> JSONResponse:
+    """`{accountId, levels: {conceptId: levelId}}` for every concept the learner has practiced
+    (A3 sends this as POST /v2/plan `learnerLevels`). Unknown account -> empty map."""
+    try:
+        when = _now(now)
+    except ValueError:
+        return _bad_now()
+    rep = _replay_if_known(get_store(), account_id, when)
+    known = {cid: st.level["id"] for cid, st in sorted(rep.concepts.items()) if st.active or st.xp > 0}
+    return JSONResponse({"accountId": account_id, "levels": known})
 
 
 @router.get("/refresher/{account_id}", response_model=None)
