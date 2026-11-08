@@ -51,8 +51,8 @@ class SuccessFeedback(BaseModel):
 SUCCESS_SCHEMA = {
     "type": "object",
     "properties": {
-        "explanation": {"type": "string", "description": "1-2 sentences explaining what concept the exercise tested and what the learner demonstrated."},
-        "summary": {"type": "string", "description": "One friendly sentence about the learner's solution efficiency."},
+        "explanation": {"type": "string", "description": "1-2 sentences, addressed to the learner as you: what concept the exercise tested and what you demonstrated."},
+        "summary": {"type": "string", "description": "One friendly sentence, addressed as you, about your solution's efficiency."},
         "learnerTime": {"type": "string"},
         "learnerSpace": {"type": "string"},
         "bestTime": {"type": "string"},
@@ -66,8 +66,9 @@ SUCCESS_SCHEMA = {
 }
 
 SYSTEM_PROMPT = """You review a learner's code that passed every test for a coding exercise.
+Write every text field directly to the learner in the second person ("you"), never "the learner".
 
-1. Explain in 1-2 sentences what concept this exercise tested and what the learner demonstrated.
+1. Explain in 1-2 sentences what concept this exercise tested and what you (the learner) demonstrated.
 2. Judge the solution's time and extra-space complexity in Big-O.
 3. Compare with the best practical approach for this problem.
 4. If the learner is not optimal, suggest a faster solution defining the same function.
