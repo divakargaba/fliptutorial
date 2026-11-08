@@ -19,7 +19,8 @@ DEFAULT_LEVEL = "beginner-1"
 # fails). Python uses the v1 grader; the others need lane A2's runners (``app.runners``).
 # Other languages (and these, while the runners are absent) get concept questions.
 CODING_LANGUAGES = ("python",)
-RUNNER_CODING_LANGUAGES = ("javascript", "java", "cpp")
+# Function-style runners first, then whole programs graded on stdin/stdout (app.runners.stdio_runner).
+RUNNER_CODING_LANGUAGES = ("javascript", "java", "cpp", "typescript", "c", "csharp", "go", "rust")
 
 
 @lru_cache(maxsize=1)

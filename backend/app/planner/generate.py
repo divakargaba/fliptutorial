@@ -143,6 +143,7 @@ class LangRules:
     defines: str  # regex template; FN is replaced by the escaped function name
     forbidden: re.Pattern
     allow_null: bool
+    stdio: bool = False  # whole program graded on stdin/stdout (app.runners.stdio_runner)
 
 
 _CPP_HEADERS = "algorithm|cmath|climits|cctype|map|set|unordered_map|unordered_set|numeric|string|vector|iostream"
@@ -184,6 +185,63 @@ LANG_RULES: dict[str, LangRules] = {
         False,
     ),
 }
+
+# Whole-program languages graded on stdin/stdout. functionName is "main"; every case's argsJson is a
+# one-string array (the full stdin) and expectedJson is the exact printed text.
+_STDIO_COMMON = ("A complete program that reads its whole input from standard input, solves the task and prints "
+                 "the answer to standard output (no prompts or extra text, no files, network or processes). ")
+STDIO_RULES: dict[str, LangRules] = {
+    "typescript": LangRules(
+        "TypeScript",
+        _STDIO_COMMON + "Read input with `const input: string = require(\"fs\").readFileSync(0, \"utf8\");` "
+        "(declare `declare const require: any;` first) and print with console.log. No other require or import. "
+        "starterCode reads the input and prints a placeholder.",
+        r"readFileSync\s*\(\s*0",
+        re.compile(r"\b(?:child_process|http|https|net|dgram|worker_threads|cluster|fetch|eval)\b"
+                   r"|\bimport\s|writeFile|unlink|\bprocess\s*\.\s*(?:exit|env|kill)", re.M),
+        False, stdio=True,
+    ),
+    "c": LangRules(
+        "C",
+        _STDIO_COMMON + "One file with `int main(void)` that reads with scanf/fgets and prints with printf; only "
+        "<stdio.h>, <stdlib.h>, <string.h>, <ctype.h>, <math.h>, <limits.h>, <stdbool.h> includes. starterCode "
+        "reads the input and prints a placeholder.",
+        r"\bint\s+main\s*\(",
+        re.compile(r"#\s*include\s*<(?!(?:stdio|stdlib|string|ctype|math|limits|stdbool)\.h>)|#\s*include\s*\x22"
+                   r"|\b(?:system|popen|fork|exec\w*|fopen|freopen|remove|rename)\s*\(|\basm\b", re.M),
+        False, stdio=True,
+    ),
+    "csharp": LangRules(
+        "C#",
+        _STDIO_COMMON + "A `class Program { static void Main() { ... } }` that reads with Console.ReadLine() or "
+        "Console.In.ReadToEnd() and prints with Console.WriteLine; only `using System;`, `System.Linq`, "
+        "`System.Collections.Generic` and `System.Text`. starterCode reads the input and prints a placeholder.",
+        r"\bstatic\s+(?:void|int)\s+Main\s*\(",
+        re.compile(r"\busing\s+(?!System\s*;|System\.Linq\s*;|System\.Collections\.Generic\s*;|System\.Text\s*;)"
+                   r"|\bSystem\.(?:IO\.File|Net|Diagnostics|Reflection|Threading)\b|\bProcess\b|\bFile\s*\.", re.M),
+        False, stdio=True,
+    ),
+    "go": LangRules(
+        "Go",
+        _STDIO_COMMON + "`package main` with `func main()`, reading with bufio/fmt from os.Stdin and printing with "
+        "fmt; only fmt, bufio, os, strings, strconv, sort and math imports, and os only for os.Stdin. starterCode "
+        "reads the input and prints a placeholder (no unused imports or variables, or it will not compile).",
+        r"\bpackage\s+main\b[\s\S]*\bfunc\s+main\s*\(\s*\)",
+        re.compile(r"\"(?:net|os/exec|syscall|unsafe|io/ioutil|plugin|runtime|path/filepath)(?:/[\w/]*)?\""
+                   r"|\bos\s*\.\s*(?!(?:Stdin|Stdout)\b)\w+|\bexec\s*\.|\bsyscall\s*\.|\bunsafe\s*\.", re.M),
+        False, stdio=True,
+    ),
+    "rust": LangRules(
+        "Rust",
+        _STDIO_COMMON + "`fn main()` reading with std::io::stdin().read_to_string or read_line (`use std::io::Read;` "
+        "as needed) and printing with println!; only std::io and std::collections. starterCode reads the input and "
+        "prints a placeholder (prefix unused variables with _ so it compiles).",
+        r"\bfn\s+main\s*\(\s*\)",
+        re.compile(r"\bstd\s*::\s*(?:process|fs|net|env|thread)\b|\bunsafe\b|\bextern\b|\bCommand\b", re.M),
+        False, stdio=True,
+    ),
+}
+LANG_RULES.update(STDIO_RULES)
 
 
 LANGUAGE_NEUTRAL = ("pseudocode", "unknown")
@@ -242,6 +300,18 @@ def coding_prompt(c: Clip, section: Section, pause: PauseSlot, tier: str, feedba
                  "- functionName is a plain identifier (the function or method name); ")
         runnable = f"compiling {r.name}"
         values = "integers, strings, booleans or null only" if r.allow_null else "integers, strings or booleans only (no null)"
+        if r.stdio:
+            shape = shape.replace("- functionName is a plain identifier (the function or method name); ",
+                                  '- functionName is "main"; ')
+    cases = ("- 1-2 examples and 3-5 hiddenTests, all inputs different. argsJson is ALWAYS a JSON array with one "
+             "element per parameter (f(5) -> \"[5]\"). expectedJson is one JSON value: "
+             f"{values}.\n")
+    what = "names the function and what it returns"
+    if language != "python" and LANG_RULES[language].stdio:
+        cases = ("- 1-2 examples and 3-5 hiddenTests, all inputs different. argsJson is a JSON array holding exactly "
+                 'ONE string: the full text on standard input (e.g. ["3 4\\n"]). expectedJson is a JSON string: '
+                 'exactly what the program prints (e.g. "7"); trailing spaces and newlines are ignored.\n')
+        what = "describes the input format and exactly what to print"
     return (
         "You write one short practice exercise for a learner watching a programming tutorial. The video "
         "is paused here; below is what the instructor said before the pause (nothing after it).\n"
@@ -252,10 +322,8 @@ def coding_prompt(c: Clip, section: Section, pause: PauseSlot, tier: str, feedba
         f"referenceSolution is correct; knownWrongSolution is {runnable} with a plausible logic mistake "
         "(never a syntax error) that fails at least one hidden test. Describe it in wrongMistake and put "
         "the argsJson of a hidden test it fails into wrongFailsOnArgsJson.\n"
-        "- 1-2 examples and 3-5 hiddenTests, all inputs different. argsJson is ALWAYS a JSON array with one "
-        "element per parameter (f(5) -> \"[5]\"). expectedJson is one JSON value: "
-        f"{values}.\n"
-        "- title <= 80 chars; statement <= 600 chars, names the function and what it returns.\n"
+        f"{cases}"
+        f"- title <= 80 chars; statement <= 600 chars, {what}.\n"
         f"- conceptTags from: {', '.join(concept_ids())}.\n"
         "- conceptEvidenceCueIds: cue ids (copied from the brackets) where the idea is taught.\n"
         "- languageEvidence: the words that show the language.\n"
@@ -303,6 +371,12 @@ def check_coding(out: GenOutput, c: Clip, exercise_id: str, language: str) -> tu
     cases = examples + hidden
     if not r.allow_null and any(v is None for args, exp in cases for v in [*args, exp]):
         raise _CheckFailed(f"{r.name} cases cannot use null")
+    if r.stdio:
+        if fn != "main":
+            raise _CheckFailed('functionName must be "main" for a whole program')
+        if any(len(args) != 1 or not isinstance(args[0], str) or not isinstance(exp, str) or not exp.strip()
+               for args, exp in cases):
+            raise _CheckFailed("each argsJson must be one stdin string and each expectedJson the printed text as a string")
     if len({len(args) for args, _ in cases}) != 1:
         raise _CheckFailed("every case must pass the same number of arguments")
     seen = [json.dumps(args) for args, _ in cases]
