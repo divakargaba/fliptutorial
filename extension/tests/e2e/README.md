@@ -45,6 +45,20 @@ expired-set draft recovery through Chrome storage. They use a local fixture API,
 not FastAPI, captions, the Anthropic API or Judge0. The normal suite skips these opt-in cases
 and checks that the default build hides Test me. T7 owns live provider validation.
 
+The already-paused cases start real media, pause it with the native media method,
+then open Test me and pass Submit. Both efficient and inefficient reviews must
+request analysis with the generated exercise id and setId, show the verdict, and
+keep the same paused frame beyond the solved hold. Closing the panel must also
+preserve that pause. A cache-reopen case returns the same generated exercise twice
+and requires a fresh review instead of the previous attempt's verdict.
+
+```powershell
+$env:WXT_TESTME_ENABLED = 'true'
+$env:WXT_API_BASE_URL = 'http://127.0.0.1:8019'
+npm.cmd run test:e2e -- --project mv3-desktop --project mv3-narrow --grep 'already-paused|reopening a cached'
+Remove-Item Env:WXT_TESTME_ENABLED, Env:WXT_API_BASE_URL
+```
+
 The rejected-resume case injects a rejected `play()` only in the content script's
 isolated world, then restores it before checking the Resume video button. Other
 flows use the browser's normal media methods.

@@ -1,9 +1,71 @@
 import { expect } from '@playwright/test';
-import { correctCode, expectPlaying, generated, test } from './extension.fixture';
+import { analysisFixture, correctCode, expectPlaying, generated, test } from './extension.fixture';
 
 test.describe('opt-in Test me through the built worker', () => {
   test.skip(process.env.WXT_TESTME_ENABLED !== 'true', 'Build with WXT_TESTME_ENABLED=true.');
   test.use({ preparedVideo: false });
+
+  for (const optimal of [true, false]) {
+    test(`already-paused Submit requests ${optimal ? 'efficient' : 'inefficient'} review without autoplay`, async ({ app }, info) => {
+      const { page } = app;
+      app.holdAnalysis = true;
+      if (!optimal) app.analysis = analysisFixture;
+      await page.locator('#start').click();
+      await page.locator('video').evaluate(video => video.pause());
+      const pausedAt = await page.locator('video').evaluate(video => video.currentTime);
+      await page.getByRole('button', { name: 'Test me', exact: true }).click();
+      await page.getByRole('textbox', { name: 'Python code' }).fill(correctCode);
+      await page.getByRole('button', { name: 'Submit', exact: true }).click();
+      await expect.poll(() => app.analyses.length).toBe(1);
+      expect(app.analyses[0]).toEqual({ exerciseId: generated.exercise.id, revision: generated.setId, code: correctCode });
+      await expect(page.getByText('Checking how efficient your solution is…')).toBeVisible();
+      await app.release();
+      if (optimal) await expect(page.locator('.bp-efficiency.is-optimal')).toBeVisible();
+      else {
+        await expect(page.getByText('You passed, and it can be faster')).toBeVisible();
+        await page.getByRole('button', { name: 'Show a faster solution' }).click();
+        await expect(page.locator('.bp-better-code')).toHaveText(analysisFixture.betterSolution!);
+      }
+      // Observe beyond the production solved hold: review must not claim a native pause.
+      await page.waitForTimeout(2000);
+      await expect(page.getByRole('heading', { name: 'Solved', exact: true })).toBeVisible();
+      expect(await page.locator('video').evaluate(video => ({ paused: video.paused, time: video.currentTime })))
+        .toEqual({ paused: true, time: pausedAt });
+      await page.screenshot({ path: info.outputPath(`test-me-native-pause-${optimal ? 'efficient' : 'inefficient'}.png`), animations: 'disabled' });
+      await page.getByRole('button', { name: 'Close practice', exact: true }).click();
+      await expect(page.locator('.bp-panel')).toHaveCount(0);
+      expect(await page.locator('video').evaluate(video => video.paused)).toBe(true);
+    });
+  }
+
+  test('reopening a cached generated exercise gets a fresh review for its new attempt', async ({ app }) => {
+    const { page } = app;
+    app.analysis = analysisFixture;
+    await page.locator('#start').click();
+    await page.getByRole('button', { name: 'Test me', exact: true }).click();
+    await page.getByRole('textbox', { name: 'Python code' }).fill(correctCode);
+    await page.getByRole('button', { name: 'Submit', exact: true }).click();
+    await expect(page.getByText('You passed, and it can be faster')).toBeVisible();
+    await page.getByRole('button', { name: 'Close practice', exact: true }).click();
+    await expectPlaying(page);
+    await page.locator('video').evaluate(video => video.pause());
+    app.analysis = { ...analysisFixture, optimal: true, best: analysisFixture.learner, betterSolution: null };
+    app.holdAnalysis = true;
+    // The API returns the identical exercise id and setId, as a backend cache hit would.
+    await page.getByRole('button', { name: 'Test me', exact: true }).click();
+    await expect(page.getByRole('textbox', { name: 'Python code' })).toHaveText(correctCode);
+    await page.getByRole('button', { name: 'Submit', exact: true }).click();
+    await expect.poll(() => app.analyses.length).toBe(2);
+    await expect(page.getByText('Checking how efficient your solution is…')).toBeVisible();
+    await expect(page.getByText('You passed, and it can be faster')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Show a faster solution' })).toHaveCount(0);
+    await app.release();
+    await expect(page.locator('.bp-efficiency.is-optimal')).toBeVisible();
+    await page.waitForTimeout(2000);
+    expect(await page.locator('video').evaluate(video => video.paused)).toBe(true);
+    expect(app.generations).toHaveLength(2);
+    expect(app.analyses[1]).toEqual(app.analyses[0]);
+  });
 
   test('unprepared video pauses, generates, grades with setId and resumes', async ({ app }, info) => {
     const { page } = app;
