@@ -47,7 +47,12 @@ if gitdir=$(git rev-parse --absolute-git-dir 2>/dev/null); then
 else
   STATE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/board"
 fi
-mkdir -p "$STATE_DIR"
+# Sandboxed agents (e.g. Codex) may not write .git; fall back to the ignored .autopilot/ in the work tree.
+if ! { mkdir -p "$STATE_DIR" 2>/dev/null && [[ -w "$STATE_DIR" ]]; }; then
+  top=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+  STATE_DIR="$top/.autopilot/board-state"
+  mkdir -p "$STATE_DIR" || die "cannot create board state directory (tried .git/board and $STATE_DIR)"
+fi
 KEY="${REPO//\//_}-$ISSUE"
 CONSUMER="${BOARD_CONSUMER:-default}"
 [[ "${1:-}" == hook && -z "${BOARD_CONSUMER:-}" ]] && CONSUMER=claude-hooks
