@@ -16,15 +16,67 @@ export function LevelUp({ concept, level }: { concept: string; level: LevelId })
   return <p className="bp-v2 bp-v2-levelup" role="status">Level up! {conceptName(concept)} · {levelName(level)}</p>;
 }
 
+// What one practice event earned (GET /v2/profile/{accountId}/award/{eventId}, lane B1).
+export type AwardLevel = { level: LevelId; levelName: string; rank: number; minXp: number };
+export type AwardItem = {
+  concept: string; conceptName: string; primary: boolean; xpGained: number; xpBefore: number; xp: number;
+  levelBefore: AwardLevel; level: AwardLevel; nextLevel: AwardLevel | null; xpToNext: number; progress: number; leveledUp: boolean;
+};
+export type Award = { accountId: string; eventId: string; type: string; totalXpGained: number; leveledUp: boolean; awards: AwardItem[] };
+
+const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+const share = (xp: number, lv: AwardLevel, next: AwardLevel | null) =>
+  next && next.minXp > lv.minXp ? Math.max(0, Math.min(1, (xp - lv.minXp) / (next.minXp - lv.minXp))) : 1;
+
+function ProgressRow({ item, delayMs }: { item: AwardItem; delayMs: number }) {
+  // Animate from where the learner was in this level (0 after a level-up) to where they are now.
+  const from = item.leveledUp ? 0 : share(item.xpBefore, item.level, item.nextLevel);
+  const [width, setWidth] = useState(reducedMotion() ? item.progress : from);
+  useEffect(() => {
+    if (reducedMotion()) return;
+    const timer = setTimeout(() => setWidth(item.progress), 60 + delayMs);
+    return () => clearTimeout(timer);
+  }, [item.progress, delayMs]);
+  const known = conceptName(item.concept);
+  const name = known !== item.concept ? known : item.conceptName || item.concept;
+  const gained = Math.round(item.xpGained);
+  return <li className="bp-v2-progress-row" style={{ listStyle: 'none', margin: item.primary ? '10px 0 0' : '8px 0 0', fontSize: item.primary ? 14 : 12 }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'baseline' }}>
+      <strong style={{ fontWeight: item.primary ? 600 : 500 }}>{name} <span className="bp-v2-chip" style={{ marginBottom: 0 }}>{item.level.levelName}</span></strong>
+      <span style={{ color: 'var(--bp-pass)', fontWeight: 600, whiteSpace: 'nowrap' }}>{gained > 0 ? `+${gained} XP` : '+0 XP'}</span>
+    </div>
+    <div aria-hidden="true" style={{ height: item.primary ? 8 : 6, borderRadius: 99, background: 'var(--bp-chip)', overflow: 'hidden', marginTop: 6 }}>
+      <span style={{ display: 'block', height: '100%', width: `${Math.max(width * 100, 2)}%`, borderRadius: 99, background: 'var(--bp-pass)',
+        transition: `width 900ms var(--bp-ease-out, ease-out) ${delayMs}ms` }} />
+    </div>
+    <progress className="sr-only" aria-label={`${name} progress to the next level`} value={item.progress} max={1} />
+    <small style={{ display: 'block', marginTop: 4, color: 'var(--bp-text-2, inherit)' }}>
+      {Math.floor(item.xp)} XP · {item.nextLevel ? `${Math.ceil(item.xpToNext)} XP to ${item.nextLevel.levelName}` : 'Max level'}
+    </small>
+    {item.leveledUp && <LevelUp concept={item.concept} level={item.level.level} />}
+  </li>;
+}
+
+/** Duolingo-style "what you just earned" card shown after a pass or a correct answer. */
+export function ProgressCard({ award }: { award: Award }) {
+  const items = [...award.awards].sort((a, b) => Number(b.primary) - Number(a.primary));
+  const total = Math.round(award.totalXpGained);
+  return <section className="bp-v2 bp-v2-card bp-v2-progress" aria-label="Your progress" role="status" style={{ padding: 12 }}>
+    <p style={{ margin: 0, fontSize: 22, fontWeight: 700, color: 'var(--bp-pass)' }}>+{total} XP</p>
+    <ul style={{ padding: 0, margin: 0 }}>{items.map((item, i) => <ProgressRow key={item.concept} item={item} delayMs={i * 120} />)}</ul>
+  </section>;
+}
+
 export type ConceptQuestionPanelProps = {
   question: PlanQuestion; feedback: FeedbackResult | null; checking: boolean;
   error?: { code: string; message: string; retryable: boolean } | null; canResume?: boolean;
+  progress?: Award | null;
   onAnswer(answer: string): void; onSkip(): void; onResume(): void; onClose(): void;
 };
 export function ConceptQuestionPanel(props: ConceptQuestionPanelProps) {
   return <QuestionForm key={`${props.question.id}/${props.question.revision}`} {...props} />;
 }
-function QuestionForm({ question, feedback, checking, error, canResume, onAnswer, onSkip, onResume, onClose }: ConceptQuestionPanelProps) {
+function QuestionForm({ question, feedback, checking, error, canResume, progress, onAnswer, onSkip, onResume, onClose }: ConceptQuestionPanelProps) {
   const [answer, setAnswer] = useState('');
   const title = useId();
   const group = useId();
@@ -51,6 +103,7 @@ function QuestionForm({ question, feedback, checking, error, canResume, onAnswer
         {error && <p role="alert">{error.message}{error.retryable ? ' Try your answer again, or skip and watch.' : ' Skip and watch to continue.'}</p>}
         {canResume && <p role="status">The browser didn’t resume playback. Try Resume video again.</p>}
         {feedback && <FeedbackCard feedback={feedback} code="" />}
+        {passed && progress && <ProgressCard award={progress} />}
         <div className="bp-v2-actions"><PracticeMore onLater={onSkip} />
           {passed ? <button type="button" className="bp-v2-primary" onClick={onResume}>Resume video</button>
             : <button className="bp-v2-primary" disabled={checking || !answer.trim()}>{checking ? 'Checking…' : 'Check answer'}</button>}</div>

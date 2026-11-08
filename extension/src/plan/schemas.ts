@@ -88,6 +88,7 @@ export const PlanMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('levelV2'), accountId: id, concept: id }).strict(),
   z.object({ type: z.literal('levelsV2'), accountId: id }).strict(),
   z.object({ type: z.literal('refresherV2'), accountId: id }).strict(),
+  z.object({ type: z.literal('awardV2'), accountId: id, eventId: id }).strict(),
   z.object({ type: z.literal('eventsV2'), events: z.array(PracticeEventSchema).min(1).max(100) }).strict(),
 ]);
 export type PlanMessage = z.infer<typeof PlanMessageSchema>;
