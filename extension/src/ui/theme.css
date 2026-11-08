@@ -164,6 +164,9 @@
 .bp-call { color: var(--bp-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bp-arrow { color: var(--bp-text-3); }
 .bp-expected { color: var(--bp-pass); font-weight: 500; white-space: nowrap; }
+.bp-example-stdio { display: grid; align-items: start; }
+.bp-stdio-label { display: block; color: var(--bp-text-2); font-size: 12px; margin-bottom: 4px; }
+.bp-example-stdio pre { margin: 0; font-family: var(--bp-mono); white-space: pre-wrap; overflow-wrap: anywhere; }
 
 .bp-editor-card {
   flex-shrink: 0; min-height: 212px;

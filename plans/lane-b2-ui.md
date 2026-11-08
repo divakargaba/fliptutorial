@@ -18,6 +18,7 @@ Branch `lane/b2-ui`. Contracts: `extension/src/v2/types.ts`, fixtures in `contra
 Preview/MV3 Playwright against the v2 fixtures; contrast check on new views.
 
 ## Status
+- [x] Lead #6719193527: stdio examples for TypeScript/C/C#/Go/Rust render as labeled Input/Output text blocks with preserved whitespace and real newlines, without JSON quotes/escapes. Runner already synced main via ec03e87; origin/main has no commits missing from this lane at checkpoint. Existing function-example presentation is preserved.
 - [x] Implemented concept questions (all three formats), feedback and exact-line CodeMirror diagnosis snapshots, unavailable topic, level chips/level-up, refresher and controlled settings views in `extension/src/ui/v2/`.
 - [x] Implemented real local-profile popup with account selection, XP progress, strength/decay, highlights, up to three recommendations and complementary profiles. Fixture-only data stays in the showcase/tests.
 - [x] Added optional `conceptLevels`, `levelUp`, `feedback: {result, submittedCode}` and `manualResume` to `PracticePanel`; concept questions accept optional API-shaped `error` and `canResume` per A3 request #6716380716.
@@ -77,3 +78,7 @@ Board whoami/unread still fail state-directory mkdir even with the merged fallba
 Completed lead #6718124766: FeedbackCard in extension/src/ui/v2/index.tsx omits the misconception explanation paragraph when its trimmed text equals the summary, matching the existing success-feedback comparison. The misconception heading, distinct explanations, code diagnosis and failing example remain available.
 
 Observed essential checks: npm.cmd run typecheck, npm.cmd run build and git diff --check passed. No test-suite expansion, browser/screenshot run, provider call or live acceptance claimed. tools/board whoami confirmed reyanshBadhwar26; unread succeeded before coding and returned no new posts on refresh. Runner should commit/push this small checkpoint and open one PR for @divakargaba. No git mutations or direct board posts performed.
+
+## Stdio example checkpoint on ec03e87 (2026-11-08)
+
+Completed lead #6719193527 in PracticePanel.tsx and theme.css. Observed: npm ci succeeded with a writable temporary cache after default-cache EPERM; npm run typecheck, npm run build and git diff --check passed. No test expansion, browser/screenshot checks, provider calls or git mutations. Board whoami/unread succeeded and confirmed reyanshBadhwar26; final refresh read through #6719260247, with no new B2 assignment. Runner handoff files prepared for immediate commit/push and PR #38 update; remote mergeability must be confirmed after push.
