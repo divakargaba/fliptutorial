@@ -15,9 +15,20 @@ FORMATS = ("code", "theory", "mixed", "off_topic")
 QUESTION_STYLES = ("multiple_choice", "short_answer", "predict_output")
 DEFAULT_LEVEL = "beginner-1"
 
-# Languages whose coding exercises can be verified in Judge0 today (reference passes,
-# known-wrong fails). Other languages get concept questions until lane A2's runners land.
+# Languages whose coding exercises can be verified in Judge0 (reference passes, known-wrong
+# fails). Python uses the v1 grader; the others need lane A2's runners (``app.runners``).
+# Other languages (and these, while the runners are absent) get concept questions.
 CODING_LANGUAGES = ("python",)
+RUNNER_CODING_LANGUAGES = ("javascript", "java", "cpp")
+
+
+@lru_cache(maxsize=1)
+def coding_languages() -> tuple[str, ...]:
+    try:
+        from ..runners import SUPPORTED_LANGUAGES
+    except ImportError:
+        return CODING_LANGUAGES
+    return CODING_LANGUAGES + tuple(x for x in RUNNER_CODING_LANGUAGES if x in SUPPORTED_LANGUAGES)
 
 
 @lru_cache(maxsize=1)

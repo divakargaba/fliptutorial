@@ -75,9 +75,44 @@ def anthropic_model_call():
     return call
 
 
+async def runner_verify(ex: ApprovedExercise) -> bool:
+    """Non-Python exercises, via lane A2's runner for ``ex.language``: the reference passes every case,
+    the known-wrong solution compiles and fails at least one, and the starter compiles."""
+    import asyncio
+
+    from ..runners import RunnerBusy, RunnerTimeout, RunnerUnavailable, get_runner
+
+    runner = get_runner(ex.language)
+    examples = [{"args": c.args, "expected": c.expected} for c in ex.examples]
+    hidden = [{"args": c.args, "expected": c.expected} for c in ex.hiddenTests]
+
+    async def grade(code: str, mode: str):
+        for _ in range(30):
+            try:
+                return await runner.grade(code, ex.functionName, examples, hidden, mode)
+            except RunnerBusy:
+                await asyncio.sleep(1.0)
+        raise RunnerUnavailable("runner stayed busy")
+
+    try:
+        ref = await grade(ex.referenceSolution, "submit")
+        if ref.passedCount != ref.totalCount:
+            return False
+        wrong = await grade(ex.knownWrongSolution, "submit")
+        if wrong.passedCount >= wrong.totalCount or any(r.outcome == "syntax_error" for r in wrong.results):
+            return False
+        starter = await grade(ex.starterCode, "run")
+        return not any(r.outcome == "syntax_error" for r in starter.results)
+    except (RunnerUnavailable, RunnerTimeout):
+        return False
+
+
 async def judge0_verify(ex: ApprovedExercise) -> bool:
     """Reference passes every case and known-wrong fails one, via the app's shared grader."""
     import asyncio
+
+    if ex.language != "python":
+        return await runner_verify(ex)
 
     from .. import main
     from ..grader import VerificationCase

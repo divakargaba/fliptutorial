@@ -46,10 +46,23 @@ Any YouTube video id → a cached, timestamped exercise plan before the learner 
   no translation. Payload cap raised 8 → 48 MB (CS50P's 9 h ASR track is 19 MB and failed before).
 - [x] For A2: `app.planner.find_exercise(id)` returns the PrivateExercise (`.exercise` is a v1 ApprovedExercise with hidden tests and solutions, plus `.revision`,
   `.concepts`, `.level`), and `find_question(id)` returns the PrivateQuestion (`.answer`, `.explanation`, `.style`, `.choices`, `.revision`).
-- Checks: `backend/tests/test_planner.py` passes 21/21 offline (stubbed Claude/Judge0/captions) and the full backend suite passes. Live smoke on 2026-11-08 (port 8011,
+- [x] A2 grading hand-off (`backend/app/planner/grading.py`): each ready exercise/question goes to `app.feedback.register_exercise` /
+  `register_question` when it is generated, and again whenever POST/GET `/v2/plan` serves it. This refills A2's in-memory 2 h TTL store after a
+  restart or expiry. It does nothing while `app.feedback` is still the stub. Verified against `lane/a2-feedback` `e62dfc8`: items land in its store.
+- Checks: `backend/tests/test_planner.py` passes 23/23 (24 with A2 merged) offline (stubbed Claude/Judge0/captions) and the full backend suite passes. Live smoke on 2026-11-08 (port 8011,
   real Claude + ce.judge0.com): `dQw4w9WgXcQ` gave `not_coding` ("only song lyrics…"). `nLRL_NcnK-4` (CS50P) had 18 sections / 13 pauses after the first windows, and the first
   pause was ready in about 1 min; the 2 coding exercises passed Judge0 verify. No secrets were in the public plan. `python -m app.planner.inspect_plan <videoId> <port> [--wait s]` prints a summary.
 - [ ] Goal 6: answer-on-screen check with storyboard frames (today: `question_posed` pauses before the reveal; demonstrations get a new problem).
 - [ ] Proof: `backend/content/eval/` with ≥20 labelled videos and a precision/recall report; auto-pause bar to post.
-- [ ] Classification progress is persisted only when a video is fully classified (a restart mid-way re-classifies it).
-- [ ] Coding exercises in other languages once A2's runners exist.
+- [x] Classification progress is saved after every ~40-min window (`classifyProgress` in the plan cache: windows done, numberer state, caption digest).
+  A restarted backend resumes at the next window with the same section/pause ids and ranks, and reuses items already generated. If the captions changed
+  (digest or window boundaries differ) it reclassifies from scratch. An in-memory `error` is never written to disk. Offline: `test_planner.py` 25 passed + 1 skipped until A2 merges; full backend suite 290 passed / 5 skipped.
+- [x] Coding exercises in JavaScript, Java and C++ via A2's runners (`app.runners`). `vocab.coding_languages()` turns them on only when
+  `app.runners` imports, so before A2 merges they stay concept questions. Each language has a prompt shape that matches A2's wrappers
+  (JS `function f(...)`; Java `class Solution { public static T f(...) }`; C++ a free function using the wrapper's std headers),
+  plus static checks for required shape, banned I/O/process/includes and no null for Java/C++. Verify (`planner.runner_verify`) needs the
+  reference to pass all cases, the known-wrong to compile and fail at least one, and the starter to compile. Otherwise the pause
+  falls back to a concept question. `PrivateExercise.exercise` is a `PlannedExercise` (an `ApprovedExercise` subclass with `language: str`), so
+  A2's `find_exercise` fallback gets the real language. Offline: `tests/test_planner_languages.py` 26/26. Live 2026-11-08: A2's
+  runners at `8a8cacc` on ce.judge0.com verified JS/Java/C++ sum loops, a Java String and a C++ bool exercise; a Java known-wrong
+  that does not compile was rejected. SQL is not planned (its exercises have a different shape).

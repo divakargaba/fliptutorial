@@ -223,6 +223,43 @@ def test_private_items_found_for_grading(tmp_path):
     assert p.find_exercise("nope") is None and p.find_question("nope") is None
 
 
+def test_ready_items_registered_with_feedback_store(tmp_path, monkeypatch):
+    from app import feedback
+
+    exercises: dict[str, dict] = {}
+    questions: dict[str, dict] = {}
+    monkeypatch.setattr(feedback, "register_exercise", lambda **kw: exercises.__setitem__(kw["exercise_id"], kw), raising=False)
+    monkeypatch.setattr(feedback, "register_question", lambda **kw: questions.__setitem__(kw["question_id"], kw), raising=False)
+    p = make_planner(tmp_path)
+    _, plan = asyncio.run(run_to_ready(p))
+    ex = plan["pauses"][0]["exercise"]
+    reg = exercises[ex["id"]]
+    assert reg["revision"] == ex["revision"] and reg["function_name"] == "sum_to" and len(reg["hidden_tests"]) == 3
+    assert reg["reference_solution"] and reg["language"] == "python" and set(reg["examples"][0]) == {"args", "expected"}
+    q = plan["pauses"][2]["question"]
+    assert questions[q["id"]]["correct_answer"] == "b" and questions[q["id"]]["choices"]
+
+    # A restarted backend (or an expired A2 entry) is refilled when the cached plan is served again.
+    exercises.clear()
+    questions.clear()
+    fresh = make_planner(tmp_path)
+    assert fresh.peek("vidPlanner1")["status"] == "ready"
+    assert ex["id"] in exercises and q["id"] in questions
+
+
+def test_planned_items_land_in_feedback_store(tmp_path):
+    """With lane A2 merged: planned items land in its real grading store."""
+    store_mod = pytest.importorskip("app.feedback.exercise_store")
+
+    p = make_planner(tmp_path)
+    _, plan = asyncio.run(run_to_ready(p))
+    ex, q = plan["pauses"][0]["exercise"], plan["pauses"][2]["question"]
+    stored = store_mod.get_store().get_exercise(ex["id"])
+    assert stored and stored.revision == ex["revision"] and len(stored.hiddenTests) == 3
+    sq = store_mod.get_store().get_question(q["id"])
+    assert sq and sq.correctAnswer == "b" and sq.style == "multiple_choice"
+
+
 def test_cached_plan_is_instant_for_next_viewer(tmp_path):
     asyncio.run(run_to_ready(make_planner(tmp_path)))
     model = StubModel()
@@ -481,3 +518,68 @@ def test_api_validation_and_get(client):
                                       "learnerLevels": {"loops": "advanced-1", "not-a-concept": "expert-1"}})
     assert r.status_code == 200 and r.json()["learnerLevel"] == "beginner-2"
     assert client.get("/v2/plan/vidPlanner1").json()["learnerLevel"] == "beginner-2"
+
+
+# ---------------------------------------------------------------------------
+# Restart mid-classification
+# ---------------------------------------------------------------------------
+
+
+def crash_on_window(n: int):
+    """Stub model whose n-th window classification call fails (a crash/restart mid-way)."""
+    model = StubModel()
+
+    async def call(prompt, out_model):
+        if out_model is WindowOut and model.count("WindowOut") == n - 1:
+            model.calls.append(("WindowOut", prompt))
+            for _ in range(200):  # let the earlier windows' items finish first
+                await asyncio.sleep(0)
+            raise RuntimeError("server stopped")
+        return await model(prompt, out_model)
+
+    return call
+
+
+def test_restart_resumes_classification_at_next_window(tmp_path):
+    long = make_transcript(5400)  # 3 windows
+    baseline = asyncio.run(run_to_ready(make_planner(tmp_path / "full", transcript=long)))[1]
+
+    p1 = make_planner(tmp_path / "c", model=crash_on_window(3), transcript=long)
+    asyncio.run(run_to_ready(p1))
+    saved = json.loads((tmp_path / "c" / "vidPlanner1.json").read_text())
+    assert saved["status"] == "planning" and saved["classifyProgress"]["windows"] == 2
+
+    model = StubModel()
+    p2 = make_planner(tmp_path / "c", model=model, transcript=long)  # restarted backend
+    _, plan = asyncio.run(run_to_ready(p2))
+    assert plan["status"] == "ready"
+    assert model.count("WindowOut") == 1  # only the window that never finished
+    assert [x["id"] for x in plan["pauses"]] == [x["id"] for x in baseline["pauses"]]
+    assert [s["id"] for s in plan["sections"]] == [s["id"] for s in baseline["sections"]]
+    assert [x["pauseAtS"] for x in plan["pauses"]] == [x["pauseAtS"] for x in baseline["pauses"]]
+    assert [x["rank"] for x in plan["pauses"]] == [x["rank"] for x in baseline["pauses"]]
+    # items generated before the restart are reused, not regenerated
+    reused = sum(1 for x in saved["tiers"]["beginner"]["items"].values() if x["status"] == "ready")
+    assert reused > 0
+    assert model.count("GenOutput") + model.count("QuestionOut") == len(plan["pauses"]) - reused
+    assert_no_secrets(plan)
+    done = json.loads((tmp_path / "c" / "vidPlanner1.json").read_text())
+    assert done["status"] == "classified" and "classifyProgress" not in done
+
+
+def test_restart_with_different_captions_reclassifies_from_scratch(tmp_path):
+    asyncio.run(run_to_ready(make_planner(tmp_path, model=crash_on_window(3), transcript=make_transcript(5400))))
+    model = StubModel()
+    edited = make_transcript(5400, fn=lambda t: cue_text(t) + (" (edited)" if t == 3000 else ""))
+    p2 = make_planner(tmp_path, model=model, transcript=edited)  # same windows, changed captions
+    _, plan = asyncio.run(run_to_ready(p2))
+    assert plan["status"] == "ready"
+    assert model.count("WindowOut") == 3
+    assert [s["id"] for s in plan["sections"]][:3] == ["s1", "s2", "s3"]
+
+
+def test_failed_classification_is_not_cached_as_error(tmp_path):
+    p1 = make_planner(tmp_path, model=crash_on_window(3), transcript=make_transcript(5400))
+    _, plan = asyncio.run(run_to_ready(p1))
+    assert plan["status"] == "error"
+    assert json.loads((tmp_path / "vidPlanner1.json").read_text())["status"] == "planning"

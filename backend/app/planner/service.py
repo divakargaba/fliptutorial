@@ -30,16 +30,16 @@ from typing import Any, Awaitable, Callable
 
 from pydantic import BaseModel, ValidationError
 
-from ..catalog import ApprovedExercise
 from ..transcripts import Transcript, TranscriptError
 from .classify import (
     Block, Evidence, Numberer, PauseSlot, Section, WindowOut, build_prompt, make_blocks, validate_window, windows,
 )
+from .grading import register_item
 from .generate import (
-    GenerationFailed, ModelCall, PrivateExercise, PrivateQuestion, Verify, generate_coding, generate_question,
-    public_exercise,
+    GenerationFailed, ModelCall, PlannedExercise, PrivateExercise, PrivateQuestion, Verify, generate_coding,
+    generate_question, public_exercise,
 )
-from .vocab import CODING_LANGUAGES, DEFAULT_LEVEL, concept_ids, tier_of
+from .vocab import DEFAULT_LEVEL, coding_languages, concept_ids, tier_of
 
 logger = logging.getLogger("breakpoint.planner")
 
@@ -103,6 +103,12 @@ class VideoState:
     expires_at: float | None = None  # in-memory only states (no_captions / error)
     tiers: dict[str, TierState] = field(default_factory=dict)
     progress: asyncio.Event = field(default_factory=asyncio.Event)
+    # Classification progress while ``planning`` (saved after every window so a restart resumes):
+    # {"windows": done, "windowCount", "nextStartS", "numberer", "reasons", "about"}.
+    classify_progress: dict | None = None
+    # Loaded from disk mid-classification: sections/tiers held back until the transcript confirms
+    # the same windows (so generation never starts on sections that might be discarded).
+    resume: tuple[list[Section], dict[str, TierState]] | None = None
 
     @property
     def slots(self) -> list[PauseSlot]:
@@ -114,7 +120,7 @@ class VideoState:
 
 
 def planned_kind(section: Section, slot: PauseSlot) -> str:
-    if section.language in CODING_LANGUAGES and section.format in ("code", "mixed") and slot.trigger != "concept_complete":
+    if section.language in coding_languages() and section.format in ("code", "mixed") and slot.trigger != "concept_complete":
         return "coding"
     return "concept"
 
@@ -138,12 +144,15 @@ def _dump_state(st: VideoState) -> dict:
             d["question"] = it.question.dump()
         return d
 
-    return {
+    d = {
         "cacheVersion": CACHE_VERSION, "videoId": st.video_id, "status": st.status, "reason": st.reason,
         "verdictEvidence": [e.dump() for e in st.verdict_evidence], "generatedAt": st.generated_at,
         "sections": [sec(s) for s in st.sections],
         "tiers": {t: {"items": {k: item(v) for k, v in ts.items.items()}} for t, ts in st.tiers.items()},
     }
+    if st.status == "planning" and st.classify_progress:
+        d["classifyProgress"] = st.classify_progress
+    return d
 
 
 def _load_state(d: dict) -> VideoState:
@@ -160,15 +169,48 @@ def _load_state(d: dict) -> VideoState:
             it = Item(v["kind"], v.get("status", "pending"))
             if "exercise" in v:
                 e = v["exercise"]
-                it.exercise = PrivateExercise(ApprovedExercise.model_validate(e["exercise"]), e["revision"],
+                it.exercise = PrivateExercise(PlannedExercise.model_validate(e["exercise"]), e["revision"],
                                               e["concepts"], e["level"], e["language"])
             if "question" in v:
                 it.question = PrivateQuestion.load(v["question"])
             tier.items[k] = it
         st.tiers[t] = tier
-    if st.status == "planning":  # interrupted classification: redo it
+    if st.status == "planning":  # interrupted classification: resume it (or redo it if there's no progress)
+        prog = d.get("classifyProgress")
+        if prog and st.sections:
+            st.classify_progress = prog
+            st.resume = (st.sections, st.tiers)
         st.sections, st.tiers = [], {}
     return st
+
+
+def _windows_digest(wins: list[list[Block]]) -> str:
+    """Fingerprint of the captions in these windows (a re-uploaded/changed track must be reclassified)."""
+    h = hashlib.sha256()
+    for win in wins:
+        for b in win:
+            for c in b.cues:
+                h.update(f"{c.id}|{c.start_s}|{c.end_s}|{c.text}\n".encode())
+    return h.hexdigest()[:16]
+
+
+def _resume_point(st: VideoState, wins: list[list[Block]]) -> int:
+    """Number of windows already classified, if the saved progress matches this transcript's windows."""
+    prog = st.classify_progress
+    if not prog or st.resume is None:
+        return 0
+    try:
+        done, count = int(prog["windows"]), int(prog["windowCount"])
+        if count != len(wins) or not 0 < done < count or abs(wins[done][0].start_s - float(prog["nextStartS"])) > 1e-6:
+            return 0
+        if prog.get("digest") != _windows_digest(wins[:done]):
+            return 0
+        Numberer(**prog["numberer"])
+        list(prog["reasons"])
+        bool(prog["about"])
+    except (KeyError, TypeError, ValueError):
+        return 0
+    return done
 
 
 class PlanStore:
@@ -242,6 +284,7 @@ class Planner:
         if not st:
             return None
         last_level, levels = self._specs.get(video_id, (DEFAULT_LEVEL, {}))
+        _register_served(st, level or last_level, levels)
         return public_plan(st, level or last_level, levels)
 
     def request(self, video_id: str, level: str, levels: Levels | None = None) -> dict:
@@ -263,6 +306,7 @@ class Planner:
                 ts.want |= concepts
                 if not st.classified or _unstarted(st, ts):
                     self._spawn(f"g:{video_id}:{tier}", self._generate(st, tier))
+        _register_served(st, level, levels)
         return public_plan(st, level, levels)
 
     async def wait_idle(self) -> None:
@@ -335,7 +379,31 @@ class Planner:
             numberer = Numberer()
             reasons: list[str] = []
             about = False
+            start = _resume_point(st, wins)
+            if start:
+                prog = st.classify_progress or {}
+                numberer = Numberer(**prog["numberer"])
+                reasons, about = list(prog["reasons"]), bool(prog["about"])
+                sections, tiers = st.resume or ([], {})
+                st.sections = sections
+                for t, held in tiers.items():  # keep the ``want`` sets requests added meanwhile
+                    st.tiers.setdefault(t, TierState()).items.update(held.items)
+                logger.info("planner classify video=%s resuming at window %d/%d", st.video_id, start + 1, len(wins))
+            else:
+                st.sections = []
+                for ts in st.tiers.values():
+                    ts.items.clear()
+            st.resume = None
+            if st.sections:
+                qual = [s for s in st.sections if s.qualifies]
+                if qual:
+                    st.reason = st.reason or (reasons[0] if reasons else "")
+                    st.verdict_evidence = [e for s in qual[:3] for e in s.evidence[:1]]
+                st.progress.set()
+                st.progress = asyncio.Event()
             for wi, win in enumerate(wins):
+                if wi < start:
+                    continue
                 nxt = wins[wi + 1][0].start_s if wi + 1 < len(wins) else None
                 out = await self._classify_window(transcript.title, win, wi == 0, wi == len(wins) - 1)
                 res = validate_window(out, win, nxt)
@@ -350,6 +418,11 @@ class Planner:
                     st.verdict_evidence = [e for s in qual[:3] for e in s.evidence[:1]]
                 st.progress.set()
                 st.progress = asyncio.Event()
+                if nxt is not None:  # save progress so a restart resumes at the next window
+                    st.classify_progress = {"windows": wi + 1, "windowCount": len(wins), "nextStartS": nxt,
+                                            "numberer": asdict(numberer), "reasons": reasons, "about": about,
+                                            "digest": _windows_digest(wins[: wi + 1])}
+                    self.store.save(st)
                 if wi == 0 and not about and not any(s.qualifies for s in res.sections):
                     break  # clearly not a programming video: say so now, don't spend more
             qualifying = [s for s in st.sections if s.qualifies]
@@ -362,6 +435,7 @@ class Planner:
                 st.reason = (reasons[0] if reasons else "") or "No section teaches or demonstrates code."
                 st.verdict_evidence = [e for s in st.sections[:3] for e in s.evidence[:1]]
             st.generated_at = _now_iso()
+            st.classify_progress = None
             self.store.save(st)
             logger.info("planner classify video=%s status=%s sections=%d pauses=%d ms=%d", st.video_id, st.status,
                         len(st.sections), len(st.slots), int((time.monotonic() - started) * 1000))
@@ -424,6 +498,8 @@ class Planner:
             await self._one(st, ts, tier, slot)
 
     async def _one(self, st: VideoState, ts: TierState, tier: str, slot: PauseSlot) -> None:
+        if st.status not in ("planning", "classified") or slot.section_index >= len(st.sections):
+            return  # classification failed meanwhile (sections were cleared)
         section = st.sections[slot.section_index]
         kind = planned_kind(section, slot)
         item = Item(kind)
@@ -440,13 +516,15 @@ class Planner:
             if item.kind == "concept":
                 item.question = await generate_question(self.model_call, transcript, st.video_id, section, slot, tier)
             item.status = "ready"
+            register_item(item.exercise, item.question)
         except (GenerationFailed, PlannerUnavailable, TranscriptError) as exc:
             logger.info("planner %s/%s dropped: %s", st.video_id, slot.id, exc)
             item.status = "failed"
         except Exception:
             logger.exception("planner %s/%s failed", st.video_id, slot.id)
             item.status = "failed"
-        if st.classified:
+        # Never persist an in-memory failure (error / no_captions expire; on disk they would stick).
+        if st.status == "classified" or (st.status == "planning" and st.classify_progress):
             self.store.save(st)
 
 
@@ -459,6 +537,14 @@ class Planner:
 def _unstarted(st: VideoState, ts: TierState) -> bool:
     return any(s.concept in ts.want and (s.id not in ts.items or ts.items[s.id].status == "pending")
                for s in st.slots)
+
+
+def _register_served(st: VideoState, level: str, levels: Levels | None) -> None:
+    """Refresh A2's grading store with every ready item this learner's plan shows (survives restarts and its TTL)."""
+    for slot in st.slots:
+        _, it = _slot_item(st, slot, level, levels)
+        if it is not None and it.status == "ready":
+            register_item(it.exercise, it.question)
 
 
 def _slot_item(st: VideoState, slot: PauseSlot, level: str, levels: Levels | None) -> tuple[str, Item | None]:
