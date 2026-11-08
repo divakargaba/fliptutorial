@@ -94,14 +94,26 @@ GOOD_EXERCISE = {
 GOOD_QUESTION = {
     "status": "ok", "title": "Growth of one loop", "style": "multiple_choice",
     "prompt": "A loop runs once per item in a list of n items. How does its running time grow?",
-    "choices": [{"id": "a", "text": "O(1)"}, {"id": "b", "text": "O(n)"}, {"id": "c", "text": "O(n^2)"}],
+    "choices": [{"id": "a", "text": "O(1)", "mistake": "Ignored the loop's repetitions",
+                 "whyWrong": "Constant time would mean the work never grows with the list."},
+                {"id": "b", "text": "O(n)", "mistake": "", "whyWrong": ""},
+                {"id": "c", "text": "O(n^2)", "mistake": "Counted a nested loop that isn't there",
+                 "whyWrong": "There is only one loop, so nothing multiplies the work by n again."}],
     "answer": "b", "explanation": "One step per item.", "concepts": ["complexity"], "evidenceCueIds": [],
+    "retryHint": "Count how many times the body runs for a list of n items.",
+    "mcReason": "Naming a growth class is a definition check with no concrete input to trace.",
 }
 
 
+THEORY_PROMPT = "teaches the idea as theory"
+
+
 class StubModel:
-    def __init__(self, window=coding_window, exercise=GOOD_EXERCISE, question=GOOD_QUESTION):
+    # theory_codeable=False: a theory idea ("growth of a single loop") is judged not codeable, so its
+    # coding attempt answers noExercise and the pause falls back to an application question.
+    def __init__(self, window=coding_window, exercise=GOOD_EXERCISE, question=GOOD_QUESTION, theory_codeable=False):
         self.window, self.exercise, self.question = window, exercise, question
+        self.theory_codeable = theory_codeable
         self.calls: list[tuple[str, str]] = []
 
     async def __call__(self, prompt: str, model) -> str:
@@ -111,6 +123,8 @@ class StubModel:
         if model is WindowOut:
             return json.dumps(self.window())
         if model is GenOutput:
+            if THEORY_PROMPT in prompt and not self.theory_codeable:
+                return json.dumps({**self.exercise, "status": "noExercise", "conceptEvidenceCueIds": [first_cue.group(1)]})
             return json.dumps({**self.exercise, "conceptEvidenceCueIds": [first_cue.group(1)]})
         if model is QuestionOut:
             return json.dumps({**self.question, "evidenceCueIds": [first_cue.group(1)]})
@@ -452,7 +466,8 @@ def test_learner_levels_set_level_per_pause_concept(tmp_path):
     assert coding and all(x["exercise"]["level"].startswith("intermediate") for x in coding)
     assert concept and all(x["question"]["level"].startswith("beginner") for x in concept)
     # Only the wanted tier per concept is generated: no beginner loops items, no intermediate complexity items.
-    assert model.count("GenOutput") == len(coding) and model.count("QuestionOut") == len(concept)
+    # Each theory concept item first tried a coding exercise (noExercise here), then asked a question.
+    assert model.count("GenOutput") == len(coding) + len(concept) and model.count("QuestionOut") == len(concept)
     assert p.peek("vidPlanner1") == plan  # GET without a level uses the latest POST's levels
 
 
@@ -472,7 +487,8 @@ def test_widening_learner_levels_generates_only_new_items(tmp_path):
     assert plan["status"] == "ready"
     q = next(x for x in plan["pauses"] if x["kind"] == "concept")
     assert q["question"]["level"].startswith("advanced")
-    assert model.count("QuestionOut") == 1 and model.count("GenOutput") == 0 and model.count("WindowOut") == 0
+    # One theory coding attempt (noExercise) then the question; nothing reclassified.
+    assert model.count("QuestionOut") == 1 and model.count("GenOutput") == 1 and model.count("WindowOut") == 0
     assert p.request("vidPlanner1", "beginner-1")["status"] == "ready"  # beginner items still cached
 
 

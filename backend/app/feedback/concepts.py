@@ -191,15 +191,32 @@ async def explain_wrong_answer(
     choices: list[dict] | None = None,
     concept_name: str = "this concept",
     learner_level: str = "beginner-1",
+    choice_notes: dict[str, dict[str, str]] | None = None,
+    retry_hint: str = "",
     model_call: ModelCall | None = None,
 ) -> WrongAnswerFeedback:
     """Name the misconception behind a wrong concept answer without revealing the answer.
 
-    Uses Claude with a short budget; any failure, malformed output or answer leak falls back
-    to deterministic coaching.
+    A stored per-choice note from the planner is served instantly (no model call). Otherwise
+    Claude is asked with a short budget; any failure, malformed output or answer leak falls back
+    to deterministic coaching, using the planner's retry hint as the next step when there is one.
     """
     correct_text = _choice_text(choices, correct_answer) if style == "multiple_choice" else None
     picked = (_choice_text(choices, learner_answer) or learner_answer) if style == "multiple_choice" else learner_answer
+
+    def leaks(*texts: str) -> bool:
+        return _reveals(" ".join(texts), style=style, prompt=prompt, learner_answer=picked,
+                        correct_answer=correct_answer, correct_text=correct_text)
+
+    hint = retry_hint.strip() if retry_hint.strip() and not leaks(retry_hint) else ""
+    note = (choice_notes or {}).get(learner_answer.strip().lower()) if style == "multiple_choice" else None
+    if note:
+        mistake, why = str(note.get("mistake", "")).strip(), str(note.get("whyWrong", "")).strip()
+        if mistake and why and len(mistake) <= _LEN["misconception"] and len(why) <= _LEN["whyWrong"] \
+                and not leaks(mistake, why):
+            fallback_step = fallback_wrong_answer(style, learner_answer, choices, concept_name).nextStep
+            return WrongAnswerFeedback(misconception=mistake, whyWrong=why, nextStep=hint or fallback_step,
+                                       aiGenerated=True)
     try:
         call = model_call or anthropic_model_call(system=WRONG_ANSWER_SYSTEM_PROMPT, schema=WRONG_ANSWER_SCHEMA)
         lines = [f"Concept: {concept_name}", f"Learner level: {learner_level}", f"Question style: {style}",
@@ -215,13 +232,13 @@ async def explain_wrong_answer(
         out = {k: str(v.get(k, "")).strip() for k in _LEN}
         if any(not out[k] or len(out[k]) > limit for k, limit in _LEN.items()):
             raise ValueError("coaching fields missing or too long")
-        if _reveals(" ".join(out.values()), style=style, prompt=prompt, learner_answer=picked,
-                    correct_answer=correct_answer, correct_text=correct_text):
+        if leaks(*out.values()):
             raise ValueError("coaching revealed the answer")
         return WrongAnswerFeedback(**out, aiGenerated=True)
     except Exception as exc:
         logger.info("wrong-answer coaching unavailable: %s: %s", type(exc).__name__, exc)
-        return fallback_wrong_answer(style, learner_answer, choices, concept_name)
+        fb = fallback_wrong_answer(style, learner_answer, choices, concept_name)
+        return fb.model_copy(update={"nextStep": hint}) if hint else fb
 
 
 def anthropic_model_call(model: str | None = None, *, system: str | None = None,
