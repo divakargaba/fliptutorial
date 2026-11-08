@@ -6,10 +6,10 @@ test('built extension pauses once, Run fails, Submit passes and resumes', async 
   await automaticPause(page);
   const panel = page.locator('.bp-panel');
   expect(await panel.evaluate(el => getComputedStyle(el).fontSize)).toBe('14px');
-  expect(await page.locator('.bp-body').evaluate(el => getComputedStyle(el).paddingLeft)).toBe(info.project.name.includes('narrow') ? '16px' : '20px');
+  expect(await page.locator('.bp-body').evaluate(el => getComputedStyle(el).paddingLeft)).toBe('16px');
   expect(await panel.evaluate(el => getComputedStyle(el).borderTopWidth)).toBe('1px');
   const parent = await page.locator('breakpoint-practice').evaluate(el => el.parentElement?.id);
-  expect(parent).toBe('below');
+  expect(parent).toBe(info.project.name.includes('narrow') ? 'below' : 'secondary-inner'); // Side is the default where there's room
   await panel.scrollIntoViewIfNeeded();
   await page.screenshot({ path: info.outputPath('editing.png'), animations: 'disabled' });
   const editor = page.getByRole('textbox', { name: 'Python code' });
