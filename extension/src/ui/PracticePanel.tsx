@@ -79,6 +79,7 @@ function Panel(props: PracticePanelProps & { draftKey: string }) {
   const blocked = leaving || checking || invalidCode || solved || error?.code === 'SET_EXPIRED';
   const fn = functionName(exercise.starterCode);
   const language = props.language ?? 'python';
+  const stdio = ['typescript', 'c', 'csharp', 'go', 'rust'].includes(language);
   const filename = { python: 'main.py', javascript: 'main.js', typescript: 'main.ts', java: 'Main.java', cpp: 'main.cpp', c: 'main.c', csharp: 'Main.cs', go: 'main.go', rust: 'main.rs', sql: 'query.sql', pseudocode: 'pseudocode.txt', unknown: 'code.txt' }[language];
   const value = (item: unknown) => language === 'python' ? formatValue(item) : JSON.stringify(item) ?? 'no output';
   const coach = useHints(props, code);
@@ -137,7 +138,10 @@ function Panel(props: PracticePanelProps & { draftKey: string }) {
         </div>
 
         <div className="bp-examples bp-stagger" role="group" aria-label="Examples">
-          {exercise.examples.slice(0, 3).map((example, i) => <div className="bp-example" key={i}>
+          {exercise.examples.slice(0, 3).map((example, i) => stdio ? <div className="bp-example bp-example-stdio" key={i}>
+            <div><span className="bp-stdio-label">Input</span><pre>{example.args[0] as string}</pre></div>
+            <div><span className="bp-stdio-label">Output</span><pre>{example.expected as string}</pre></div>
+          </div> : <div className="bp-example" key={i}>
             <code className="bp-call">{language === 'python' ? formatCall(fn, example.args) : `Input: ${example.args.map(value).join(', ')}`}</code>
             <span className="bp-arrow" aria-label="returns">→</span>
             <code className="bp-expected">{value(example.expected)}</code>
