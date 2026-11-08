@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import './v2/styles.css';
 @source './*.tsx';
 
 .bp-test-me { margin: 8px 0; }

@@ -91,7 +91,8 @@ def validate_event(raw: Any) -> tuple[dict | None, str | None]:
     for key in ("id", "accountId", "at", "type"):
         if not isinstance(raw.get(key), str) or not raw[key].strip():
             return None, f"missing {key}"
-    if len(raw["id"]) > 200 or len(raw["accountId"]) > 64:
+    # Same bound as the extension's queue schema (A3), so nothing it accepts is rejected forever.
+    if len(raw["id"]) > 200 or len(raw["accountId"]) > 200:
         return None, "id too long"
     if raw["type"] not in EVENT_TYPES:
         return None, f"unknown type {raw['type']!r}"

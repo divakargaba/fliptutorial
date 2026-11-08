@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import type { AnalysisResponse, HintResponse, LastResult, PracticeResponse } from '../../src/contracts';
 const practice: PracticeResponse = JSON.parse(readFileSync(new URL('../../../contracts/practice-response.fixture.json', import.meta.url), 'utf8'));
 const failed = JSON.parse(readFileSync(new URL('../../../contracts/submission-response.fixture.json', import.meta.url), 'utf8'));
+const publicProfile = JSON.parse(readFileSync(new URL('../../../contracts/v2/public-profile.fixture.json', import.meta.url), 'utf8'));
 export const generated = JSON.parse(readFileSync(new URL('../../../contracts/testme-response.fixture.json', import.meta.url), 'utf8'));
 export const hintFixture: HintResponse = JSON.parse(readFileSync(new URL('../../../contracts/hint-response.fixture.json', import.meta.url), 'utf8'));
 export const analysisFixture: AnalysisResponse = JSON.parse(readFileSync(new URL('../../../contracts/analysis-response.fixture.json', import.meta.url), 'utf8'));
@@ -60,7 +61,12 @@ export const test = base.extend<{ app: App; breakpointCount: 1 | 2; preparedVide
       const json = (status: number, body: unknown) => {
         if (!res.destroyed) res.writeHead(status, { 'Content-Type': 'application/json' }).end(JSON.stringify(body));
       };
-      if (req.method === 'GET' && req.url?.startsWith('/v1/videos/')) {
+      if (req.method === 'GET' && req.url === '/v2/accounts') {
+        json(200, [{ accountId: 'test-ana', displayName: 'Ana (test)' }, { accountId: 'test-ben', displayName: 'Ben (test)' }]);
+      } else if (req.method === 'GET' && req.url?.startsWith('/v2/profile/')) {
+        const ben = req.url.endsWith('/test-ben');
+        json(200, { ...publicProfile, ...(ben ? { accountId: 'test-ben', displayName: 'Ben (test)', complements: [] } : {}) });
+      } else if (req.method === 'GET' && req.url?.startsWith('/v1/videos/')) {
         app.lookupCount++;
         const id = req.url.split('/')[3];
         json(200, id === practice.videoId ? {

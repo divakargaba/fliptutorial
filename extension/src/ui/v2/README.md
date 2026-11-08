@@ -1,0 +1,25 @@
+# B2 v2 UI handoff
+
+Import views from `src/ui/v2` and retain the existing `src/ui/theme.css` shadow stylesheet (it includes v2 styles). Mount inside `.breakpoint-shell` with `data-theme="light"` or `"dark"`.
+
+## A3 runtime integration
+
+- `ConceptQuestionPanel` preserves the frozen props. Optional `error?: {code, message, retryable} | null` and `canResume?: boolean` display failed requests and rejected playback without losing the answer. `onAnswer` sends the selected **choice id**, or trimmed text for short-answer/output questions. The parent owns requests, stale-result rejection and `checking`. Skip/Close stay enabled while checking. Correct feedback exposes explicit Resume; it never plays media itself. Change question id/revision to reset the form. Heading focus moves in and returns on unmount.
+- `FeedbackCard({ feedback, code })` shows the contract result. Pass the exact **submitted code**, not the current draft. Diagnosis lines highlight a read-only CodeMirror snapshot; line notes also appear as accessible text. Out-of-range, fractional and duplicate line numbers cannot create invalid ranges. Optimization appears only when `success.optimization.show` is true. The server owns that tier decision.
+- Existing `PracticePanel` accepts optional `conceptLevels: {concept, level}[]`, `levelUp: {concept, level} | null`, and `feedback: {result: FeedbackResult, submittedCode: string} | null`. `manualResume?: boolean` keeps solved feedback visible with explicit Resume video and no countdown or rejected-play warning. This adds chips, a level-up announcement and feedback without changing v1 callers. The current editor remains Python; A3 must choose its language-capable coding presentation for other languages. `LevelChip` and `LevelUp` are independently reusable.
+- `TopicNotAvailable({ reason, onDismiss })` and `RefresherPrompt({ due, onStart, onDismiss })` are presentation only. `due` is `PublicProfile.refresherDue`; Start returns the first due concept id. The parent requests `/v2/refresher/{accountId}` and mounts the returned question, handles 204, and controls dismissal lifetime.
+- `LearnerSettings({value, videoId?, onChange})` is controlled. Value is `{frequency: 'few'|'normal'|'many', autoPause: boolean, disabledVideos: string[]}`. Passing a video id exposes Never pause on this video. Runtime owns immediate enforcement, persistence, and storage-change observation.
+
+The popup saves settings at `chrome.storage.local['breakpoint:learner-settings']` (`SETTINGS_KEY`), selected account id at `['breakpoint:active-account']` (`ACCOUNT_KEY`), aligned with lead clarification #6716393647. Default is normal, auto-pause on, empty exclusions. Popup writes serialize to preserve the latest choice. The first available backend account is used if no saved valid selection exists. Follow-up after the runner syncs A3: replace the local popup storage adapter/constants with `src/plan/preferences.ts` helpers and frozen constants; those files are absent from this checkout at d8c5b2f.
+
+## B1 profile integration
+
+`ProfilePage` loads `GET /v2/accounts`, accepting an array of `{accountId, displayName}` or `{accounts: [...]}`, then `GET /v2/profile/{accountId}` with the frozen public-profile shape. Both responses are validated. Account changes abort old requests; 6 s deadlines, offline/501/malformed data, empty accounts and storage errors have recovery states. No fixture data is bundled as a live profile. Confirm the account-list envelope with B1 (the frozen README names the endpoint but does not specify its response). `ProfileView({profile})` is separately usable in fixture tests. Recommendations show up to three supplied skills and only link to HTTPS YouTube URLs.
+
+## Proof and showcase
+
+`npm run typecheck`, `npm test`, `npm run build`, then `npm run test:e2e -- --grep v2`.
+
+Open `/tests/showcase/v2.html?state=question&theme=dark` on the existing Vite preview server. States: question, short, predict, question-checking, question-passed, question-error, question-resume-error, failed, passed, beginner-passed, coding-level, coding-passed, level-up, profile, profile-live, refresher, settings, unavailable. `profile-live` uses the real API; other states are explicitly fixture-only. All visual states are captured at both configured viewport sizes and themes by `v2.preview.spec.ts`; `v2-popup.spec.ts` exercises the built MV3 popup, loopback API, and Chrome storage. Outputs are in ignored `extension/test-results/`; captured evidence is in `extension/assets/ui-checks/v2/`.
+
+This lane does not claim live any-video planning, real provider grading or mounted v2 content-script playback. A3 owns those integration gates.
