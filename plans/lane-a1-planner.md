@@ -68,6 +68,9 @@ Any YouTube video id → a cached, timestamped exercise plan before the learner 
   Two live runs (`claude-haiku-5-5`, the live classification path): section "qualifies" precision 0.918 / 0.962, recall 0.876 / 0.874,
   and 77/78 pauses inside labelled teaching and before a labelled answer. That meets the bar (precision ≥ 0.9 in every run), so auto-pause
   can be on. Every false positive is a "create project + Hello World" setup boundary. No non-coding video got a qualifying section.
+- [x] Setup boundary tightened (lead follow-up): the classifier prompt now puts setup (install tools, create a project, tour files/IDE,
+  run the starter Hello World) in its own non-qualifying section with no pauses. Two new live runs: precision **1.000 / 1.000**
+  (0 FP, lower bound 0.953), recall 0.830 / 0.782 (was 0.876 / 0.874), pauses 80/80 correct. The earlier runs are kept as `results-v1-run*.json`.
   Harness: `python -m app.planner.evaluate run|score` (`app/planner/evaluate.py`); offline scoring tests are in `tests/test_planner_eval.py` (7/7).
 - [x] Classification progress is saved after every ~40-min window (`classifyProgress` in the plan cache: windows done, numberer state, caption digest).
   A restarted backend resumes at the next window with the same section/pause ids and ranks, and reuses items already generated. If the captions changed

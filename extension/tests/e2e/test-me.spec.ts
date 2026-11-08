@@ -143,7 +143,8 @@ test.describe('opt-in Test me through the built worker', () => {
         await expect(page.getByRole('textbox', { name: 'Python code' })).toBeVisible();
         expect(app.generations).toHaveLength(2);
         expect(app.generations[1]).toEqual(app.generations[0]);
-        await page.getByRole('button', { name: 'Skip and watch' }).click();
+        await page.getByRole('button', { name: 'More', exact: true }).click();
+        await page.getByRole('button', { name: 'Practice later', exact: true }).click();
       } else {
         await expect(retry).toHaveCount(0);
         await page.getByRole('button', { name: 'Resume video', exact: true }).click();
@@ -191,7 +192,8 @@ test.describe('opt-in Test me through the built worker', () => {
     await editor.press('Control+Enter');
     expect(app.requests).toHaveLength(1);
     expect(await page.locator('video').evaluate(v => v.paused)).toBe(true);
-    await page.getByRole('button', { name: 'Skip and watch' }).click();
+    await page.getByRole('button', { name: 'More', exact: true }).click();
+    await page.getByRole('button', { name: 'Practice later', exact: true }).click();
     await expectPlaying(page);
     await page.reload();
     await page.getByRole('button', { name: 'Test me', exact: true }).click();

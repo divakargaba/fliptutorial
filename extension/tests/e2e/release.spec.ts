@@ -25,7 +25,7 @@ for (const failure of failures) {
     const lookups = app.lookupCount;
     await page.getByRole('button', { name: 'Submit', exact: true }).click();
     await expect.poll(() => app.requests.length).toBe(1);
-    const skip = page.getByRole('button', { name: 'Skip and watch' });
+    const skip = page.getByRole('button', { name: 'More', exact: true });
     await expect(skip).toBeEnabled();
     await expect(page.getByText(failure.title, { exact: true })).toBeVisible({ timeout: 20_000 });
     await expect.poll(async () => (await editor.locator('.cm-line').allTextContents()).join('\n')).toBe(draft);
@@ -55,6 +55,9 @@ for (const failure of failures) {
     await expect(skip).toBeFocused();
     expect(await page.locator('video').evaluate(v => v.currentTime)).toBe(pausedAt);
     await skip.press('Enter');
+    await page.keyboard.press('Tab');
+    await expect(page.getByRole('button', { name: 'Practice later', exact: true })).toBeFocused();
+    await page.keyboard.press('Enter');
     await expectPlaying(page);
     await page.reload();
     await page.getByRole('button', { name: /^Breakpoint/ }).click();
@@ -74,7 +77,7 @@ for (const theme of ['dark', 'light'] as const) {
     await editor.press('Tab');
     await expect(page.getByRole('button', { name: 'Stuck? Get a hint' })).toBeFocused();
     await page.keyboard.press('Tab');
-    const skip = page.getByRole('button', { name: 'Skip and watch' });
+    const skip = page.getByRole('button', { name: 'More', exact: true });
     await expect(skip).toBeFocused();
     expect(await skip.evaluate(el => getComputedStyle(el).outlineWidth)).toBe('2px');
     await editor.fill('# A readable comment\ndef raise_to_power(base, exponent):\n    return 2 ** exponent');

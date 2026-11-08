@@ -1,4 +1,5 @@
 import shellCss from './styles/youtube.css?inline';
+import timelineCss from './styles/timeline.css?inline';
 import themeCss from '../src/ui/theme.css?inline';
 import { createRoot, type Root } from 'react-dom/client';
 import { flushSync } from 'react-dom';
@@ -22,17 +23,9 @@ import { WatchSegments } from '../src/plan/watch';
 import { PlanLoader } from '../src/plan/loader';
 import { planSolved, markPlanSolved } from '../src/plan/progress';
 import type { ExercisePlan, FeedbackResult, PracticeEvent } from '../src/v2/types';
-import { ConceptQuestionPanel, LearnerSettings as LearnerSettingsView, TopicNotAvailable } from '../src/ui/v2';
+import { ConceptQuestionPanel, LearnerSettings as LearnerSettingsView, TopicNotAvailable, TimelineMarkers } from '../src/ui/v2';
 import { saveLearnerSettings } from '../src/plan/preferences';
 import { seekForPractice } from '../src/plan/timeline';
-import * as V2Views from '../src/ui/v2';
-import type { ComponentType } from 'react';
-
-type TimelineProps = { markers: ReturnType<PlaybackSession['timelineMarkers']>; onSelect(id: string): void };
-// The presentation is B2-owned and may arrive in a later main merge. Keep the
-// playback path usable while that optional export is absent; never mount a
-// nonfunctional placeholder on top of YouTube's native controls.
-const TimelineMarkers = (V2Views as typeof V2Views & { TimelineMarkers?: ComponentType<TimelineProps> }).TimelineMarkers;
 
 // Keep the presentation contract shared with B2. accountId is wired ahead of
 // its draft-isolation follow-up; feedback uses the exact submitted snapshot.
@@ -305,12 +298,12 @@ export default defineContentScript({
     }
 
     async function renderTimeline() {
-      if (!TimelineMarkers || !isCurrent()) return;
+      if (!isCurrent()) return;
       const video = player;
       const movie = document.querySelector<HTMLElement>('#movie_player');
       const bar = movie?.querySelector<HTMLElement>('.ytp-progress-bar');
       const markers = video && playerReady && accountReady ? session.timelineMarkers(video.duration) : [];
-      if (!movie || !bar || !markers.length || isAd() || isFullscreen() || !mountable()) {
+      if (!movie || !bar || !markers.length || isAd() || isFullscreen() || !mountable() || session.active || session.testMe) {
         if (timelineUi) timelineUi.shadowHost.style.display = 'none';
         return;
       }
@@ -320,7 +313,11 @@ export default defineContentScript({
         try {
           const created = await createShadowRootUi(ctx, {
             name: 'breakpoint-timeline', position: 'inline', anchor: movie, append: 'last', isolateEvents: true,
-            css: `${themeCss}\n:host { all: initial; display: block; } .breakpoint-timeline { position: relative; width: 100%; height: 28px; pointer-events: none; } .breakpoint-timeline :is(button, summary, a, input) { pointer-events: auto; }`,
+            // WXT's default all:initial !important also resets our dynamic host
+            // position/display. Use the normal-priority reset in timeline.css
+            // so measured placement and active-attempt hiding can take effect.
+            inheritStyles: true,
+            css: `${themeCss}\n${timelineCss}`,
             onMount: container => createRoot(container), onRemove: root => root?.unmount(),
           });
           if (generation !== session.generation || !isCurrent()) { created.remove(); return; }
@@ -331,17 +328,18 @@ export default defineContentScript({
       if (!timelineUi?.mounted) return;
       if (timelineUi.shadowHost.parentElement !== movie) movie.append(timelineUi.shadowHost);
       const rect = bar.getBoundingClientRect(), parent = movie.getBoundingClientRect();
-      // A separate rail above the seekbar preserves native seeking and avoids
-      // editing YouTube's progress elements. Re-measure for theater/resizing.
+      // B2 insets each icon 16px inside its track. Extend our rail by that
+      // amount on each side so the icon centers match actual seekbar times.
+      // The complete 40px control sits above the native bar, never over it.
       Object.assign(timelineUi.shadowHost.style, {
-        position: 'absolute', left: `${rect.left - parent.left}px`, top: `${rect.top - parent.top - 30}px`,
-        width: `${rect.width}px`, height: '28px', zIndex: '60', pointerEvents: 'none',
+        position: 'absolute', left: `${rect.left - parent.left - 16}px`, top: `${rect.top - parent.top - 44}px`,
+        width: `${rect.width + 32}px`, height: '40px', zIndex: '60', pointerEvents: 'none',
         display: rect.width > 0 && rect.height > 0 ? 'block' : 'none',
       });
       const signature = JSON.stringify([session.generation, accountId, markers, theme()]);
       if (signature !== timelineSignature) {
         timelineSignature = signature;
-        timelineUi.mounted.render(<div className="breakpoint-timeline" data-theme={theme()}>
+        timelineUi.mounted.render(<div className="breakpoint-shell breakpoint-timeline" data-theme={theme()}>
           <TimelineMarkers markers={markers} onSelect={id => void selectTimeline(id)} />
         </div>);
       }
