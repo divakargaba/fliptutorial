@@ -60,13 +60,16 @@ Following the lead's explicit-play decision (#6716127037), the UI now accepts
 required `ownsPause: boolean` separately from `canResume` (play rejection).
 Native-pause efficient/inefficient screenshots are refreshed in
 `assets/ui-checks/hints-efficiency/{desktop,narrow}-test-me-native-pause-*.png`.
-The six updated checks currently fail only at the final playing assertion against
-`f6347b4`: the callback closes the panel but leaves the media paused. All preceding
-review, wording, countdown and primary-button assertions pass. These screenshots
-show the new UI with the caller's prop still missing; they are not evidence of a
-completed playback integration. Abdullah2 must pass `active.ownsPause` and land
-the deliberate user-play callback before rerunning. Typecheck also requires the
-content-script caller and `tests/showcase/showcase.tsx` to supply `ownsPause`.
+Integrated validation against `9c02edb`: all six checks pass at desktop 1440×900
+and narrow 1024×768, including the final explicit-click playback assertion.
+The refreshed four screenshots show the integrated learner-paused solved states;
+the narrow captures scroll to keep Resume video visible. All 45 Vitest tests pass,
+and the opt-in production build passes. Playwright exited 0 after stopping only
+its leftover Vite server (PID 33344) during Windows cleanup.
+Typecheck still fails at the lead-owned `tests/showcase/showcase.tsx:118`: its
+ordinary panel caller must supply `ownsPause: true`. The production content-script
+caller is integrated. No live providers, backend tests, full browser regression
+or manual Chrome checks were run for this evidence/documentation update.
 
 ```powershell
 $env:WXT_TESTME_ENABLED = 'true'
