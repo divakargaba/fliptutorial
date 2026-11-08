@@ -1,5 +1,6 @@
 import { useContext, useEffect, useRef, useState } from 'react';
-import { Check, ChevronDown, CircleAlert, ExternalLink, Gauge, Lightbulb, LoaderCircle, Pause, Play, Send, SkipForward, Sparkles, X } from 'lucide-react';
+import { Check, ChevronDown, CircleAlert, ExternalLink, Gauge, Lightbulb, LoaderCircle, Pause, Play, Send, Sparkles, X } from 'lucide-react';
+import { PracticeMore } from './PracticeMore';
 import type { Breakpoint, HintResponse, LastResult, SubmissionResponse } from '../contracts';
 import { HintsContext, type AnalysisState } from '../hints';
 import { flushDraft, loadDraft, practiceDraftKey, saveDraft } from '../drafts';
@@ -168,9 +169,7 @@ function Panel(props: PracticePanelProps & { draftKey: string }) {
       </div>}
 
       <footer className="bp-footer">
-        <button type="button" className="bp-skip" onClick={() => leave(props.onSkip)}>
-          <SkipForward size={14} aria-hidden="true" />Skip and watch
-        </button>
+        <PracticeMore onLater={() => leave(props.onSkip)} />
         <button type="button" className="bp-button bp-secondary" disabled={blocked} aria-busy={checking && lastMode === 'run'}
           onClick={run} title={`Run examples (${MOD}+Enter)`}>
           {checking && lastMode === 'run' ? <LoaderCircle size={14} className="bp-spin" aria-hidden="true" /> : <Play size={14} aria-hidden="true" />}Run
@@ -362,16 +361,23 @@ function CoachFeedback({ coach }: { coach: Coach }) {
 }
 
 function HintsSection({ coach, disabled }: { coach: Coach; disabled: boolean }) {
+  const [expanded, setExpanded] = useState<number | null>(null);
+  useEffect(() => setExpanded(coach.hints.length - 1), [coach.hints.length]);
   if (!coach.available) return null;
   const used = coach.hints.length;
   return <div className="bp-hints">
     {coach.hints.map((h, i) => <div className="bp-hint-card" key={i}>
-      <div className="bp-hint-head"><Lightbulb size={13} aria-hidden="true" />Hint {i + 1} of 3<span>· {h.focus}</span></div>
-      <p>{h.hint}</p>
-      {h.sources.length > 0 && <div className="bp-hint-sources">
-        {h.sources.map(src => <a key={src.url} href={src.url} target="_blank" rel="noopener noreferrer">
-          {src.title}<ExternalLink size={11} aria-hidden="true" /></a>)}
-      </div>}
+      <button type="button" className="bp-hint-head bp-hint-toggle" aria-expanded={expanded === i}
+        aria-controls={`bp-hint-content-${i}`} onClick={() => setExpanded(current => current === i ? null : i)}>
+        <Lightbulb size={13} aria-hidden="true" />Hint {i + 1} of 3<span>· {h.focus}</span><ChevronDown size={13} aria-hidden="true" />
+      </button>
+      <div className="bp-hint-content" id={`bp-hint-content-${i}`} hidden={expanded !== i}>
+        <p>{h.hint}</p>
+        {h.sources.length > 0 && <div className="bp-hint-sources">
+          {h.sources.map(src => <a key={src.url} href={src.url} target="_blank" rel="noopener noreferrer">
+            {src.title}<ExternalLink size={11} aria-hidden="true" /></a>)}
+        </div>}
+      </div>
     </div>)}
     {coach.error && <p className="bp-inline-error">{coach.error}</p>}
     {used < 3 ? <button type="button" className="bp-hint-button" onClick={coach.next} disabled={disabled || coach.loading}

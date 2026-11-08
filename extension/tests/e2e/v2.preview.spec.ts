@@ -42,7 +42,7 @@ test('v2 question sends choice id, permits retry, and offers explicit resume', a
   await expect(page.getByRole('button', { name: 'Check answer' })).toBeDisabled();
   await page.getByRole('radio', { name: '1', exact: true }).check();
   await page.getByRole('button', { name: 'Check answer' }).click();
-  await expect(page.getByRole('button', { name: 'Skip and watch' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'More', exact: true })).toBeEnabled();
   await expect(page.getByRole('heading', { name: 'Try again' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Resume video' })).toHaveCount(0);
   await page.getByRole('radio', { name: '3', exact: true }).check();
@@ -58,7 +58,7 @@ for (const state of ['short', 'predict']) test(`v2 ${state} answer isolates YouT
   for (const key of ['Space', 'j', 'k', 'l', 'f']) await answer.press(key);
   expect(await page.evaluate(() => (globalThis as typeof globalThis & { pageHotkeys: number }).pageHotkeys)).toBe(0);
   await answer.fill('3'); await answer.press('Tab');
-  await expect(page.getByRole('button', { name: 'Skip and watch' })).toBeFocused();
+  await expect(page.getByRole('button', { name: 'More', exact: true })).toBeFocused();
   await page.getByRole('button', { name: 'Check answer' }).click();
   await expect(page.getByRole('heading', { name: 'Well done' })).toBeVisible();
 });
@@ -92,7 +92,7 @@ test('v2 controls and refresher callbacks work', async ({ page }) => {
 test('v2 request errors remain actionable and deliberate success holds have no countdown', async ({ page }) => {
   await page.goto('/tests/showcase/v2.html?state=question-error');
   await expect(page.getByRole('alert')).toContainText('Connection failed.');
-  await expect(page.getByRole('button', { name: 'Skip and watch' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'More', exact: true })).toBeEnabled();
   await page.goto('/tests/showcase/v2.html?state=question-resume-error');
   await expect(page.getByText('The browser didn’t resume playback.', { exact: false })).toBeVisible();
   await page.getByRole('button', { name: 'Resume video' }).click();
@@ -123,6 +123,44 @@ test('v2 profile switches accounts, preserves settings and recovers an API failu
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Ben (test)', level: 1 })).toBeVisible();
   await expect(page.getByLabel('Pause frequency')).toHaveValue('many');
+});
+
+test('v2 Practice later stays under More and supports keyboard dismissal', async ({ page }) => {
+  await page.goto('/tests/showcase/v2.html?state=question');
+  await expect(page.getByRole('button', { name: 'Practice later', exact: true })).toHaveCount(0);
+  const more = page.getByRole('button', { name: 'More', exact: true });
+  await more.click();
+  await page.getByRole('button', { name: 'Practice later', exact: true }).focus();
+  await page.keyboard.press('Escape');
+  await expect(more).toBeFocused();
+  await expect(more).toHaveAttribute('aria-expanded', 'false');
+  await more.press('Enter');
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Enter');
+  await expect(page.getByLabel('Last action')).toHaveText('skip');
+});
+
+for (const theme of ['dark', 'light']) test(`v2 ${theme} timeline clusters ready challenges and preserves passed state`, async ({ page }, info) => {
+  await page.goto(`/tests/showcase/v2.html?state=timeline&theme=${theme}`);
+  const markers = page.getByRole('group', { name: 'Challenge timeline', exact: true }).getByRole('button');
+  await expect(markers).toHaveCount(2);
+  await expect(markers.last()).toHaveAttribute('data-passed', 'true');
+  await markers.first().focus();
+  await page.keyboard.press('Enter');
+  const nearby = page.getByRole('group', { name: 'Nearby challenges', exact: true });
+  await expect(nearby).toBeVisible();
+  await nearby.getByRole('button').first().click();
+  await expect(page.getByLabel('Opened challenge')).not.toBeEmpty();
+  await page.getByRole('button', { name: 'Close nearby challenges' }).click();
+  await page.getByText('Challenges (4)', { exact: true }).click();
+  await expect(page.locator('.bp-challenge-list li')).toHaveCount(4);
+  await expect(page.locator('.bp-challenge-list small').filter({ hasText: 'Passed · Review' })).toHaveCount(1);
+  await expect(page.locator('.bp-challenge-list small').filter({ hasText: 'Unfinished · Practice' })).toHaveCount(3);
+  await markers.last().click();
+  await expect(page.getByLabel('Opened challenge')).toHaveText('later');
+  await expect(markers.last()).toHaveAttribute('data-passed', 'true');
+  expect(await page.locator('.breakpoint-shell').evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
+  await page.screenshot({ path: info.outputPath(`timeline-${theme}.png`), fullPage: true, animations: 'disabled' });
 });
 
 for (const theme of ['dark', 'light']) test(`v2 ${theme} showcase captures every new view`, async ({ page }, info) => {

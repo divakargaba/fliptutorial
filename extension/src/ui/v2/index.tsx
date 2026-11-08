@@ -3,6 +3,9 @@ import { ACTIVE_ACCOUNT_KEY, DEFAULT_SETTINGS, SETTINGS_KEY as FROZEN_SETTINGS_K
 import levels from '../../../../contracts/v2/levels.json';
 import concepts from '../../../../contracts/v2/concepts.json';
 import { FeedbackEditor } from './FeedbackEditor';
+import { PracticeMore } from '../PracticeMore';
+export { TimelineMarkers } from '../TimelineChallenges';
+export type { TimelineMarker, TimelineMarkersProps } from '../TimelineChallenges';
 
 export const levelName = (id: LevelId) => levels.levels.find(level => level.id === id)?.name ?? id;
 export const conceptName = (id: string) => concepts.concepts.find(concept => concept.id === id)?.name ?? id;
@@ -48,7 +51,7 @@ function QuestionForm({ question, feedback, checking, error, canResume, onAnswer
         {error && <p role="alert">{error.message}{error.retryable ? ' Try your answer again, or skip and watch.' : ' Skip and watch to continue.'}</p>}
         {canResume && <p role="status">The browser didn’t resume playback. Try Resume video again.</p>}
         {feedback && <FeedbackCard feedback={feedback} code="" />}
-        <div className="bp-v2-actions"><button type="button" onClick={onSkip}>Skip and watch</button>
+        <div className="bp-v2-actions"><PracticeMore onLater={onSkip} />
           {passed ? <button type="button" className="bp-v2-primary" onClick={onResume}>Resume video</button>
             : <button className="bp-v2-primary" disabled={checking || !answer.trim()}>{checking ? 'Checking…' : 'Check answer'}</button>}</div>
         <span role="status">{checking ? 'Checking your answer' : ''}</span>

@@ -143,6 +143,7 @@
 .bp-icon-button:active { background: var(--bp-chip-hover); }
 
 .bp-body { display: flex; flex-direction: column; gap: 16px; min-height: 0; overflow-y: auto; padding: 16px; padding-top: 4px; overscroll-behavior: contain; }
+.bp-body > * { flex-shrink: 0; }
 .bp-stagger { animation: bp-rise 360ms var(--bp-ease-out) both; }
 .bp-stagger:nth-child(2) { animation-delay: 50ms; }
 .bp-stagger:nth-child(3) { animation-delay: 100ms; }
@@ -164,6 +165,7 @@
 .bp-expected { color: var(--bp-pass); font-weight: 500; white-space: nowrap; }
 
 .bp-editor-card {
+  flex-shrink: 0; min-height: 212px;
   border: 1px solid var(--bp-line); border-radius: 10px; background: var(--bp-editor-bg); overflow: hidden;
   transition: border-color 150ms ease, box-shadow 150ms ease;
 }
@@ -249,6 +251,9 @@
   transition: background-color 150ms ease, color 150ms ease;
 }
 .bp-skip:hover { background: var(--bp-chip); color: var(--bp-text); }
+.bp-more { position: relative; margin-right: auto; }
+.bp-more-options { position: absolute; z-index: 2; bottom: calc(100% + 8px); left: 0; width: 220px; padding: 12px; background: var(--bp-surface); border: 1px solid var(--bp-line); border-radius: 10px; box-shadow: var(--bp-shadow); }
+.bp-more-options p { margin-top: 8px; }
 .bp-button {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 36px; padding: 0 16px;
   border: 0; border-radius: 18px; font-size: 14px; font-weight: 500; white-space: nowrap;
@@ -334,6 +339,10 @@
 .bp-hint-head { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; color: var(--bp-text); font-size: 12px; font-weight: 600; }
 .bp-hint-head svg { color: var(--bp-warn, #f2c94c); }
 .bp-hint-head span { color: var(--bp-text-3); font-weight: 400; }
+.bp-hint-toggle { width: 100%; border: 0; padding: 0; background: transparent; text-align: left; flex-wrap: wrap; margin-bottom: 0; }
+.bp-hint-toggle > svg:last-child { margin-left: auto; transition: transform 150ms ease; }
+.bp-hint-toggle[aria-expanded='true'] > svg:last-child { transform: rotate(180deg); }
+.bp-hint-content { margin-top: 6px; overflow-wrap: anywhere; }
 .bp-hint-card p { color: var(--bp-text); font-size: 13px; line-height: 19px; }
 .bp-hint-sources { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .bp-hint-sources a {
@@ -341,6 +350,15 @@
   background: var(--bp-chip); color: var(--bp-focus); font-size: 11.5px; text-decoration: none;
 }
 .bp-hint-sources a:hover { background: var(--bp-chip-hover); }
+.bp-challenge-track { position: relative; height: 40px; width: 100%; }
+.bp-v2 .bp-timeline-marker { position: absolute; top: 4px; transform: translateX(-50%); display: flex; align-items: center; justify-content: center; gap: 2px; min-width: 32px; min-height: 32px; padding: 4px; color: var(--bp-text); border-color: var(--bp-text-3); }
+.bp-timeline-marker[data-passed='true'] { color: var(--bp-pass); }
+.bp-challenge-disclosure { color: var(--bp-text); }
+.bp-v2 .bp-challenge-list { list-style: none; padding: 0; display: grid; gap: 8px; margin: 12px 0; }
+.bp-challenge-list button { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; }
+.bp-challenge-list button > svg { flex-shrink: 0; }
+.bp-challenge-list strong, .bp-challenge-list small { display: block; overflow-wrap: anywhere; }
+.bp-challenge-list small { color: var(--bp-text-2); margin-top: 4px; }
 .bp-coach {
   display: grid; grid-template-columns: 14px 1fr; gap: 8px; align-items: start; padding: 10px 12px; border-radius: 8px;
   background: var(--bp-raised); font-size: 12.5px; animation: bp-rise 240ms var(--bp-ease-out) both;

@@ -4,6 +4,7 @@ import css from '../../src/ui/theme.css?inline';
 import { ConceptQuestionPanel, FeedbackCard, LearnerSettings, LevelUp, RefresherPrompt, TopicNotAvailable, defaultSettings } from '../../src/ui/v2';
 import { ProfilePage, ProfileView } from '../../src/profile-ui';
 import { PracticePanel } from '../../src/ui/PracticePanel';
+import { TimelineChallenges } from '../../src/ui/TimelineChallenges';
 import practice from '../../../contracts/practice-response.fixture.json';
 import type { Breakpoint } from '../../src/contracts';
 import type { ExercisePlan, FeedbackResult, Language, PlanQuestion, PublicProfile } from '../../src/v2/types';
@@ -35,6 +36,16 @@ function Showcase() {
   const [checking, setChecking] = useState(state === 'question-checking');
   const [action, setAction] = useState('');
   const [accountId, setAccountId] = useState('test-ana');
+  if (state === 'timeline') {
+    const pauses = (plan as ExercisePlan).pauses.map((pause, index) => ({ ...pause, pauseAtS: 1000 + index * 20 }));
+    return <><TimelineChallenges durationS={10000} pauses={[
+      ...pauses,
+      { ...pauses[0]!, id: 'nearby', pauseAtS: pauses[0]!.pauseAtS + 10 },
+      { ...pauses[0]!, id: 'later', pauseAtS: 9000 },
+      { ...pauses[0]!, id: 'not-ready', ready: false, pauseAtS: 8000 },
+      { ...pauses[0]!, id: 'missing-exercise', exercise: null, pauseAtS: 7000 },
+    ]} passedIds={new Set(['later'])} onOpen={setAction} /><output aria-label="Opened challenge">{action}</output></>;
+  }
   if (state === 'profile-live') return <ProfilePage />;
   if (state === 'profile') return <ProfileView profile={profile as PublicProfile} />;
   if (state === 'coding-language' || state === 'coding-accounts') {

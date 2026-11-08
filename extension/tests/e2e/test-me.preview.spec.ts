@@ -68,7 +68,8 @@ for (const theme of ['dark', 'light']) {
     const audit = await auditPanel(page);
     expect(audit.contrastFailures).toEqual([]);
     expect(audit.controlFailures).toEqual([]);
-    await page.getByRole('button', { name: 'Skip and watch' }).click();
+    await page.getByRole('button', { name: 'More', exact: true }).click();
+    await page.getByRole('button', { name: 'Practice later', exact: true }).click();
     await page.reload();
     await page.getByRole('button', { name: 'Test me', exact: true }).click();
     await expect(editor).toHaveText('# keep this generated draft');
