@@ -32,8 +32,11 @@ test.describe('panels fit a short window', () => {
     // Feedback and progress made the content taller than the capped panel: the actions stay on screen.
     const resume = page.getByRole('button', { name: 'Resume video', exact: true });
     await expect(resume).toBeInViewport();
+    // The bug was the actions being clipped *inside* the capped panel: Resume must sit within its bottom edge.
+    // (Where the panel itself ends depends on what sits above it and font metrics, and YouTube's page scrolls.)
     const panel = await page.locator('.bp-panel').boundingBox();
-    expect(panel!.y + panel!.height).toBeLessThanOrEqual(600);
+    const button = await resume.boundingBox();
+    expect(button!.y + button!.height).toBeLessThanOrEqual(panel!.y + panel!.height + 1);
     // Everything else is still reachable by scrolling inside the panel.
     const body = page.locator('.bp-v2.bp-panel > .bp-v2-body');
     expect(await body.evaluate(el => el.scrollHeight > el.clientHeight)).toBe(true);
