@@ -86,7 +86,7 @@ Work top to bottom. Mark State in this table when shipped or blocked (only your 
 | R1 | @divakargaba | **Docs + CI for Breakpoint.** Replace the template `README.md` with Breakpoint: what it is, macOS and Windows setup (backend venv + `.env`, `npm ci && npm run build`, Load unpacked), demo links with timestamps for all 4 breakpoints, test commands, troubleshooting. Fill HACKATHON.md "Product decision". Change `.github/workflows/check.yml` to run backend pytest (Python 3.12) and extension typecheck/Vitest/build plus the preview Playwright suite (no provider keys); keep it green on GitHub. Add a five-minute demo script to PLAN.md (what to click, what to say, fallback). | Done |
 | R2 | @abdullahwarraichh | **Backup demo recording (PRD §9.2–3).** Use your D5 harness with Playwright `recordVideo` at 1440×900 to record one clean take on real YouTube: badge → auto-pause at the exponent challenge → wrong Run → correct Submit → Solved → resume. Also record a short take of the calculator one. Commit the `.webm` files to `demo/` (Git LFS not needed if < 25 MB each) and link them in PLAN.md. | Done: [`demo/exponent-challenge.webm`](demo/exponent-challenge.webm), [`demo/calculator-challenge.webm`](demo/calculator-challenge.webm); re-record with `node demo/record.mjs`; see Measured results |
 | R3 | @reyanshBadhwar26 | **Failure matrix + accessibility (PRD §6–7).** Add MV3 E2E cases with screenshots for every grader/API failure the UI must handle: `GRADER_UNAVAILABLE`, `GRADER_TIMEOUT`, `BUSY`, `STALE_EXERCISE` (draft kept, exercise reloads), `INVALID_CODE`, network timeout. Each must keep the draft, keep playback paused and leave Skip reachable. Run an automated contrast/a11y check (e.g. axe-core in Playwright) on the panel in dark and light themes; fix anything below WCAG AA in `src/ui/`. | Done — 16/16 release MV3 checks; 28 screenshots in `extension/assets/ui-checks/release/`; browser-computed AA text contrast and focused accessibility audit (not axe/full conformance). See Measured results. |
-| M1 | @spectaboy | **Manual desktop-Chrome checks.** Use the built MV3 extension on real YouTube (`rfscVS0vtbw&t=9798s`) in desktop Chrome. Follow the four-step checklist in `extension/tests/e2e/README.md` ("Two-minute desktop Chrome click-through"): (1) keyboard-only hotkey isolation, (2) theater mode layout, (3) tab switch before a pause, (4) ads and light theme at 2×. Also run the opt-in automated checks: `cd extension && npm run build && node tests/e2e/real-youtube.mjs --checks && node tests/e2e/real-youtube.mjs --controls`. Record results in Measured results. Report "no ad served" if YouTube doesn't serve one. | Todo |
+| M1 | @spectaboy | **Manual desktop-Chrome checks.** Use the built MV3 extension on real YouTube (`rfscVS0vtbw&t=9798s`) in desktop Chrome. Follow the four-step checklist in `extension/tests/e2e/README.md` ("Two-minute desktop Chrome click-through"): (1) keyboard-only hotkey isolation, (2) theater mode layout, (3) tab switch before a pause, (4) ads and light theme at 2×. Also run the opt-in automated checks: `cd extension && npm run build && node tests/e2e/real-youtube.mjs --checks && node tests/e2e/real-youtube.mjs --controls`. Record results in Measured results. Report "no ad served" if YouTube doesn't serve one. | In progress: automated `--checks`/`--controls` passed (tab crossing manual, no ad served); hand-driven desktop-Chrome click-through pending |
 
 ## "Test me" feature (stretch scope, off by default)
 
@@ -202,6 +202,15 @@ attempt failed its focus assertion; restoring Playwright's default focus setting
 after the probe fixed the harness, and the final run passed. Actual hidden-tab
 crossing remains unverified; no ad appeared in the final run. No new checks are
 pending beyond the explicit manual handoff.
+
+M1 automated part (Omar, Windows 11, 2026-11-07, `4bab93a`, fresh `npm ci` + build,
+backend on 127.0.0.1:8000 with live `ce.judge0.com`): `--checks` passed keyboard
+hotkey isolation, theater placement, seek-across and rewind re-arm (paused at
+**9803.348 s**); Submit -> resumed **6.0 s**. Tab crossing reported **manual
+required** (desktop kept both pages visible). **No ad served** (`observed: false`).
+`--controls` passed keyboard Skip and Close. Cold badge after player ready:
+**0.022 / 0.002 / 0.000 s** (3 fresh profiles). Hand-driven desktop-Chrome
+click-through (4 steps + final Submit at 2×) is still pending Omar's manual run.
 
 ## Five-minute demo script
 
