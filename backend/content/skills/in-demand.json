@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "asOf": "2026-11-08",
+  "curatedBy": "@spectaboy (hand-picked for the hackathon demo)",
+  "method": "Hand-picked, ranked list mapped to contracts/v2/concepts.json ids. Reasons cite public developer surveys; refresh monthly or swap the source (BREAKPOINT_IN_DEMAND_FILE or app.profile.skills.set_source). Every videoUrl was checked against YouTube oEmbed on 2026-11-08.",
+  "sources": [
+    {
+      "id": "so-2025",
+      "title": "Stack Overflow Developer Survey 2025: Technology (most popular technologies)",
+      "url": "https://survey.stackoverflow.co/2025/technology",
+      "published": "2025"
+    },
+    {
+      "id": "octoverse-2025",
+      "title": "GitHub Octoverse 2025: a new developer joins GitHub every second as AI leads TypeScript to #1",
+      "url": "https://github.blog/news-insights/octoverse/octoverse-a-new-developer-joins-github-every-second-as-ai-leads-typescript-to-1/",
+      "published": "2025-10-28"
+    }
+  ],
+  "skills": [
+    {
+      "concept": "react-state",
+      "reason": "React stays one of the most-used web frameworks, and TypeScript, the language most React apps now ship in, became #1 on GitHub",
+      "videoUrl": "https://www.youtube.com/watch?v=O6P86uwfdR0",
+      "videoTitle": "Learn useState In 15 Minutes - React Hooks Explained (Web Dev Simplified)",
+      "sourceIds": ["so-2025", "octoverse-2025"]
+    },
+    {
+      "concept": "http-apis",
+      "reason": "API back ends are in demand: FastAPI's +5 point jump was one of the biggest web-framework shifts in the 2025 survey",
+      "videoUrl": "https://www.youtube.com/watch?v=GZvSYJDk-us",
+      "videoTitle": "APIs for Beginners - How to use an API (freeCodeCamp)",
+      "sourceIds": ["so-2025"]
+    },
+    {
+      "concept": "sql-joins",
+      "reason": "SQL is among the most-used languages by professional developers, and joins are where most data questions start",
+      "videoUrl": "https://www.youtube.com/watch?v=HXV3zeQKqGY",
+      "videoTitle": "SQL Tutorial - Full Database Course for Beginners (freeCodeCamp)",
+      "sourceIds": ["so-2025"]
+    },
+    {
+      "concept": "js-async",
+      "reason": "TypeScript/JavaScript lead GitHub activity; async/await and promises are core to every modern JS codebase",
+      "videoUrl": "https://www.youtube.com/watch?v=PoRJizFvM7s",
+      "videoTitle": "Async JS Crash Course - Callbacks, Promises, Async Await (Traversy Media)",
+      "sourceIds": ["octoverse-2025"]
+    },
+    {
+      "concept": "git",
+      "reason": "Version control is assumed in every team; GitHub reports a new developer joining every second",
+      "videoUrl": "https://www.youtube.com/watch?v=RGOj5yH7evk",
+      "videoTitle": "Git and GitHub for Beginners - Crash Course (freeCodeCamp)",
+      "sourceIds": ["octoverse-2025"]
+    },
+    {
+      "concept": "dynamic-programming",
+      "reason": "Hand-picked: a staple of technical interviews for software roles",
+      "videoUrl": "https://www.youtube.com/watch?v=oBt53YbR9Kk",
+      "videoTitle": "Dynamic Programming - Learn to Solve Algorithmic Problems & Coding Challenges (freeCodeCamp)",
+      "sourceIds": []
+    }
+  ]
+}

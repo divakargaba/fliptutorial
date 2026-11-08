@@ -18,4 +18,24 @@ Branch `lane/b1-profile`. Contracts: `contracts/v2/README.md` §3 (consume event
 pytest driven by `practice-events.fixture.json` + generated event streams: level-ups, decay over simulated days, refresher selection, matching for the seeded accounts. No network.
 
 ## Status
-- [ ] Not started
+- [x] Goals 1–7 implemented in `backend/app/profile/` (engine, store, seed, skills, matching); router stays at
+  `app.profile.router` (already wired in `main.py`). Check: `cd backend && python -m pytest -q tests/test_profile.py` → 20 passed, offline.
+- Storage: SQLite `backend/data/profile.sqlite3` (gitignored; override `BREAKPOINT_PROFILE_DB`). Events are the source
+  of truth; profiles are replayed per request. Seeded on first open: `test-ana` (Python beginner, `lists` refresher due),
+  `test-ben` (Advanced SQL joins + HTTP APIs), `test-cam` (Advanced React), `test-dee` (Intermediate algorithms),
+  `test-eli` (new, private). Delete the DB file to reseed relative to "now".
+- XP: pass = 30 × (1 + 0.15 × (exercise rank − 1)) × hints (−20 %/hint, floor 40 %) × first try 1.25 × optimal 1.2,
+  halved if the exercise is 4+ ranks below the learner; first concept full XP, others half. Practiced 5, failed 3,
+  refresher 15 (correct) / 2, skip/hint/watch 0.
+- Decay: strength = 2^(−days since last practice / half-life); half-life 0.5 d → 1 d on first success, ×2 per success
+  on a new day (×1.2 same day, cap 90 d), ×0.5 on failure. `refresherDue` when strength < 0.35.
+- Refresher: stored bank `backend/content/skills/refreshers.json` (one MCQ per concept, plan-question shape, no answers
+  in responses). Lane A2 grades via `app.profile.skills.lookup_refresher(questionId)` → `{question, answer, explanation}`
+  (ids start `rf-`); the extension then posts a `refresher_answered` event.
+- In-demand: `backend/content/skills/in-demand.json`, dated 2026-11-08, sources = Stack Overflow 2025 survey + GitHub
+  Octoverse 2025, video links verified via YouTube oEmbed. Swap via `BREAKPOINT_IN_DEMAND_FILE` or `skills.set_source()`.
+  `GET /v2/skills/in-demand?accountId=` skips skills the learner is already Advanced in.
+- Extras beyond the contract (additive): read endpoints accept `?now=<ISO>` to simulate decay for the demo;
+  `/level/{concept}` also returns `tier`, `rank`, `nextLevel`, `refresherDue` and private `stats` (watchedS, practiced,
+  passed, failed, skipped, hintsUsed). Events for an unknown local id create a private account.
+- Not done: toggling `public` (seed data only; no endpoint in the contract); generated refreshers from lane A2.
