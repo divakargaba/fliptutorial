@@ -63,7 +63,12 @@ Any YouTube video id → a cached, timestamped exercise plan before the learner 
   `rfscVS0vtbw` (`claude-haiku-5-5`): the calculator pause at 3338 s came back `new_problem` (frames show `result = num1 + num2`), and the
   reviewed exponent pause at 9803.3 s came back `clear` (header and partial body only). Limit: 160×90 frames, so small-font code reads as
   "not visible" and the pause is kept.
-- [ ] Proof: `backend/content/eval/` with ≥20 labelled videos and a precision/recall report; auto-pause bar to post.
+- [x] Proof: `backend/content/eval/` has 26 videos labelled by hand from captions and frames: tutorials in 9 languages, theory,
+  mixed, code-mentioning talks and non-coding videos. `labels.json`, `README.md` and the generated `REPORT.md` are in that folder.
+  Two live runs (`claude-haiku-5-5`, the live classification path): section "qualifies" precision 0.918 / 0.962, recall 0.876 / 0.874,
+  and 77/78 pauses inside labelled teaching and before a labelled answer. That meets the bar (precision ≥ 0.9 in every run), so auto-pause
+  can be on. Every false positive is a "create project + Hello World" setup boundary. No non-coding video got a qualifying section.
+  Harness: `python -m app.planner.evaluate run|score` (`app/planner/evaluate.py`); offline scoring tests are in `tests/test_planner_eval.py` (7/7).
 - [x] Classification progress is saved after every ~40-min window (`classifyProgress` in the plan cache: windows done, numberer state, caption digest).
   A restarted backend resumes at the next window with the same section/pause ids and ranks, and reuses items already generated. If the captions changed
   (digest or window boundaries differ) it reclassifies from scratch. An in-memory `error` is never written to disk. Offline: `test_planner.py` 25 passed + 1 skipped until A2 merges; full backend suite 290 passed / 5 skipped.
