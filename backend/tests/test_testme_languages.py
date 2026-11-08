@@ -79,12 +79,19 @@ def test_static_check_failure_retries_then_runner_verify_failure_is_unavailable(
     assert "rejected" in model.prompts[1] and len(runner.seen) == 1
 
 
-def test_python_only_prompt_is_unchanged_and_default_is_python(monkeypatch):
+def test_python_only_prompt_is_unchanged_and_default_is_every_gradable_language(monkeypatch):
     monkeypatch.delenv("BREAKPOINT_TESTME_LANGUAGES", raising=False)
-    assert enabled_languages() == ("python",)
+    assert enabled_languages() == ALL
     assert "not teaching Python code" in build_prompt(CLIP)
     monkeypatch.setenv("BREAKPOINT_TESTME_LANGUAGES", "python, js ,java,c++,rust")
     assert set(enabled_languages()) == set(ALL)
+
+
+def test_env_var_narrows_languages(monkeypatch):
+    monkeypatch.setenv("BREAKPOINT_TESTME_LANGUAGES", "python")
+    assert enabled_languages() == ("python",)
+    monkeypatch.setenv("BREAKPOINT_TESTME_LANGUAGES", "java")
+    assert enabled_languages() == ("python", "java")  # Python is always on
 
 
 def test_public_endpoint_shape_unchanged_for_javascript(monkeypatch):

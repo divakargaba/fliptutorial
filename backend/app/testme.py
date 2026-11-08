@@ -16,9 +16,8 @@ Errors are ``TestMeError`` with codes ``NOT_PYTHON``, ``GENERATOR_UNAVAILABLE``,
 ``GENERATOR_TIMEOUT`` and ``BUSY``. Prompts, solutions and hidden tests are never
 logged.
 
-Languages: Python always; JavaScript, Java and C++ when listed in
-``BREAKPOINT_TESTME_LANGUAGES`` (comma list, default ``python``) and lane A2's
-runners are installed. Non-Python exercises use the planner's per-language shape and
+Languages: Python always, plus every language lane A2's runners can grade (today
+JavaScript, Java and C++). ``BREAKPOINT_TESTME_LANGUAGES`` (comma list) narrows the set. Non-Python exercises use the planner's per-language shape and
 static checks (``app.planner.generate.check_coding``) and the planner's runner verify
 (``app.planner.runner_verify``). The public response shape is unchanged; only
 ``exercise.language`` differs. ``NOT_PYTHON`` keeps its code and means "not a
@@ -100,10 +99,10 @@ def normalize_language(name: str) -> str:
 
 
 def enabled_languages() -> tuple[str, ...]:
-    """Python plus each language in BREAKPOINT_TESTME_LANGUAGES that a runner can grade."""
+    """Python plus every language a runner can grade; BREAKPOINT_TESTME_LANGUAGES can narrow the list."""
     from .planner.vocab import coding_languages
 
-    raw = os.environ.get("BREAKPOINT_TESTME_LANGUAGES", "python")
+    raw = os.environ.get("BREAKPOINT_TESTME_LANGUAGES") or ",".join(coding_languages())
     wanted = {normalize_language(x) for x in raw.split(",") if x.strip()}
     return ("python",) + tuple(x for x in coding_languages() if x != "python" and x in wanted and x in LANGUAGE_NAMES)
 
