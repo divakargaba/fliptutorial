@@ -16,6 +16,13 @@ const question = z.object({
   prompt: z.string().min(1), choices: z.array(z.object({ id, text: z.string() }).strict()).optional(),
   concepts: z.array(id).min(1), level: LevelSchema, aiGenerated: z.boolean(),
 }).strict();
+// B1 returns the same public question contract as the planner, never its answer.
+// Null represents HTTP 204 (no skill is due), not a failed request.
+export const RefresherSchema = z.object({
+  accountId: id, concept: id, conceptName: z.string().min(1),
+  strength: z.number().min(0).max(1), reason: z.string(), question,
+}).strict().refine(r => r.question.concepts.includes(r.concept), 'Refresher concept mismatch').nullable();
+export type Refresher = NonNullable<z.infer<typeof RefresherSchema>>;
 export const ExercisePlanSchema = z.object({
   schemaVersion: z.literal(2), videoId: VideoIdSchema, planId: id, generatedAt: z.string(), learnerLevel: LevelSchema,
   status: z.enum(['planning', 'ready', 'not_coding', 'no_captions', 'error']),
@@ -80,6 +87,7 @@ export const PlanMessageSchema = z.discriminatedUnion('type', [
     learnerLevel: LevelSchema, lastResult: LastResultSchema.optional() }).strict(),
   z.object({ type: z.literal('levelV2'), accountId: id, concept: id }).strict(),
   z.object({ type: z.literal('levelsV2'), accountId: id }).strict(),
+  z.object({ type: z.literal('refresherV2'), accountId: id }).strict(),
   z.object({ type: z.literal('eventsV2'), events: z.array(PracticeEventSchema).min(1).max(100) }).strict(),
 ]);
 export type PlanMessage = z.infer<typeof PlanMessageSchema>;
