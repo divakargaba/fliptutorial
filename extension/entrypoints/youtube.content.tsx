@@ -14,8 +14,21 @@ import { Badge } from '../src/ui/Badge';
 import { TestMeControls } from '../src/ui/TestMeControls';
 import { PracticePanel, SOLVED_HOLD_MS, type PracticePanelProps } from '../src/ui/PracticePanel';
 import { HintsContext, type AnalysisState } from '../src/hints';
+import { sendPlanRequest, LevelResultSchema, LevelsResultSchema } from '../src/plan/api';
+import { AnswerResultSchema, ExercisePlanSchema, SubmitResultSchema, type PlanMessage } from '../src/plan/schemas';
+import { ACCOUNT_KEY, SETTINGS_KEY, readAccount, readSettings, type LearnerSettings } from '../src/plan/settings';
+import { EventQueue } from '../src/plan/events';
+import { WatchSegments } from '../src/plan/watch';
+import { PlanLoader } from '../src/plan/loader';
+import { planSolved, markPlanSolved } from '../src/plan/progress';
+import type { ExercisePlan, FeedbackResult, PracticeEvent } from '../src/v2/types';
+import { ConceptQuestionPanel, LearnerSettings as LearnerSettingsView, TopicNotAvailable } from '../src/ui/v2';
+import { saveLearnerSettings } from '../src/plan/preferences';
 
-type RenderedPanel = PracticePanelProps & { aiGenerated: boolean; ownsPause: boolean };
+// Keep the presentation contract shared with B2. accountId is wired ahead of
+// its draft-isolation follow-up; feedback uses the exact submitted snapshot.
+type RenderedPanel = PracticePanelProps & { aiGenerated: boolean; accountId?: string;
+  language?: PracticePanelProps['breakpoint']['exercise']['language'] };
 
 export default defineContentScript({
   matches: ['https://www.youtube.com/*'],
@@ -32,6 +45,47 @@ export default defineContentScript({
     const trace = (stage: string) => { if (debug) performance.mark(`breakpoint:${stage}`); };
     trace('start');
     const session = new PlaybackSession();
+    let plan: ExercisePlan | null = null;
+    let planSolvedIds = new Set<string>();
+    let prepared: boolean | null = null;
+    let settings: LearnerSettings = readSettings({}); // disabled until storage has loaded
+    let accountId = 'test-ana';
+    let accountReady = false;
+    let planLoader: PlanLoader | undefined;
+    let planLoadSequence = 0;
+    let dismissedUnavailable = false;
+    let settingsError: string | null = null;
+    let feedbackState: { ticket: Ticket; feedback: FeedbackResult; code: string } | null = null;
+    const attemptEvents = new WeakMap<object, { accountId: string; attempts: number; hintsUsed: number }>();
+    // Content persists events directly, so navigation or worker cold-start cannot
+    // lose them before delivery. The worker is the sole network queue drainer.
+    const eventStore = new EventQueue(browser.storage.local, async () => false);
+    function emitEvent(fields: Omit<PracticeEvent, 'id' | 'at' | 'accountId'>, account = accountId) {
+      const event = { ...fields, accountId: account, id: crypto.randomUUID(), at: new Date().toISOString() };
+      void eventStore.enqueue([event]).then(() => browser.runtime.sendMessage({ type: 'flushEventsV2' })).catch(() => {});
+    }
+    const watch = new WatchSegments(watchedS => {
+      if (session.videoId) emitEvent({ type: 'watched', videoId: session.videoId, watchedS });
+    });
+    function eventContext(active = session.active) {
+      if (!active) return null;
+      let context = attemptEvents.get(active);
+      if (!context) { context = { accountId, attempts: 0, hintsUsed: 0 }; attemptEvents.set(active, context); }
+      return context;
+    }
+    function practiceEvent(type: PracticeEvent['type'], active = session.active, extra: Partial<PracticeEvent> = {}) {
+      const item = active?.planPause?.exercise ?? active?.planPause?.question;
+      const context = eventContext(active);
+      if (!active || !item || !context || !session.videoId) return;
+      emitEvent({ type, videoId: session.videoId, exerciseId: item.id, concepts: item.concepts, level: item.level,
+        attempts: context.attempts, hintsUsed: context.hintsUsed, ...extra }, context.accountId);
+    }
+    const sendV2 = (message: PlanMessage) => browser.runtime.sendMessage(message);
+    async function learnerLevel(concept: string | undefined, account: string): Promise<string> {
+      if (!concept) return 'beginner-1';
+      const reply = await sendPlanRequest({ type: 'levelV2', accountId: account, concept }, LevelResultSchema, sendV2);
+      return reply.ok ? reply.data.level : 'beginner-1';
+    }
     let player: HTMLVideoElement | null = null;
     let oldPlayer: HTMLVideoElement | null = null;
     let oldSource = '';
@@ -52,9 +106,21 @@ export default defineContentScript({
     // Efficiency review of the latest passing submission, keyed to its attempt.
     let analysisState: { ticket: Ticket; state: AnalysisState } | null = null;
     const hints = {
-      requestHint(input: { code: string; level: number; lastResult?: unknown; previousHints?: string[] }) {
+      async requestHint(input: { code: string; level: number; lastResult?: unknown; previousHints?: string[] }) {
         const a = session.active;
         if (!a) return Promise.resolve({ ok: false as const, error: { error: { code: 'NO_ATTEMPT', message: 'No exercise is open.', retryable: false }, requestId: 'local' } });
+        if (a.planPause?.exercise) {
+          const ticket = session.ticket();
+          const item = a.planPause.exercise;
+          const level = await learnerLevel(item.concepts[0], eventContext(a)!.accountId);
+          if (!session.isCurrent(ticket)) return { ok: false as const, error: { error: { code: 'STALE_ATTEMPT', message: 'Exercise closed.', retryable: false }, requestId: 'local' } };
+          const reply = await sendPlanRequest({ type: 'hintV2', exerciseId: item.id, revision: item.revision,
+            code: input.code, hintLevel: input.level, learnerLevel: level }, HintResponseSchema, sendV2);
+          if (reply.ok && session.isCurrent(ticket) && input.level > 0) {
+            eventContext(a)!.hintsUsed++; practiceEvent('hint_used', a, { hintLevel: input.level });
+          }
+          return reply;
+        }
         return sendRequest({ type: 'hint', exerciseId: a.breakpoint.exercise.id, revision: a.revision, ...input } as WorkerMessage,
           HintResponseSchema, send);
       },
@@ -112,16 +178,28 @@ export default defineContentScript({
     function render() {
       if (!ui?.mounted || !isCurrent() || uiFailed) return;
       const active = session.active;
-      const state = bindExpired || session.route === 'unavailable' ? 'unavailable' : session.route === 'loading' ? 'loading' : 'ready';
+      if (active) eventContext(active);
       const breakpoints = session.data?.breakpoints ?? [];
+      const state = bindExpired || session.route === 'unavailable' ? 'unavailable'
+        : session.route === 'loading' || (prepared === false && plan?.status === 'planning' && breakpoints.length === 0) ? 'loading' : 'ready';
       const remaining = breakpoints.filter(b => session.available(b));
       const solved = breakpoints.filter(b => session.solvedIds.has(b.exercise.id)).length;
       let panel: RenderedPanel | null = null;
       if (active && session.videoId) {
         const ticket = session.ticket();
+        const plannedItem = active.planPause?.exercise ?? active.planPause?.question;
         panel = {
           videoId: session.videoId, revision: active.revision, breakpoint: active.breakpoint,
+          language: active.breakpoint.exercise.language,
           attempt: active.state, result: active.result, error: active.error, canResume: active.canResume,
+          ...(plannedItem ? {
+            manualResume: true, accountId: eventContext(active)!.accountId,
+            conceptLevels: plannedItem.concepts.map(concept => ({
+              concept, level: plannedItem.level,
+            })),
+            feedback: feedbackState && session.isCurrent(feedbackState.ticket)
+              ? { result: feedbackState.feedback, submittedCode: feedbackState.code } : null,
+          } : {}),
           aiGenerated: active.generated, ownsPause: active.ownsPause,
           ...(active.generated ? {} : {
             index: Math.max(0, breakpoints.findIndex(b => b.id === active.breakpoint.id)), total: breakpoints.length,
@@ -140,7 +218,7 @@ export default defineContentScript({
         clearTimeout(leavingTimer);
         leavingTimer = setTimeout(() => { leavingPanel = null; render(); }, 220);
       }
-      shownPanel = panel;
+      shownPanel = active?.planPause?.question ? null : panel;
       const visiblePanel = panel ?? leavingPanel;
       const request = session.testMe;
       const testMe = testMeEnabled ? {
@@ -152,16 +230,85 @@ export default defineContentScript({
       try {
         flushSync(() => ui!.mounted!.render(<HintsContext.Provider value={hints}><TestMeContext.Provider value={testMe}><div className="breakpoint-shell" data-theme={theme()}
           data-placement={anchor?.id === 'secondary-inner' || anchor?.id === 'secondary' ? 'side' : 'below'}>
-          {session.route !== 'unsupported' && <div data-breakpoint-badge>
+          {prepared === false && plan && ['not_coding', 'no_captions'].includes(plan.status) && !dismissedUnavailable
+            ? <TopicNotAvailable reason={plan.verdict.reason} onDismiss={() => { dismissedUnavailable = true; render(); }} />
+            : session.route !== 'unsupported' && <div data-breakpoint-badge>
             <Badge state={state} total={breakpoints.length} remaining={remaining.length} solved={solved}
               active={!!active && !active.generated} nextAtS={remaining[0]?.pauseAtS ?? null} onOpen={openFromBadge} />
           </div>}
           <TestMeControls />
+          {accountReady && session.videoId && <details className="bp-v2">
+            <summary>Practice settings</summary>
+            <LearnerSettingsView value={settings} videoId={session.videoId} onChange={next => {
+              // Persist first; the storage observer applies the same settings
+              // to every tab. A failed write must not pretend to be saved.
+              void saveLearnerSettings(next).then(() => { settingsError = null; render(); })
+                .catch(() => { settingsError = 'Could not save practice settings. Please try again.'; render(); });
+            }} />
+            {settingsError && <p role="alert">{settingsError}</p>}
+          </details>}
           {visiblePanel && <div data-breakpoint-panel data-ai-generated={visiblePanel.aiGenerated || undefined} tabIndex={-1} style={{ width: '100%' }}>
-            <PracticePanel key={`${session.generation}/${visiblePanel.breakpoint.exercise.id}`} {...visiblePanel} />
+            {active?.planPause?.question
+              ? <ConceptQuestionPanel key={`${session.generation}/${active.planPause.question.id}`}
+                  question={active.planPause.question} checking={active.state === 'checking'}
+                  {...{ error: active.error, canResume: active.canResume }}
+                  feedback={feedbackState && session.isCurrent(feedbackState.ticket) ? feedbackState.feedback : null}
+                  onAnswer={answer => void answerQuestion(answer)} onSkip={skip} onClose={skip} onResume={visiblePanel.onResume} />
+              : <PracticePanel key={`${session.generation}/${visiblePanel.breakpoint.exercise.id}`} {...visiblePanel} />}
           </div>}
         </div></TestMeContext.Provider></HintsContext.Provider>));
       } catch { failMount(); }
+    }
+
+    function applyPlan() {
+      // Prepared lessons keep their existing v1 grading and revision flow.
+      // A racing plan response is held until the v1 lookup decides ownership.
+      if (plan && prepared === false) {
+        session.acceptPlan(session.generation, plan, settings);
+        for (const id of planSolvedIds) session.solvedIds.add(id);
+      }
+      session.autoPause = settings.autoPause && !settings.disabledVideos.includes(session.videoId ?? '');
+      render();
+    }
+
+    async function restorePlanProgress(incoming: ExercisePlan, generation: number, account: string) {
+      const solved = await Promise.all(incoming.pauses.map(async p => {
+        const item = p.exercise ?? p.question;
+        return item && await planSolved(account, incoming.videoId, item.id, item.revision).catch(() => false) ? item.id : null;
+      }));
+      if (generation !== session.generation || plan !== incoming || account !== accountId || !isCurrent()) return;
+      planSolvedIds = new Set(solved.filter((id): id is string => id !== null));
+      applyPlan();
+    }
+
+    async function loadRoute(generation: number, videoId: string) {
+      try {
+        const stored = await browser.storage.local.get([SETTINGS_KEY, ACCOUNT_KEY]);
+        if (generation !== session.generation || !isCurrent()) return;
+        settings = readSettings(stored[SETTINGS_KEY]); accountId = readAccount(stored[ACCOUNT_KEY]);
+        accountReady = true;
+      } catch { settings = readSettings({}); }
+      if (generation !== session.generation || !isCurrent()) return;
+      session.autoPause = settings.autoPause && !settings.disabledVideos.includes(videoId);
+      void lookup();
+      void loadPlan(generation, videoId, accountId);
+    }
+
+    async function loadPlan(generation: number, videoId: string, account: string) {
+      const sequence = ++planLoadSequence;
+      planLoader?.stop();
+      const levels = await sendPlanRequest({ type: 'levelsV2', accountId: account }, LevelsResultSchema, sendV2);
+      if (sequence !== planLoadSequence || generation !== session.generation || account !== accountId || !isCurrent()) return;
+      // A1 confirms POST is an idempotent cached read after job creation. Reuse
+      // this exact body when polling so two accounts cannot exchange plans via
+      // the legacy GET endpoint's "latest POST" level-map selector.
+      const request = { type: 'plan' as const, videoId, learnerLevel: 'beginner-1', learnerLevels: levels.ok ? levels.data.levels : {} };
+      planLoader = new PlanLoader(() => sendPlanRequest(request, ExercisePlanSchema, sendV2), incoming => {
+        if (sequence !== planLoadSequence || generation !== session.generation || account !== accountId || !isCurrent()) return;
+        plan = incoming;
+        void restorePlanProgress(incoming, generation, accountId);
+      });
+      planLoader.start();
     }
 
     function failMount() {
@@ -218,6 +365,7 @@ export default defineContentScript({
         : new Set<string>();
       if (generation !== session.generation || sequence !== lookupSequence || !isCurrent() ||
           (refresh && !session.isCurrent(refresh.ticket))) return;
+      if (!refresh) prepared = reply.ok && reply.data.status === 'ready';
       if (reply.ok && session.acceptLookup(generation, reply.data, solvedIds)) {
         if (refresh && session.active) {
           const updated = reply.data.breakpoints.find(b => b.exercise.id === session.active!.breakpoint.exercise.id);
@@ -250,7 +398,7 @@ export default defineContentScript({
         session.route = 'unavailable'; session.reset();
         if (refresh && session.active) { session.active.state = 'failed'; }
       }
-      render();
+      if (!refresh) applyPlan(); else render();
     }
 
     async function grade(mode: 'run' | 'submit', code: string) {
@@ -259,6 +407,32 @@ export default defineContentScript({
       if (!videoId || !active || active.error?.code === 'EXERCISE_NOT_FOUND' || active.error?.code === 'SET_EXPIRED') return;
       const ticket = session.beginGrade();
       if (!ticket) return;
+      if (active.planPause?.exercise) {
+        const item = active.planPause.exercise;
+        const context = eventContext(active)!;
+        feedbackState = null;
+        if (mode === 'submit') context.attempts++;
+        render();
+        const level = await learnerLevel(item.concepts[0], context.accountId);
+        if (!isCurrent() || !session.isCurrent(ticket)) return;
+        const reply = await sendPlanRequest({ type: 'submitV2', exerciseId: item.id, revision: item.revision,
+          language: item.language, code, mode, learnerLevel: level }, SubmitResultSchema, sendV2);
+        if (!isCurrent() || !session.isCurrent(ticket)) return;
+        const action = session.finishGrade(ticket, mode, reply.ok ? { ok: true, data: reply.data.grade } : reply);
+        if (action === 'ignored') return;
+        if (reply.ok) {
+          feedbackState = { ticket, feedback: reply.data.feedback, code };
+          if (mode === 'submit') {
+            practiceEvent(reply.data.feedback.outcome, active, {
+              ...(reply.data.feedback.diagnosis ? { misconception: reply.data.feedback.diagnosis.misconception.id } : {}),
+            });
+            if (action === 'passed') void markPlanSolved(context.accountId, videoId, item.id, item.revision).catch(() => {});
+          }
+        }
+        // v2 feedback is instructional content. Keep it visible until the
+        // learner explicitly resumes, including beginner explanations.
+        render(); return;
+      }
       render();
       const reply = await sendRequest({ type: 'grade', exerciseId: active.breakpoint.exercise.id, revision: active.revision, mode, code }, SubmissionResponseSchema, send);
       if (!isCurrent()) return;
@@ -294,6 +468,33 @@ export default defineContentScript({
           }
         }
       }
+    }
+
+    async function answerQuestion(answer: string) {
+      const active = session.active;
+      const item = active?.planPause?.question;
+      if (!active || !item || !answer.trim()) return;
+      const ticket = session.beginGrade();
+      if (!ticket) return;
+      const context = eventContext(active)!;
+      context.attempts++; feedbackState = null; render();
+      const level = await learnerLevel(item.concepts[0], context.accountId);
+      if (!isCurrent() || !session.isCurrent(ticket)) return;
+      const reply = await sendPlanRequest({ type: 'answerV2', questionId: item.id, revision: item.revision,
+        answer, learnerLevel: level }, AnswerResultSchema, sendV2);
+      if (!isCurrent() || !session.isCurrent(ticket)) return;
+      if (!reply.ok) { active.state = 'failed'; active.error = reply.error.error; }
+      else {
+        active.state = reply.data.correct ? 'passed' : 'failed';
+        if (reply.data.correct) {
+          session.solvedIds.add(item.id);
+          void markPlanSolved(context.accountId, session.videoId!, item.id, item.revision).catch(() => {});
+        }
+        feedbackState = { ticket, feedback: reply.data.feedback, code: '' };
+        practiceEvent(reply.data.correct ? 'passed' : 'failed', active,
+          reply.data.feedback.diagnosis ? { misconception: reply.data.feedback.diagnosis.misconception.id } : {});
+      }
+      render();
     }
 
     function startTestMe() {
@@ -375,6 +576,7 @@ export default defineContentScript({
 
     function skip() {
       clearTimeout(holdTimer); holdTimer = undefined;
+      if (session.active?.state !== 'passed') practiceEvent('skipped');
       const ticket = session.skip();
       if (ticket) { render(); void resume(ticket); }
     }
@@ -390,6 +592,17 @@ export default defineContentScript({
       if (!breakpoint) return;
       if (session.open(breakpoint, video.currentTime, !video.paused)) {
         video.pause(); render(); focusPanel();
+        releaseEmptyPanel(video);
+      }
+    }
+
+    function releaseEmptyPanel(video: HTMLVideoElement) {
+      // B2's pre-wired views may still be stubs during lane integration. Never
+      // hold the video behind an empty concept panel or a failed UI mount.
+      if (session.active?.planPause && !ui?.shadow.querySelector('[data-breakpoint-panel]')?.childElementCount) {
+        const ownsPause = session.canResume(session.ticket(), video.currentTime, video.paused);
+        session.interrupt(); render();
+        if (ownsPause) void video.play().catch(() => video.focus());
       }
     }
 
@@ -397,6 +610,8 @@ export default defineContentScript({
       const video = player;
       if (!video || !isCurrent() || video !== currentPlayer()) { session.reset(); return; }
       const ad = isAd();
+      watch.sample({ time: video.currentTime, wallMs: performance.now(), rate: video.playbackRate,
+        playing: !video.paused && !video.ended, seeking: video.seeking, ad, ready: playerReady && accountReady });
       if (ad !== lastAd) { lastAd = ad; session.reset(); if (session.active || session.testMe) session.interrupt(); render(); }
       const claimed = session.sample({ time: video.currentTime, wallMs: performance.now(), rate: video.playbackRate,
         playing: !video.paused && !video.ended, visible: document.visibilityState === 'visible',
@@ -409,10 +624,12 @@ export default defineContentScript({
       }
       session.active!.pausedAt = video.currentTime;
       video.pause(); render(); focusPanel();
+      releaseEmptyPanel(video);
     }
 
     function bind(video: HTMLVideoElement) {
       stopPlayer();
+      watch.reset();
       session.interrupt(); player = video; session.reset();
       // YouTube can reuse the same element across routes. Wait for new media readiness in that case.
       playerReady = video.readyState >= 2 && (video !== oldPlayer || (!!video.currentSrc && video.currentSrc !== oldSource));
@@ -427,12 +644,14 @@ export default defineContentScript({
         session.reset(); if (testMeEnabled) render();
       });
       on('emptied', () => { playerReady = false; interrupt(); });
-      on('seeking', interrupt);
+      on('seeking', () => { watch.reset(); interrupt(); });
       on('seeked', () => { session.reset(); if (testMeEnabled) render(); });
       if (testMeEnabled) on('ended', render);
-      on('ratechange', () => session.reset());
+      on('ratechange', () => { watch.reset(); session.reset(); });
       on('play', interrupt);
-      on('pause', () => session.reset());
+      on('pause', () => { watch.reset(); session.reset(); });
+      on('waiting', () => watch.reset());
+      on('ended', () => watch.reset());
       on('timeupdate', sample);
       let frame: number | undefined;
       if (typeof video.requestVideoFrameCallback === 'function') {
@@ -472,6 +691,8 @@ export default defineContentScript({
       const id = watchVideoId(location.href);
       lastHref = location.href;
       if (session.generation && id === session.videoId) return;
+      watch.reset(); planLoader?.stop(); planLoader = undefined;
+      plan = null; planSolvedIds.clear(); prepared = null; dismissedUnavailable = false; feedbackState = null; accountReady = false;
       oldPlayer = player; oldSource = player?.currentSrc ?? '';
       stopPlayer(); observer?.disconnect(); observer = undefined;
       player = null; playerReady = false;
@@ -480,7 +701,7 @@ export default defineContentScript({
       clearTimeout(leavingTimer); leavingPanel = null; shownPanel = null;
       session.navigate(id);
       if (!id) return;
-      observePlayer(); void lookup();
+      observePlayer(); void loadRoute(session.generation, id);
     }
 
     ctx.addEventListener(document, 'yt-navigate-finish', routeChanged);
@@ -491,18 +712,46 @@ export default defineContentScript({
       if (testMeEnabled) render();
     });
     ctx.addEventListener(window, 'resize', () => { session.reset(); void ensureUi(); });
+    const onStorage = (changes: Record<string, { newValue?: unknown }>, area: string) => {
+      if (area !== 'local') return;
+      if (ACCOUNT_KEY in changes) {
+        watch.reset();
+        // Switching learners invalidates in-flight grading and hides the old
+        // learner's draft/feedback. Release only a pause this attempt owns.
+        const video = player;
+        const ownsPause = video && isCurrent() && video === currentPlayer() && !video.seeking && !isAd() && !isFullscreen() &&
+          session.canResume(session.ticket(), video.currentTime, video.paused);
+        session.interrupt(); feedbackState = null;
+        accountId = readAccount(changes[ACCOUNT_KEY]?.newValue);
+        if (prepared === false) {
+          session.solvedIds.clear(); session.consumed.clear();
+          // An old learner's plan may contain a different difficulty. Stop
+          // scheduling it immediately while the new account's plan is fetched.
+          plan = null; planSolvedIds.clear(); session.data = null; session.route = 'loading'; session.reset();
+        }
+        if (session.videoId) void loadPlan(session.generation, session.videoId, accountId);
+        render();
+        if (ownsPause) void video.play().catch(() => video.focus());
+      }
+      if (SETTINGS_KEY in changes) {
+        settings = readSettings(changes[SETTINGS_KEY]?.newValue); session.reset(); applyPlan();
+      }
+    };
+    browser.storage.onChanged.addListener(onStorage);
+    ctx.setInterval(() => { void browser.runtime.sendMessage({ type: 'flushEventsV2' }).catch(() => {}); }, 30000);
     ctx.setInterval(() => {
       if (lastHref !== location.href) routeChanged();
       if (!session.videoId || !isCurrent()) return;
       if (!bindExpired && currentPlayer() !== player && !observer) observePlayer();
       if (observer) findPlayer();
       const ad = isAd();
-      if (ad !== lastAd) { lastAd = ad; session.interrupt(); render(); }
+      if (ad !== lastAd) { watch.reset(); lastAd = ad; session.interrupt(); render(); }
       // Theater changes the anchor without necessarily resizing the window or
       // replacing the player, including after the initial observer expires.
       void ensureUi();
     }, 250);
-    ctx.onInvalidated(() => { stopPlayer(); observer?.disconnect(); ui?.remove(); session.navigate(null); });
+    ctx.onInvalidated(() => { watch.reset(); planLoader?.stop(); browser.storage.onChanged.removeListener(onStorage);
+      stopPlayer(); observer?.disconnect(); ui?.remove(); session.navigate(null); });
     routeChanged();
   },
 });

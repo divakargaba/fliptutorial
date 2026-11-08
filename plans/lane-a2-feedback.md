@@ -20,4 +20,43 @@ Model default `claude-opus-5-5` for diagnosis, `claude-haiku-5-5` where speed ma
 A labelled set (`backend/tests/fixtures/submissions/`) of ≥30 right/wrong submissions across ≥3 languages with expected misconception ids; report how often the diagnosis names the right misconception and lines. Offline pytest with stubbed Claude/Judge0.
 
 ## Status
-- [ ] Not started
+- [x] Multi-language Judge0 runners: Python, JavaScript, Java, C++, SQL (`backend/app/runners/`)
+- [x] `POST /v2/submit` with FeedbackResult: grading + diagnosis (failure) + optimization (success, Intermediate+ only)
+- [x] `POST /v2/answer` for concept questions: multiple choice, predict-output (deterministic), short answer (Claude rubric)
+- [x] `POST /v2/hint` with level-aware depth: beginner=full hints, advanced=-1, expert=-2; reuses v1 RAG hint service
+- [x] Exercise store for server-side full exercise data (hidden tests, reference solutions)
+- [x] 35 labelled submissions across 4 languages (10 Python, 10 JS, 10 Java, 5 C++) + 5 concept questions
+- [x] 109 offline pytest tests: 45 runner tests + 64 feedback tests (all passing, stubbed Claude/Judge0)
+- [x] Planner integration: `/v2/submit`, `/v2/answer`, `/v2/hint` resolve exercises/questions from A1's `find_exercise`/`find_question`
+- [x] Refresher integration: `/v2/answer` resolves refresher questions from B1's `lookup_refresher`
+- [x] Language-specific docs for hints: JS (21 chunks), Java (18), C++ (17), SQL (16); hint service loads per-language index
+- [x] Fix LEVELS_PATH/CONCEPTS_PATH bug (parents[3] instead of parent.parent.parent)
+- [x] v2 hint endpoint passes exercise language to hint service (was hardcoded to Python)
+- [x] FeedbackResult includes `schemaVersion: 2` per frozen contract (`extension/src/v2/types.ts`)
+- [x] `/v2/hint` accepts `previousHints` (list[str], max 5) and passes them to the hint service for improved progression
+- [x] API integration tests: submit passed/failed/run + answer all assert `schemaVersion: 2`; hint asserts `previousHints` passthrough
+- [ ] Live integration test with real Judge0 + Anthropic key
+
+## Architecture
+
+### Runners (`backend/app/runners/`)
+- `base.py`: Abstract `Runner` base class, shared Judge0 submit/poll/parse logic, registry
+- `python_runner.py`: Python 3 (Judge0 id 71), same wrapper as v1 grader
+- `javascript_runner.py`: Node.js 18 (Judge0 id 93), normalizes JS number→int
+- `java_runner.py`: Java OpenJDK 13 (Judge0 id 62), wraps user's `Solution` class
+- `cpp_runner.py`: C++ GCC 10.2 (Judge0 id 54), auto-types args from Python values
+- `sql_runner.py`: SQLite (Judge0 id 82), `.mode json` output, row-based comparison
+
+### Feedback (`backend/app/feedback/`)
+- `__init__.py`: Router with `/v2/submit`, `/v2/answer`, `/v2/hint`; exercise resolution from store → v1 catalog → A1 planner → B1 refresher
+- `diagnosis.py`: Claude-powered misconception analysis with static fallback
+- `optimization.py`: Success feedback with complexity analysis; `show=false` for beginners
+- `concepts.py`: Deterministic MC/predict-output grading + Claude rubric for short answers
+- `exercise_store.py`: In-memory TTL cache for server-side exercise data
+
+### Labelled fixtures (`backend/tests/fixtures/submissions/`)
+- `python_submissions.json`: 10 submissions (3 pass, 7 fail with misconception ids)
+- `javascript_submissions.json`: 10 submissions (4 pass, 6 fail)
+- `java_submissions.json`: 10 submissions (3 pass, 7 fail)
+- `cpp_submissions.json`: 5 submissions (2 pass, 3 fail)
+- `concept_questions.json`: 5 questions (MC + predict-output) with test vectors

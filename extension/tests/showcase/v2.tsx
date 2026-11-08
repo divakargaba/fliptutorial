@@ -6,7 +6,7 @@ import { ProfilePage, ProfileView } from '../../src/profile-ui';
 import { PracticePanel } from '../../src/ui/PracticePanel';
 import practice from '../../../contracts/practice-response.fixture.json';
 import type { Breakpoint } from '../../src/contracts';
-import type { ExercisePlan, FeedbackResult, PlanQuestion, PublicProfile } from '../../src/v2/types';
+import type { ExercisePlan, FeedbackResult, Language, PlanQuestion, PublicProfile } from '../../src/v2/types';
 import plan from '../../../contracts/v2/exercise-plan.fixture.json';
 import failed from '../../../contracts/v2/feedback-result.failed.fixture.json';
 import passed from '../../../contracts/v2/feedback-result.passed.fixture.json';
@@ -34,8 +34,19 @@ function Showcase() {
   const [feedback, setFeedback] = useState<FeedbackResult | null>(state === 'question-passed' ? passed as FeedbackResult : null);
   const [checking, setChecking] = useState(state === 'question-checking');
   const [action, setAction] = useState('');
+  const [accountId, setAccountId] = useState('test-ana');
   if (state === 'profile-live') return <ProfilePage />;
   if (state === 'profile') return <ProfileView profile={profile as PublicProfile} />;
+  if (state === 'coding-language' || state === 'coding-accounts') {
+    const language = (params.get('language') ?? 'javascript') as Language;
+    const starterCode = language === 'sql' ? 'SELECT true;' : language === 'java' ? 'class Main {\n}' : language === 'cpp' ? 'int main() {\n}' : 'function solution(value) {\n  return value;\n}';
+    return <><label>Draft account<select aria-label="Draft account" value={accountId} onChange={event => setAccountId(event.target.value)}><option value="test-ana">Ana</option><option value="test-ben">Ben</option></select></label>
+      <PracticePanel videoId={practice.videoId} revision={practice.revision} accountId={accountId} language={language}
+        breakpoint={{ ...practice.breakpoints[0]! as Breakpoint, exercise: { ...(practice.breakpoints[0]! as Breakpoint).exercise, starterCode, examples: [{ args: [true, null], expected: false }] } }}
+        attempt="editing" result={null} error={null} canResume={false} ownsPause={true}
+        onRun={setAction} onSubmit={setAction} onSkip={() => {}} onClose={() => {}} onResume={() => {}} />
+      <output aria-label="Submitted source">{action}</output></>;
+  }
   if (state === 'coding-level' || state === 'coding-passed') return <PracticePanel videoId={practice.videoId} revision={practice.revision} breakpoint={practice.breakpoints[0]! as Breakpoint}
     attempt={state === 'coding-passed' ? 'passed' : 'editing'} result={null} error={null} canResume={false} ownsPause={true} manualResume={state === 'coding-passed'}
     conceptLevels={[{ concept: 'loops', level: 'beginner-2' }]} levelUp={{ concept: 'loops', level: 'beginner-2' }}

@@ -1,0 +1,174 @@
+{
+ "language": "javascript",
+ "source": "MDN Web Docs (developer.mozilla.org), summarized",
+ "chunks": [
+  {
+   "id": "js-for-statement",
+   "title": "for statement",
+   "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for",
+   "tags": ["loops", "for", "iteration"],
+   "text": "The for statement creates a loop with three optional expressions: initialization, condition and afterthought. for (let i = 0; i < n; i++) runs the body n times. Use break to exit and continue to skip an iteration.",
+   "nudge": "Think about your loop's three parts: where does it start, when does it stop, and how does it move forward?"
+  },
+  {
+   "id": "js-for-of",
+   "title": "for...of statement",
+   "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for...of",
+   "tags": ["loops", "for", "iteration", "arrays"],
+   "text": "for...of iterates over iterable objects (arrays, strings, maps, sets). for (const item of array) gives each element in order. Use it when you need values, not indices.",
+   "nudge": "If you need each value one by one, for...of is the simplest way to walk through an array."
+  },
+  {
+   "id": "js-while",
+   "title": "while statement",
+   "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/while",
+   "tags": ["loops", "while"],
+   "text": "The while statement executes its body as long as the condition is true. Something inside the loop must change the condition, or it runs forever.",
+   "nudge": "Ask what changes each time through the loop so the condition eventually becomes false."
+  },
+  {
+   "id": "js-if-else",
+   "title": "if...else statement",
+   "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/if...else",
+   "tags": ["conditionals", "if", "else"],
+   "text": "if (condition) executes a block when the condition is truthy. Add else if for more branches and else for a fallback. Only one branch runs. JavaScript uses truthy/falsy: 0, '', null, undefined and NaN are falsy.",
+   "nudge": "Check which branch runs first; the first truthy condition wins. Watch out for falsy surprises like 0 or empty string."
+  },
+  {
+   "id": "js-comparisons",
+   "title": "Comparison operators",
+   "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators#comparison_operators",
+   "tags": ["conditionals", "comparison", "operators"],
+   "text": "JavaScript has == (loose equality, with type coercion), === (strict equality, no coercion), <, >, <=, >=, != and !==. Prefer === and !== to avoid coercion surprises. Comparisons return a boolean.",
+   "nudge": "Make sure you're using === instead of ==, and check your boundary: does the edge case need >= or >?"
+  },
+  {
+   "id": "js-arithmetic",
+   "title": "Arithmetic operators",
+   "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators#arithmetic_operators",
+   "tags": ["arithmetic", "operators", "math"],
+   "text": "Numbers support +, -, *, / (always floating-point), % (remainder) and ** (exponentiation). There is no integer division operator; use Math.floor(a / b) for floor division. Be aware that 0.1 + 0.2 !== 0.3 due to floating-point precision.",
+   "nudge": "Double-check which operation the task asks for; dividing in JavaScript always gives a float unless you explicitly floor it."
+  },
+  {
+   "id": "js-math-object",
+   "title": "Math object",
+   "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math",
+   "tags": ["math", "functions"],
+   "text": "Math provides static methods: Math.floor(), Math.ceil(), Math.round(), Math.abs(), Math.max(), Math.min(), Math.pow(base, exp), Math.sqrt(), Math.random(). Math.floor(x) rounds toward negative infinity.",
+   "nudge": "If you need a specific math operation, check the Math object — it likely has what you need."
+  },
+  {
+   "id": "js-functions",
+   "title": "Function declaration and arrow functions",
+   "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Functions",
+   "tags": ["functions", "arrow", "return"],
+   "text": "Functions are declared with function name(params) {} or as arrow functions: const fn = (params) => expression (implicit return) or (params) => { statements } (explicit return needed). A function without return gives undefined.",
+   "nudge": "Make sure your function returns a value; arrow functions with {} need an explicit return statement."
+  },
+  {
+   "id": "js-return",
+   "title": "return statement",
+   "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/return",
+   "tags": ["functions", "return"],
+   "text": "return exits the function and optionally gives a value to the caller. A function that reaches the end without return gives undefined. return on its own (no value) gives undefined too.",
+   "nudge": "Check that every code path through your function reaches a return with the right value."
+  },
+  {
+   "id": "js-type-conversions",
+   "title": "Type conversions",
+   "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Expressions_and_operators#type_conversions",
+   "tags": ["types", "conversion", "parseInt", "parseFloat", "Number"],
+   "text": "Number(str) converts a string to a number (NaN if it fails). parseInt(str, 10) parses an integer; always pass the radix. String(val) converts to string. typeof checks the type. The + operator with a string triggers concatenation, not addition.",
+   "nudge": "If your code concatenates instead of adding, check whether one operand is a string that needs Number() first."
+  },
+  {
+   "id": "js-template-literals",
+   "title": "Template literals",
+   "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals",
+   "tags": ["strings", "template", "interpolation"],
+   "text": "Template literals use backticks: `Hello, ${name}!`. Expressions inside ${} are evaluated and converted to strings. They can span multiple lines. Tagged templates allow custom processing.",
+   "nudge": "Use backticks and ${} to embed values in a string instead of concatenation."
+  },
+  {
+   "id": "js-string-methods",
+   "title": "String methods",
+   "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String",
+   "tags": ["strings", "methods"],
+   "text": "Strings are immutable. Common methods: .length (property), .includes(), .indexOf(), .slice(start, end), .substring(), .split(), .trim(), .toUpperCase(), .toLowerCase(), .replace(), .replaceAll(), .startsWith(), .endsWith(). Methods return new strings.",
+   "nudge": "Remember strings are immutable — .replace() returns a new string; assign it back."
+  },
+  {
+   "id": "js-arrays",
+   "title": "Arrays",
+   "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array",
+   "tags": ["arrays", "list", "data-structures"],
+   "text": "Arrays are ordered lists: const arr = [1, 2, 3]. Access by index (0-based). Mutating: .push(), .pop(), .shift(), .unshift(), .splice(). Non-mutating: .slice(), .concat(), .includes(), .indexOf(), .join(). .length gives the count.",
+   "nudge": "Check whether you need to change the array in place (push/splice) or get a new one (slice/concat)."
+  },
+  {
+   "id": "js-array-methods",
+   "title": "Array iteration methods",
+   "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array#iteration_methods",
+   "tags": ["arrays", "map", "filter", "reduce", "forEach"],
+   "text": ".map(fn) transforms each element and returns a new array. .filter(fn) keeps elements where fn returns true. .reduce(fn, init) accumulates a value. .forEach(fn) runs fn on each element (no return value). .find(fn) returns the first match or undefined. .every(fn) and .some(fn) test conditions.",
+   "nudge": "If you want to transform every element, use .map(); if you want to keep only some, use .filter(); if you want a single accumulated value, use .reduce()."
+  },
+  {
+   "id": "js-objects",
+   "title": "Objects",
+   "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Working_with_objects",
+   "tags": ["objects", "properties", "data-structures"],
+   "text": "Objects are key-value collections: { key: value }. Access with obj.key or obj['key']. Object.keys(), Object.values(), Object.entries() return arrays. Use the in operator to check if a key exists. Destructuring: const { a, b } = obj.",
+   "nudge": "If you need to check whether a key exists, use 'key' in obj or obj.hasOwnProperty('key')."
+  },
+  {
+   "id": "js-map-set",
+   "title": "Map and Set",
+   "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map",
+   "tags": ["data-structures", "map", "set"],
+   "text": "Map stores key-value pairs with any key type: new Map(), .set(k, v), .get(k), .has(k), .delete(k), .size. Set stores unique values: new Set(), .add(v), .has(v), .delete(v), .size. Both are iterable with for...of.",
+   "nudge": "If you need unique values or fast lookups by key, consider Set or Map instead of arrays and objects."
+  },
+  {
+   "id": "js-spread-rest",
+   "title": "Spread and rest syntax",
+   "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax",
+   "tags": ["arrays", "objects", "spread", "rest"],
+   "text": "Spread (...) expands an iterable into individual elements: [...arr1, ...arr2] merges arrays; { ...obj1, ...obj2 } merges objects. Rest (...args) collects remaining arguments into an array.",
+   "nudge": "Use spread to combine or copy arrays/objects without mutating the originals."
+  },
+  {
+   "id": "js-try-catch",
+   "title": "try...catch",
+   "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/try...catch",
+   "tags": ["errors", "exceptions"],
+   "text": "try { ... } catch (e) { ... } catches runtime errors. e.message describes the error. Add finally for cleanup that always runs. throw new Error('message') raises an error.",
+   "nudge": "If your code might fail on certain inputs, wrap the risky part in try/catch and handle the error."
+  },
+  {
+   "id": "js-null-undefined",
+   "title": "null and undefined",
+   "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/null",
+   "tags": ["types", "null", "undefined"],
+   "text": "undefined means a variable was declared but not assigned, or a function returned nothing. null is an intentional 'no value'. Use === null or === undefined for checks. The ?? (nullish coalescing) operator provides a default for null/undefined only.",
+   "nudge": "If your function returns undefined when you expect a value, check that every path has a return statement."
+  },
+  {
+   "id": "js-sort",
+   "title": "Array.prototype.sort()",
+   "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort",
+   "tags": ["arrays", "sorting"],
+   "text": ".sort() sorts in place and by default converts elements to strings, so [10, 2, 1].sort() gives [1, 10, 2]. For numbers use .sort((a, b) => a - b). Return negative if a < b, positive if a > b, 0 if equal.",
+   "nudge": "If sorting numbers gives unexpected results, you need a compare function: .sort((a, b) => a - b)."
+  },
+  {
+   "id": "js-ternary",
+   "title": "Conditional (ternary) operator",
+   "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Conditional_operator",
+   "tags": ["conditionals", "ternary"],
+   "text": "condition ? exprIfTrue : exprIfFalse evaluates one of two expressions. Useful for short inline decisions. Avoid nesting ternaries deeply — use if/else for readability.",
+   "nudge": "A ternary is a compact if/else for expressions. Make sure both branches return the right type."
+  }
+ ]
+}

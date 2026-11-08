@@ -31,6 +31,7 @@ type App = {
   holdGeneration: boolean;
   generationFailure: { status: number; code: string; retryable: boolean } | null;
   hints: HintRequest[];
+  hintText?: string;
   analyses: AnalysisRequest[];
   analysis: AnalysisResponse;
   holdAnalysis: boolean;
@@ -87,7 +88,7 @@ export const test = base.extend<{ app: App; breakpointCount: 1 | 2; preparedVide
         for await (const chunk of req) body += chunk;
         const input = JSON.parse(body) as HintRequest;
         app.hints.push(input);
-        json(200, { ...hintFixture, level: input.level, hint: input.level === 0 ? null : `Hint ${input.level}: ${hintFixture.hint}` });
+        json(200, { ...hintFixture, level: input.level, hint: input.level === 0 ? null : `Hint ${input.level}: ${app.hintText ?? hintFixture.hint}` });
       } else if (req.method === 'POST' && req.url === '/v1/analysis') {
         let body = '';
         for await (const chunk of req) body += chunk;

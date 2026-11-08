@@ -6,6 +6,11 @@ type LocalStorage = {
 const pending = new Map<string, { code: string; timer: ReturnType<typeof setTimeout> }>();
 const writing = new Map<string, Promise<void>>();
 const storageKey = (key: string) => `breakpoint:draft:${key}`;
+/** Preserve v1 keys; v2 drafts belong to one local learner, including pending writes. */
+export function practiceDraftKey(videoId: string, exerciseId: string, revision: string, accountId?: string): string {
+  const key = `${videoId}/${exerciseId}/${revision}`;
+  return accountId === undefined ? key : `account/${encodeURIComponent(accountId)}/${key}`;
+}
 function storage(): LocalStorage {
   const api = (globalThis as typeof globalThis & {
     chrome?: { storage?: { local?: LocalStorage } };
