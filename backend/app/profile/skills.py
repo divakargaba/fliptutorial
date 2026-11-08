@@ -169,7 +169,7 @@ def validate_generated(raw: Any, concept: str, level: str) -> dict | None:
     """Normalise generator output into a stored multiple-choice refresher, or None if it is unusable."""
     if not isinstance(raw, dict):
         return None
-    title, prompt = _text(raw.get("title"), 1, 80), _text(raw.get("prompt"), 10, 800)
+    title, prompt = _text(raw.get("title"), 1, 100), _text(raw.get("prompt"), 10, 800)
     explanation = _text(raw.get("explanation"), 1, 800)
     choices_raw = raw.get("choices")
     if not (title and prompt and explanation and isinstance(choices_raw, list) and 2 <= len(choices_raw) <= 6):
