@@ -1,0 +1,142 @@
+{
+ "language": "cpp",
+ "source": "cppreference.com, summarized",
+ "chunks": [
+  {
+   "id": "cpp-for-statement",
+   "title": "for statement",
+   "url": "https://en.cppreference.com/w/cpp/language/for",
+   "tags": ["loops", "for", "iteration"],
+   "text": "for (init; condition; increment) repeats the body while condition is true. for (int i = 0; i < n; ++i) runs n times. The range-based for (for (auto& x : container)) iterates over elements of arrays, vectors and other ranges.",
+   "nudge": "Think about your loop bounds: does the condition use < or <=, and does it cover every index you need?"
+  },
+  {
+   "id": "cpp-while",
+   "title": "while statement",
+   "url": "https://en.cppreference.com/w/cpp/language/while",
+   "tags": ["loops", "while"],
+   "text": "while (condition) repeats the body while condition is true. do-while runs the body at least once before checking. Something inside must change the condition to avoid an infinite loop.",
+   "nudge": "Check what changes each iteration so the loop eventually ends."
+  },
+  {
+   "id": "cpp-if-else",
+   "title": "if statement",
+   "url": "https://en.cppreference.com/w/cpp/language/if",
+   "tags": ["conditionals", "if", "else"],
+   "text": "if (condition) runs a block when the condition is true. else if and else add branches. Only one branch runs. In C++17, if with an initializer: if (auto x = expr; condition). Non-zero integers and non-null pointers are truthy.",
+   "nudge": "Check the order of your conditions; the first true branch wins."
+  },
+  {
+   "id": "cpp-comparisons",
+   "title": "Comparison operators",
+   "url": "https://en.cppreference.com/w/cpp/language/operator_comparison",
+   "tags": ["conditionals", "comparison", "operators"],
+   "text": "C++ has <, >, <=, >=, == and !=. For std::string, these compare lexicographically. For pointers, == checks address equality. The spaceship operator <=> (C++20) provides three-way comparison.",
+   "nudge": "Make sure you're comparing the right types. For strings, == compares by value (unlike Java's == for objects)."
+  },
+  {
+   "id": "cpp-arithmetic",
+   "title": "Arithmetic operators",
+   "url": "https://en.cppreference.com/w/cpp/language/operator_arithmetic",
+   "tags": ["arithmetic", "operators", "math"],
+   "text": "+, -, *, /, % work on numeric types. Integer division truncates toward zero: 7/2 gives 3, -7/2 gives -3. No power operator; use std::pow(base, exp) from <cmath> (returns double). Overflow of signed integers is undefined behavior.",
+   "nudge": "Integer division truncates in C++. If you need a floating-point result, cast one operand to double."
+  },
+  {
+   "id": "cpp-cmath",
+   "title": "cmath functions",
+   "url": "https://en.cppreference.com/w/cpp/header/cmath",
+   "tags": ["math", "functions"],
+   "text": "<cmath> provides std::pow(b, e), std::abs(), std::sqrt(), std::floor(), std::ceil(), std::round(), std::fmod(). std::pow returns double; cast if you need int. std::abs works on ints (from <cstdlib>) and floats.",
+   "nudge": "Need a power or square root? Include <cmath> and use std::pow or std::sqrt. Watch the double return type."
+  },
+  {
+   "id": "cpp-functions",
+   "title": "Function declarations",
+   "url": "https://en.cppreference.com/w/cpp/language/function",
+   "tags": ["functions", "return"],
+   "text": "Functions are declared with return type, name and parameters: int add(int a, int b) { return a + b; }. void functions don't return. Every non-void function must return on all paths (undefined behavior otherwise). Pass by value, by reference (&) or by const reference (const&).",
+   "nudge": "Make sure every code path in your function reaches a return with the correct type."
+  },
+  {
+   "id": "cpp-return",
+   "title": "return statement",
+   "url": "https://en.cppreference.com/w/cpp/language/return",
+   "tags": ["functions", "return"],
+   "text": "return expr exits the function and provides a value. The type must match (or be convertible to) the declared return type. Reaching the end of a non-void function without returning is undefined behavior.",
+   "nudge": "If the compiler warns about missing return, ensure all if/else branches return a value."
+  },
+  {
+   "id": "cpp-types",
+   "title": "Fundamental types",
+   "url": "https://en.cppreference.com/w/cpp/language/types",
+   "tags": ["types", "primitives"],
+   "text": "int (usually 32-bit), long long (at least 64-bit), double (64-bit float), float (32-bit float), char, bool. auto lets the compiler deduce the type. size_t is unsigned and used for sizes. Signed integer overflow is undefined behavior.",
+   "nudge": "If your numbers get very large, check whether int is enough or you need long long."
+  },
+  {
+   "id": "cpp-strings",
+   "title": "std::string",
+   "url": "https://en.cppreference.com/w/cpp/string/basic_string",
+   "tags": ["strings", "methods"],
+   "text": "std::string is a mutable character sequence. .length() or .size() for length, .substr(pos, len), .find(str), .append(str), .replace(pos, len, str), .c_str() for C-string. + concatenates. Indexing with [] or .at() (bounds-checked). Compare with ==, <, etc.",
+   "nudge": "std::string supports + for concatenation and == for comparison. Use .at() for bounds-checked access."
+  },
+  {
+   "id": "cpp-vector",
+   "title": "std::vector",
+   "url": "https://en.cppreference.com/w/cpp/container/vector",
+   "tags": ["arrays", "vectors", "data-structures"],
+   "text": "std::vector<T> is a dynamic array. .push_back(v), .pop_back(), .size(), .empty(), .at(i) (bounds-checked), [] (unchecked), .front(), .back(), .begin(), .end(). Initialize: vector<int> v = {1, 2, 3} or vector<int> v(n, val).",
+   "nudge": "If you need a resizable array, use std::vector. Remember .at() throws on out-of-bounds, [] does not."
+  },
+  {
+   "id": "cpp-map",
+   "title": "std::map and std::unordered_map",
+   "url": "https://en.cppreference.com/w/cpp/container/map",
+   "tags": ["maps", "data-structures"],
+   "text": "std::map<K,V> stores sorted key-value pairs (red-black tree, O(log n)). std::unordered_map<K,V> uses hashing (O(1) average). Both: [key] inserts default if missing, .at(key) throws, .find(key), .count(key), .erase(key), .size().",
+   "nudge": "Use [] to access or insert, but be aware it creates a default entry if the key is absent. Use .find() to check first."
+  },
+  {
+   "id": "cpp-sort",
+   "title": "std::sort",
+   "url": "https://en.cppreference.com/w/cpp/algorithm/sort",
+   "tags": ["sorting", "algorithms"],
+   "text": "std::sort(begin, end) sorts a range in ascending order. std::sort(begin, end, comparator) for custom order. Works on arrays and vectors. Uses introsort (O(n log n)). For stable sort: std::stable_sort. Include <algorithm>.",
+   "nudge": "Use std::sort with iterators. Provide a lambda comparator for custom ordering."
+  },
+  {
+   "id": "cpp-references",
+   "title": "References and pointers",
+   "url": "https://en.cppreference.com/w/cpp/language/reference",
+   "tags": ["references", "pointers"],
+   "text": "A reference (int& r = x) is an alias — changes to r change x. A pointer (int* p = &x) stores an address; dereference with *p. const references (const int& r) prevent modification. Prefer references over pointers when you don't need nullability.",
+   "nudge": "If you want a function to modify its argument, pass by reference (&). const& avoids copying without allowing changes."
+  },
+  {
+   "id": "cpp-try-catch",
+   "title": "try-catch",
+   "url": "https://en.cppreference.com/w/cpp/language/try_catch",
+   "tags": ["errors", "exceptions"],
+   "text": "try { ... } catch (const std::exception& e) { e.what(); } catches standard exceptions. Common: std::runtime_error, std::out_of_range, std::invalid_argument. throw std::runtime_error(\"msg\") raises an exception. catch (...) catches anything.",
+   "nudge": "Wrap risky operations in try/catch. Use specific exception types when possible."
+  },
+  {
+   "id": "cpp-io",
+   "title": "Input/Output streams",
+   "url": "https://en.cppreference.com/w/cpp/io",
+   "tags": ["io", "streams", "cin", "cout"],
+   "text": "std::cout << value prints to stdout. std::cin >> variable reads from stdin (whitespace-delimited). std::getline(std::cin, str) reads a full line. std::endl flushes and adds newline; '\\n' is faster if flushing isn't needed.",
+   "nudge": "If std::cin seems to skip input, check whether a previous >> left a newline in the buffer."
+  },
+  {
+   "id": "cpp-boolean-logic",
+   "title": "Logical operators",
+   "url": "https://en.cppreference.com/w/cpp/language/operator_logical",
+   "tags": ["boolean", "logic", "operators"],
+   "text": "&& is logical AND, || is logical OR, ! is logical NOT. All short-circuit: && stops on false, || stops on true. In C++, 0 is false, any non-zero is true.",
+   "nudge": "Break complex conditions into parts. Remember && short-circuits on the first false."
+  }
+ ]
+}

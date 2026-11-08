@@ -1,0 +1,89 @@
+{
+  "language": "python",
+  "exercise": {
+    "id": "test-py-power",
+    "revision": "r1",
+    "title": "Raise a number to a power",
+    "language": "python",
+    "statement": "Write raise_to_power(base_num, pow_num) using a loop instead of **.",
+    "functionName": "raise_to_power",
+    "starterCode": "def raise_to_power(base_num, pow_num):\n    pass\n",
+    "concepts": ["loops", "functions"],
+    "level": "beginner-1",
+    "examples": [{"args": [2, 3], "expected": 8}, {"args": [5, 2], "expected": 25}],
+    "hiddenTests": [{"args": [3, 4], "expected": 81}, {"args": [2, 0], "expected": 1}, {"args": [10, 1], "expected": 10}],
+    "referenceSolution": "def raise_to_power(base_num, pow_num):\n    result = 1\n    for _ in range(pow_num):\n        result *= base_num\n    return result\n"
+  },
+  "submissions": [
+    {
+      "id": "py-pass-1",
+      "code": "def raise_to_power(base_num, pow_num):\n    result = 1\n    for i in range(pow_num):\n        result *= base_num\n    return result\n",
+      "expectedOutcome": "passed",
+      "expectedMisconception": null,
+      "description": "Correct loop-based solution"
+    },
+    {
+      "id": "py-pass-2",
+      "code": "def raise_to_power(base_num, pow_num):\n    result = 1\n    i = 0\n    while i < pow_num:\n        result = result * base_num\n        i += 1\n    return result\n",
+      "expectedOutcome": "passed",
+      "expectedMisconception": null,
+      "description": "Correct while-loop solution"
+    },
+    {
+      "id": "py-fail-infinite-loop",
+      "code": "def raise_to_power(base_num, pow_num):\n    result = 1\n    while pow_num > 0:\n        result *= base_num\n    return result\n",
+      "expectedOutcome": "time_limit",
+      "expectedMisconception": "loop-no-progress",
+      "description": "Infinite loop: never decrements pow_num"
+    },
+    {
+      "id": "py-fail-wrong-op",
+      "code": "def raise_to_power(base_num, pow_num):\n    result = 0\n    for i in range(pow_num):\n        result += base_num\n    return result\n",
+      "expectedOutcome": "wrong_answer",
+      "expectedMisconception": "wrong-operator",
+      "description": "Adds instead of multiplying; computes base * pow instead of base ** pow"
+    },
+    {
+      "id": "py-fail-off-by-one",
+      "code": "def raise_to_power(base_num, pow_num):\n    result = base_num\n    for i in range(pow_num):\n        result *= base_num\n    return result\n",
+      "expectedOutcome": "wrong_answer",
+      "expectedMisconception": "off-by-one",
+      "description": "Starts with base_num instead of 1, multiplies one extra time"
+    },
+    {
+      "id": "py-fail-syntax",
+      "code": "def raise_to_power(base_num, pow_num)\n    result = 1\n    for i in range(pow_num):\n        result *= base_num\n    return result\n",
+      "expectedOutcome": "syntax_error",
+      "expectedMisconception": "syntax-error",
+      "description": "Missing colon after function definition"
+    },
+    {
+      "id": "py-fail-runtime",
+      "code": "def raise_to_power(base_num, pow_num):\n    result = 1\n    for i in range(pow_num):\n        result *= base\n    return result\n",
+      "expectedOutcome": "runtime_error",
+      "expectedMisconception": "undefined-variable",
+      "description": "Uses 'base' instead of 'base_num'"
+    },
+    {
+      "id": "py-fail-wrong-init",
+      "code": "def raise_to_power(base_num, pow_num):\n    result = 0\n    for i in range(pow_num):\n        result *= base_num\n    return result\n",
+      "expectedOutcome": "wrong_answer",
+      "expectedMisconception": "wrong-init",
+      "description": "Initializes accumulator to 0 instead of 1; 0 * anything = 0"
+    },
+    {
+      "id": "py-pass-slow",
+      "code": "def raise_to_power(base_num, pow_num):\n    if pow_num == 0:\n        return 1\n    return base_num * raise_to_power(base_num, pow_num - 1)\n",
+      "expectedOutcome": "passed",
+      "expectedMisconception": null,
+      "description": "Correct but slow recursive solution (O(n))"
+    },
+    {
+      "id": "py-fail-no-return",
+      "code": "def raise_to_power(base_num, pow_num):\n    result = 1\n    for i in range(pow_num):\n        result *= base_num\n    print(result)\n",
+      "expectedOutcome": "wrong_answer",
+      "expectedMisconception": "no-return",
+      "description": "Prints instead of returning the result"
+    }
+  ]
+}
