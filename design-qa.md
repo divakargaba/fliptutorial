@@ -1,6 +1,24 @@
 # Wide Workbench design QA
 
-Status: PASS for the selected UI scope, 2026-11-08. Review branch only; not merged to main.
+Status: human-approved learning follow-up implemented and verified locally, 2026-11-08. Prior Option 3 is merged in main 7dffcc6; this follow-up remains on the review branch.
+
+## Learning follow-up and black-style correction
+
+The human rejected the gray cards, decorative color strips and teal tutorial panels. That feedback supersedes the earlier color exploration: the popup now uses a near-black page, black groups, quiet neutral borders and row dividers. Blue progress and meaningful recall/tier colors remain. Solved and XP use separate labeled columns in the shared skill row, including teammate profiles. Expanded demand/tutorial cards are neutral black. The stylesheet is included through the shared theme so preview shadow roots and the real popup receive identical rules.
+
+The follow-up adds Home / Skills / History / Network navigation, skill details and deliberate review, immediate dismissible feedback above the footer, and explicit challenge position versus solved/skipped counts. In demand appears first on Home, not beneath Skills. Each new hint needs two fresh distinct completed edited-code attempts at that stage; previously tried code, blank/starter code and transport errors do not unlock it. Unlocked hints remain readable. The manifest now says “Practice coding and concepts while watching YouTube tutorials.” Long More-menu actions wrap within their button.
+
+Passing Submit captures its exact submitted source into account-scoped browser-local history; Run and failed attempts do not save solutions. History is separate from drafts, bounded to 200 solutions per account / 16 KiB source per solution, with export/delete and timestamped revisit links. Learner/exercise review metadata is carried in the URL fragment, not sent as query parameters to YouTube. Only new submissions are recorded. Legacy exercises without concepts appear in History without inventing skill associations.
+
+The optional backend `concept` query selects a learned active skill for deliberate review. Omission retains due-only behavior. Unknown concepts return 422; unlearned/inactive skills return 204. Existing answer grading is reused; deliberate popup review emits no progress/XP events. Watch-page due refresher event semantics are unchanged. This small API addition is isolated for owner review; no grading, XP computation or frozen response contract changes.
+
+Verified: 118 unit tests, typecheck, default API-8000 build and diff check. The first full default browser run recorded 164 passed / 28 opt-in skipped / 11 failures. Those findings led to viewport/focus corrections, shared preview CSS inclusion and updated assertions for the new controls. The subsequent 70-scenario targeted run (including all 28 opt-in Test me cases) recorded 61 passes / 9 failures; the final corrective run passed all 14 selected cases, covering every remaining failure. This is combined targeted evidence, not a claim of a new single green full-suite run. Black own/teammate rows at 400px/320px, Home-first demand cards, short/150% editor layout, settings, per-hint attempts, held submissions, history export/delete/account isolation, popup review, real-media seek/reopen with preserved drafts and no duplicate pass event all pass. The fixture serves byte ranges for actual seekable WebM; repeated read-only award polling is distinguished from duplicate XP events.
+
+Backend full suite reached 566 passed / 4 skipped / 10 existing Windows `signal.SIGALRM` failures; the same ten Python fixture outcomes passed with an isolated subprocess timeout harness. This is not a claim that native Windows SIGALRM tests passed. B1 owner @spectaboy approved the optional concept filter in board comment 6723502768. The patch is isolated in commit 510b14e.
+
+Visual evidence: `C:/Users/Mico/.codex/visualizations/2026/11/07/01a1b7be-dbf5-75d3-9467-9883587443b4/learning-ui/` contains home-discovery.png, own-black-skills.png, teammate-black-skills.png, teammate-black-skills-narrow.png, popup-demand-expanded.png and the learning/history/drawer evidence. These use synthetic accounts. The default extension is rebuilt. The user stopped desktop Computer Use with Escape; no further desktop input was sent and the final build's loaded Edge state is unverified.
+
+Browser tests now build into `.output/e2e/chrome-mv3`, separately from the user's normal `.output/chrome-mv3`. The fixture checks the configured isolated API origin before launching. Do not run a WXT default build during preview tests: generated type/config changes can trigger a Vite refresh even though extension bundles are isolated.
 
 ## Design target and scope
 

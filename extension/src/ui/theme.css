@@ -1,6 +1,7 @@
 @import 'tailwindcss';
 @import './v2/styles.css';
 @import '../profile-ui/profile.css';
+@import '../profile-ui/learning.css';
 @source './*.tsx';
 
 .bp-test-me { margin: 8px 0; }

@@ -70,6 +70,8 @@ export function ProgressCard({ award }: { award: Award }) {
 }
 
 export type ConceptQuestionPanelProps = {
+  resumeLabel?: string;
+  positionLabel?: string;
   question: PlanQuestion; feedback: FeedbackResult | null; checking: boolean;
   error?: { code: string; message: string; retryable: boolean } | null; canResume?: boolean;
   progress?: Award | null;
@@ -78,7 +80,7 @@ export type ConceptQuestionPanelProps = {
 export function ConceptQuestionPanel(props: ConceptQuestionPanelProps) {
   return <QuestionForm key={`${props.question.id}/${props.question.revision}`} {...props} />;
 }
-function QuestionForm({ question, feedback, checking, error, canResume, progress, onAnswer, onSkip, onResume, onClose }: ConceptQuestionPanelProps) {
+function QuestionForm({ question, feedback, checking, error, canResume, progress, onAnswer, onSkip, onResume, onClose, resumeLabel = 'Resume video', positionLabel }: ConceptQuestionPanelProps) {
   const [answer, setAnswer] = useState('');
   const title = useId();
   const group = useId();
@@ -93,7 +95,7 @@ function QuestionForm({ question, feedback, checking, error, canResume, progress
   return <section className="bp-v2 bp-panel" aria-labelledby={title}
     onKeyDown={event => event.stopPropagation()} onKeyUp={event => event.stopPropagation()} onKeyPress={event => event.stopPropagation()}>
     <header className="bp-v2-header"><span className="bp-brand-row"><BrandMark size={16} />Concept practice</span><LayoutSwitch /><button type="button" onClick={onClose} aria-label="Close practice">Close</button></header>
-    <div className="bp-v2-body"><h2 id={title} ref={heading} tabIndex={-1}>{question.title}</h2>
+    <div className="bp-v2-body">{positionLabel && <p className="bp-step">{positionLabel}</p>}<h2 id={title} ref={heading} tabIndex={-1}>{question.title}</h2>
       <div className="bp-v2-chips">{question.concepts.map(concept => <LevelChip key={concept} concept={concept} level={question.level} />)}</div>
       {question.aiGenerated && <small>AI-generated practice</small>}<p className="bp-v2-prompt">{question.prompt}</p>
       <form onSubmit={event => { event.preventDefault(); if (answer.trim() && !checking && !passed) onAnswer(answer.trim()); }}>
@@ -108,7 +110,7 @@ function QuestionForm({ question, feedback, checking, error, canResume, progress
         {feedback && <FeedbackCard feedback={feedback} code="" />}
         {passed && progress && <ProgressCard award={progress} />}
         <div className="bp-v2-actions"><PracticeMore onLater={onSkip} />
-          {passed ? <button type="button" className="bp-v2-primary" onClick={onResume}>Resume video</button>
+          {passed ? <button type="button" className="bp-v2-primary" onClick={onResume}>{resumeLabel}</button>
             : <button className="bp-v2-primary" disabled={checking || !answer.trim()}>{checking ? 'Checking…' : 'Check answer'}</button>}</div>
         <span role="status">{checking ? 'Checking your answer' : ''}</span>
       </form></div></section>;
@@ -145,8 +147,8 @@ export function RefresherPrompt({ due, onStart, onDismiss }: {
   if (!due.length) return null;
   const first = due[0]!;
   return <aside className="bp-v2 bp-refresher" aria-label="Skill refresher">
-    <span className="bp-refresher-icon" aria-hidden="true">💡</span><div><h2>A quick refresher?</h2><p>Keep {conceptName(first.concept)} fresh.</p></div>
-    <div className="bp-refresher-actions"><button onClick={onDismiss}>Later</button><button className="bp-v2-primary" onClick={() => onStart(first.concept)}>Start refresher</button></div></aside>;
+      <span className="bp-refresher-icon" aria-hidden="true">💡</span><div><h2>Refresh {conceptName(first.concept)}</h2><p>One quick question</p></div>
+      <div className="bp-refresher-actions"><button onClick={onDismiss}>Later</button><button className="bp-v2-primary" onClick={() => onStart(first.concept)}>Practice</button></div></aside>;
 }
 export type LearnerSettingsValue = Settings;
 export const SETTINGS_KEY = FROZEN_SETTINGS_KEY;

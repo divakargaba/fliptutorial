@@ -1,5 +1,5 @@
 import { expect } from '@playwright/test';
-import { analysisFixture, automaticPause, correctCode, expectPlaying, hintFixture, test } from './extension.fixture';
+import { analysisFixture, automaticPause, correctCode, expectPlaying, hintFixture, unlockHints, test } from './extension.fixture';
 
 for (const zoom of [1, 1.5]) test(`editor survives three long hints and failure at short height, zoom ${zoom}`, async ({ app }, info) => {
   const { page } = app;
@@ -16,10 +16,12 @@ for (const zoom of [1, 1.5]) test(`editor survives three long hints and failure 
   await popup.close();
   expect(actualZoom).toBe(zoom);
   await automaticPause(page);
+  await unlockHints(app.page);
   app.hintText = 'Track how the accumulator changes at each step before the next repetition. '.repeat(60);
   for (let level = 1; level <= 3; level++) {
+    if (level > 1) await unlockHints(page, level - 1);
     await page.getByRole('button', { name: level === 1 ? 'Stuck? Get a hint' : `Next hint (${level} of 3)`, exact: true }).click();
-    await expect(page.locator('.bp-hint-card')).toHaveCount(1);
+    await expect(page.getByText(`Hint ${level} of 3`, { exact: true })).toBeVisible();
   }
   const history = page.getByRole('group', { name: 'Previous hints' });
   await expect(history.getByRole('button', { name: 'Hint 3', exact: true })).toHaveAttribute('aria-pressed', 'true');
@@ -32,7 +34,7 @@ for (const zoom of [1, 1.5]) test(`editor survives three long hints and failure 
   const code = 'def raise_to_power(base, exponent):\n    return base * exponent';
   await editor.fill(code);
   await page.getByRole('button', { name: 'Run', exact: true }).click();
-  await expect(page.getByText('Wrong answer', { exact: true })).toBeVisible();
+  await expect(page.getByText('What went wrong', { exact: true })).toBeVisible();
   await expect(page.getByText('What went wrong', { exact: true })).toBeVisible();
   const card = page.locator('.bp-editor-card');
   expect(await card.evaluate(node => node.getBoundingClientRect().height)).toBeGreaterThanOrEqual(210);
@@ -44,18 +46,20 @@ for (const zoom of [1, 1.5]) test(`editor survives three long hints and failure 
   await expect(page.getByRole('button', { name: 'Run', exact: true })).toBeInViewport({ ratio: 1 });
   await expect(page.getByRole('button', { name: 'Submit', exact: true })).toBeInViewport({ ratio: 1 });
   await page.screenshot({ path: info.outputPath(`editor-hints-zoom-${zoom}.png`), fullPage: true, animations: 'disabled' });
-  expect(app.requests[0]?.code).toBe(code);
+  expect(app.requests.at(-1)?.code).toBe(code);
   expect(await page.locator('video').evaluate(video => video.paused)).toBe(true);
 });
 
 test('a long hint remains valid input for Next hint', async ({ app }) => {
   await automaticPause(app.page);
+  await unlockHints(app.page);
   app.hintText = 'Think about each step and the changing accumulator. '.repeat(85);
   await app.page.getByRole('button', { name: 'Stuck? Get a hint', exact: true }).click();
   await expect(app.page.locator('.bp-hint-card')).toHaveCount(1);
+  await unlockHints(app.page, 1);
   await app.page.getByRole('button', { name: 'Next hint (2 of 3)', exact: true }).click();
   await expect(app.page.getByRole('button', { name: 'Hint 2', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  expect(app.hints[1]?.previousHints).toEqual([Array.from(`Hint 1: ${app.hintText}`).slice(0, 400).join('')]);
+  expect(app.hints.filter(h => h.level > 0)[1]?.previousHints).toEqual([Array.from(`Hint 1: ${app.hintText}`).slice(0, 400).join('')]);
   await app.page.getByRole('button', { name: 'Hint 1', exact: true }).click();
   await expect(app.page.locator('.bp-help-content')).toContainText(`Hint 1: ${app.hintText}`);
   await expect(app.page.locator('.bp-hints .bp-inline-error')).toHaveCount(0);
@@ -74,10 +78,16 @@ test('wrong Run explains the failure and hints stop at three', async ({ app }, i
     lastResult: { outcome: 'wrong_answer', args: [2, 3], expected: 8, actual: 6, diagnostic: null } });
   await page.locator('.bp-coach').scrollIntoViewIfNeeded();
   await page.screenshot({ path: info.outputPath('failed-feedback.png'), animations: 'disabled' });
+  await page.getByRole('button', { name: 'Back to code', exact: true }).click();
+  await unlockHints(page);
+  await page.getByRole('textbox', { name: 'Python code' }).fill(code);
   for (let level = 1; level <= 3; level++) {
+    if (level > 1) await unlockHints(page, level - 1);
+    await page.getByRole('textbox', { name: 'Python code' }).fill(code);
+    if (level > 1) await page.getByRole('button', { name: `Hints (${level - 1} of 3)`, exact: true }).click();
     await page.getByRole('button', { name: level === 1 ? 'Stuck? Get a hint' : `Next hint (${level} of 3)`, exact: true }).click();
-    await expect(page.locator('.bp-hint-card')).toHaveCount(1);
-    expect(app.hints[level]).toMatchObject({ exerciseId: 'samplevid01-exponent', revision: 'demo-1', code, level,
+    await expect(page.getByText(`Hint ${level} of 3`, { exact: true })).toBeVisible();
+    expect(app.hints.filter(h => h.level > 0)[level - 1]).toMatchObject({ exerciseId: 'samplevid01-exponent', revision: 'demo-1', code, level,
       previousHints: Array.from({ length: level - 1 }, (_, i) => `Hint ${i + 1}: ${hintFixture.hint}`) });
   }
   await expect(page.getByText('All 3 hints saved', { exact: true })).toBeVisible();
@@ -85,7 +95,7 @@ test('wrong Run explains the failure and hints stop at three', async ({ app }, i
   const sources = page.locator('.bp-hint-sources a');
   await expect(sources).toHaveCount(1);
   await expect(sources.first()).toHaveAttribute('href', hintFixture.sources[0]!.url);
-  expect(app.hints.map(h => h.level)).toEqual([0, 1, 2, 3]);
+  expect(app.hints.filter(h => h.level > 0).map(h => h.level)).toEqual([1, 2, 3]);
   expect(app.analyses).toHaveLength(0);
   expect(await page.locator('video').evaluate(v => v.paused)).toBe(true);
   await page.locator('.bp-hints').scrollIntoViewIfNeeded();

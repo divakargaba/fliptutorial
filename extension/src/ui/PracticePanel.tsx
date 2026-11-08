@@ -1,6 +1,7 @@
 import { useContext, useEffect, useRef, useState } from 'react';
 import { Check, ChevronDown, CircleAlert, ExternalLink, Gauge, Lightbulb, LoaderCircle, Pause, Play, Send, Sparkles, X } from 'lucide-react';
 import { LayoutSwitch, SuccessCelebration, WorkspaceContext } from './workspace';
+import { useLearningRecord } from '../learning/use-learning-record';
 import { PracticeMore } from './PracticeMore';
 import { BrandMark } from './BrandMark';
 import type { Breakpoint, HintResponse, LastResult, SubmissionResponse } from '../contracts';
@@ -47,6 +48,9 @@ export type PracticePanelProps = {
   manualResume?: boolean;
   /** Local learner identity. Omit only for legacy v1 draft keys. */
   accountId?: string;
+  historyAccountId?: string;
+  videoTitle?: string;
+  reviewOnly?: boolean;
   /** Language of the exercise; Python remains the v1 default. */
   language?: Language;
 };
@@ -79,6 +83,7 @@ function Panel(props: PracticePanelProps & { draftKey: string }) {
   const panelRef = useRef<HTMLElement>(null);
   const workspace = useContext(WorkspaceContext);
   const [hintOpen, setHintOpen] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [instructionsOpen, setInstructionsOpen] = useState(workspace?.effectiveLayout !== 'side');
   const checking = attempt === 'checking';
   const solved = attempt === 'passed';
@@ -91,10 +96,16 @@ function Panel(props: PracticePanelProps & { draftKey: string }) {
   const filename = { python: 'main.py', javascript: 'main.js', typescript: 'main.ts', java: 'Main.java', cpp: 'main.cpp', c: 'main.c', csharp: 'Main.cs', go: 'main.go', rust: 'main.rs', sql: 'query.sql', pseudocode: 'pseudocode.txt', unknown: 'code.txt' }[language];
   const value = (item: unknown) => language === 'python' ? formatValue(item) : JSON.stringify(item) ?? 'no output';
   const coach = useHints(props, code);
+  const learning = useLearningRecord(props, coach.hints.length);
+  useEffect(() => {
+    if (attempt === 'checking') { setFeedbackOpen(false); setHintOpen(false); }
+    else if (result || error) { setFeedbackOpen(true); setHintOpen(false); }
+  }, [result, error, attempt]);
   useEffect(() => { if (coach.hints.length) setHintOpen(true); }, [coach.hints.length]);
   useEffect(() => { setInstructionsOpen(workspace?.effectiveLayout !== 'side'); }, [workspace?.effectiveLayout]);
   const backToCode = () => {
     setHintOpen(false);
+    setFeedbackOpen(false);
     panelRef.current?.querySelector<HTMLElement>('[role="textbox"]')?.focus({ preventScroll: true });
   };
 
@@ -121,13 +132,13 @@ function Panel(props: PracticePanelProps & { draftKey: string }) {
   // Move screen-reader focus to the solved heading when the moment appears.
   useEffect(() => { if (solved) heading.current?.focus({ preventScroll: true }); }, [solved]);
 
-  const changeCode = (next: string) => { setHintOpen(false); setCode(next); saveDraft(draftKey, next); };
+  const changeCode = (next: string) => { setHintOpen(false); setFeedbackOpen(false); setCode(next); saveDraft(draftKey, next); };
   const leave = (action: () => void) => {
     void flushDraft(draftKey).catch(() => {});
     action(); // Skip stays immediate even if storage or grading is unavailable.
   };
-  const run = () => { if (!blocked) { setLastMode('run'); props.onRun(code!); } };
-  const submit = () => { if (!blocked) { setLastMode('submit'); props.onSubmit(code!); } };
+  const run = () => { if (!blocked) { learning.begin('run', code!); setLastMode('run'); props.onRun(code!); } };
+  const submit = () => { if (!blocked) { learning.begin('submit', code!); setLastMode('submit'); props.onSubmit(code!); } };
   const total = props.total ?? 1;
 
   return <section ref={panelRef} className={`bp-panel bp-workbench${leaving ? ' bp-leaving' : ''}`} data-attempt={attempt}
@@ -135,7 +146,8 @@ function Panel(props: PracticePanelProps & { draftKey: string }) {
     <header className="bp-header">
       <span className="bp-workspace-brand"><BrandMark size={18} /><span>Breakpoint</span></span>
       <span className="bp-paused"><Pause size={12} aria-hidden="true" />Paused at {formatTimestamp(props.breakpoint.pauseAtS)}</span>
-      {total > 1 && <span className="bp-step">{(props.index ?? 0) + 1} of {total}</span>}
+      {total > 1 && <span className="bp-step">{props.reviewOnly ? 'Reviewing challenge' : 'Challenge'} {(props.index ?? 0) + 1} of {total}</span>}
+      {solved && aiGenerated && <small className="bp-generated-label">AI-generated practice</small>}
       <LayoutSwitch />
       <button type="button" className="bp-icon-button" aria-label="Close practice" onClick={() => leave(props.onClose)}>
         <X size={18} aria-hidden="true" />
@@ -187,8 +199,7 @@ function Panel(props: PracticePanelProps & { draftKey: string }) {
         {tooLarge && <p className="bp-inline-error">Code must be at most 16 KiB.</p>}
         {storageError && <p className="bp-note">Draft saving is unavailable here — copy your code before leaving.</p>}
 
-        <Results attempt={attempt} lastMode={lastMode} result={result} error={error} coach={coach} value={value} />
-        {props.feedback && <div className="bp-workbench-feedback"><FeedbackCard feedback={props.feedback.result} code={props.feedback.submittedCode} /></div>}
+        <p className="bp-console-idle" role="status">{checking ? 'Checking your solution…' : learning.effort < 2 && !result ? 'Try two different solutions to unlock hints. Feedback is available after every attempt.' : 'Run checks examples. Submit checks every test.'}</p>
         </div>
       </div>
 
@@ -198,8 +209,17 @@ function Panel(props: PracticePanelProps & { draftKey: string }) {
       </div>}
 
       <footer className="bp-footer">
-        <HintsSection coach={coach} disabled={leaving || checking} open={hintOpen} onOpen={setHintOpen} onBack={backToCode} />
-        <PracticeMore onLater={() => leave(props.onSkip)} />
+        <HintsSection coach={coach} disabled={leaving || checking} unlocked={learning.effort >= 2} effort={learning.effort} open={hintOpen} onOpen={open => { setHintOpen(open); if (open) setFeedbackOpen(false); }} onBack={backToCode} />
+        {(result || error) && <button className="bp-text-button bp-feedback-trigger" type="button" disabled={checking} aria-expanded={feedbackOpen} onClick={() => { setFeedbackOpen(!feedbackOpen); setHintOpen(false); }}>Feedback</button>}
+        {feedbackOpen && (result || error) && <section className="bp-feedback-drawer" aria-label="Attempt feedback" onKeyDown={event => { if (event.key === 'Escape') { event.stopPropagation(); backToCode(); } }}>
+          <header aria-live="polite"><strong>{error ? 'Could not check your solution' : result?.outcome === 'passed' ? 'Run complete' : 'What went wrong'}</strong><button type="button" className="bp-icon-button" aria-label="Close feedback" onClick={backToCode}><X size={16} /></button></header>
+          <div className="bp-feedback-content">
+            {!error && (props.feedback ? <FeedbackCard feedback={props.feedback.result} code={props.feedback.submittedCode} /> : result?.outcome !== 'passed' && <CoachFeedback coach={coach} />)}
+            {error && <Results attempt={attempt} lastMode={lastMode} result={null} error={error} coach={{ ...coach, feedback: null }} value={value} />}
+            {!error && result && <details><summary>{result.passedCount} of {result.totalCount} tests passed · Test details</summary><Results attempt={attempt} lastMode={lastMode} result={result} error={null} coach={{ ...coach, feedback: null }} value={value} /></details>}
+          </div><button type="button" className="bp-text-button" onClick={backToCode}>Back to code</button>
+        </section>}
+        <PracticeMore onLater={() => leave(props.onSkip)} onOpen={() => { setFeedbackOpen(false); setHintOpen(false); }} />
         <button type="button" className="bp-button bp-secondary" disabled={blocked} aria-busy={checking && lastMode === 'run'}
           onClick={run} title={`Run examples (${MOD}+Enter)`}>
           {checking && lastMode === 'run' ? <LoaderCircle size={14} className="bp-spin" aria-hidden="true" /> : <Play size={14} aria-hidden="true" />}Run
@@ -211,6 +231,7 @@ function Panel(props: PracticePanelProps & { draftKey: string }) {
       </footer>
     </>}
     {solved && props.feedback && <div className="bp-v2-panel-feedback"><FeedbackCard feedback={props.feedback.result} code={props.feedback.submittedCode} /></div>}
+    {learning.notice && <p className="bp-local-notice" role="status">{learning.notice}</p>}
   </section>;
 }
 
@@ -383,12 +404,12 @@ function CoachFeedback({ coach }: { coach: Coach }) {
     <Sparkles size={14} aria-hidden="true" />
     {coach.feedback.loading
       ? <span className="bp-coach-loading">Looking at what went wrong…</span>
-      : <div><strong>What went wrong</strong><p>{coach.feedback.text}</p></div>}
+      : <p>{coach.feedback.text || 'Compare your output with the expected result below, then try a different approach.'}</p>}
   </div>;
 }
 
-function HintsSection({ coach, disabled, open, onOpen, onBack }: {
-  coach: Coach; disabled: boolean; open: boolean; onOpen(open: boolean): void; onBack(): void;
+function HintsSection({ coach, disabled, unlocked, effort, open, onOpen, onBack }: {
+  coach: Coach; disabled: boolean; unlocked: boolean; effort: number; open: boolean; onOpen(open: boolean): void; onBack(): void;
 }) {
   const [selected, setSelected] = useState(0);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -396,15 +417,16 @@ function HintsSection({ coach, disabled, open, onOpen, onBack }: {
   if (!coach.available) return null;
   const used = coach.hints.length;
   const hint = coach.hints[selected];
-  const request = () => { onOpen(true); coach.next(); };
+  const request = () => { if (!disabled && unlocked) { onOpen(true); coach.next(); } };
   const close = () => { onOpen(false); trigger.current?.focus({ preventScroll: true }); };
   return <div className="bp-hints bp-help" onKeyDown={event => {
     if (event.key === 'Escape' && open) { event.stopPropagation(); close(); }
   }}>
     <button ref={trigger} type="button" className="bp-button bp-hint-button" aria-expanded={open} aria-controls="bp-hint-drawer"
-      aria-label={used ? `Hints (${used} of 3)` : 'Stuck? Get a hint'} disabled={disabled || coach.loading}
+      title={!used && !unlocked ? 'Complete two attempts with different code to unlock hints' : undefined}
+      aria-label={used ? `Hints (${used} of 3)` : !unlocked ? `Hints locked: ${Math.min(2, effort)} of 2 attempts` : 'Stuck? Get a hint'} disabled={disabled || coach.loading || (!used && !unlocked)}
       onClick={() => used ? onOpen(!open) : request()}>
-      <span aria-hidden="true">💡</span>{coach.loading ? 'Finding a hint…' : used ? `Hints · ${used}` : 'Get a hint'}
+      <span aria-hidden="true">💡</span>{coach.loading ? 'Finding a hint…' : used ? `Hints · ${used}` : !unlocked ? `Hints · ${Math.min(2, effort)}/2` : 'Get a hint'}
     </button>
     {open && <section id="bp-hint-drawer" className="bp-help-popover" aria-label="Practice hints">
       <header><strong>{hint ? `Hint ${selected + 1} of 3` : 'A little guidance'}</strong>
@@ -418,9 +440,10 @@ function HintsSection({ coach, disabled, open, onOpen, onBack }: {
         </article>}
         {coach.loading && <p role="status">Finding a helpful nudge…</p>}
         {coach.error && <p className="bp-inline-error" role="alert">{coach.error}</p>}
+        {used > 0 && used < 3 && !unlocked && <p className="bp-note" role="status">Try two more different solutions before the next hint. {Math.min(2, effort)} of 2 attempts completed.</p>}
       </div>
       <footer><button type="button" className="bp-text-button" onClick={onBack}>Back to code</button>
-        {used < 3 ? <button type="button" className="bp-button bp-secondary" disabled={disabled || coach.loading} onClick={request}>
+        {used < 3 ? <button type="button" className="bp-button bp-secondary" disabled={disabled || coach.loading || !unlocked} onClick={request}>
           {used ? `Next hint (${used + 1} of 3)` : 'Try again'}</button> : <span className="bp-note">All 3 hints saved</span>}
       </footer>
     </section>}

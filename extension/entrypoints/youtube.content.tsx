@@ -125,6 +125,7 @@ export default defineContentScript({
     let timelineMounting = false;
     let timelineSignature = '';
     let timelineSelection: AbortController | undefined;
+    let historyReviewHandled = '';
     let mounting = false;
     let uiFailed = false;
     let anchor: Element | null = null;
@@ -206,8 +207,17 @@ export default defineContentScript({
     };
     const focusBadge = () => ui?.shadow.querySelector<HTMLElement>('[data-breakpoint-badge] .bp-badge')?.focus({ preventScroll: true });
     const focusPanel = () => {
-      const panel = ui?.shadow.querySelector<HTMLElement>('[data-breakpoint-panel]');
-      (panel?.querySelector<HTMLElement>('h2[tabindex]') ?? panel)?.focus();
+      // React commits asynchronously. Bring the complete panel (including its
+      // pinned actions) into view after mounting, rather than only its heading.
+      requestAnimationFrame(() => {
+        if (!isCurrent()) return;
+        const panel = ui?.shadow.querySelector<HTMLElement>('[data-breakpoint-panel]');
+        panel?.scrollIntoView({ block: 'nearest', behavior: 'instant' });
+        // The panel's mount effect may already have focused it, or the learner
+        // may have started tabbing. Never steal focus back from its controls.
+        if (!panel?.contains(ui?.shadow.activeElement ?? null))
+          (panel?.querySelector<HTMLElement>('h2[tabindex]') ?? panel)?.focus({ preventScroll: true });
+      });
     };
 
     function render() {
@@ -232,6 +242,7 @@ export default defineContentScript({
         const plannedItem = active.planPause?.exercise ?? active.planPause?.question;
         panel = {
           videoId: session.videoId, revision: active.revision, breakpoint: active.breakpoint,
+          historyAccountId: accountId, videoTitle: (document.querySelector('h1.ytd-watch-metadata')?.textContent?.trim() || document.title.replace(/ - YouTube$/, '')).slice(0, 300), reviewOnly: active.reviewOnly,
           language: active.breakpoint.exercise.language,
           attempt: active.state, result: active.result, error: active.error, canResume: active.canResume,
           ...(plannedItem ? {
@@ -281,7 +292,7 @@ export default defineContentScript({
             ? <TopicNotAvailable reason={plan.verdict.reason} onDismiss={() => { dismissedUnavailable = true; render(); }} />
             : session.route !== 'unsupported' && <div data-breakpoint-badge hidden={!!visiblePanel}>
             <Badge state={state} total={breakpoints.length} remaining={remaining.length} solved={solved}
-              active={!!active && !active.generated} nextAtS={remaining[0]?.pauseAtS ?? null} onOpen={openFromBadge} />
+              active={!!active && !active.generated} currentIndex={active ? breakpoints.findIndex(b => b.id === active.breakpoint.id) : undefined} nextAtS={remaining[0]?.pauseAtS ?? null} onOpen={openFromBadge} />
           </div>}
           <TestMeControls />
           {refresher && !active && !request && accountReady && playerReady &&
@@ -292,6 +303,7 @@ export default defineContentScript({
             {active?.planPause?.question
               ? <ConceptQuestionPanel key={`${session.generation}/${active.planPause.question.id}`}
                   question={active.planPause.question} checking={active.state === 'checking'}
+                  positionLabel={active.refresher ? 'Skill refresher' : `${active.reviewOnly ? 'Reviewing challenge' : 'Challenge'} ${breakpoints.findIndex(b => b.id === active.breakpoint.id) + 1} of ${breakpoints.length}`}
                   {...{ error: active.error, canResume: active.canResume }}
                   feedback={feedbackState && session.isCurrent(feedbackState.ticket) ? feedbackState.feedback : null}
                   progress={progressState && session.isCurrent(progressState.ticket) ? progressState.award : null}
@@ -317,7 +329,7 @@ export default defineContentScript({
       timelineSelection?.abort(); timelineSelection = undefined;
     }
 
-    async function selectTimeline(id: string) {
+    async function selectTimeline(id: string, historyReview = false) {
       const video = testMePlayer();
       const marker = video && session.timelineMarkers(video.duration).find(m => m.id === id);
       if (!video || !marker || session.active || session.testMe || !accountReady) return;
@@ -338,6 +350,8 @@ export default defineContentScript({
           video.seeking || !video.paused || isAd() || isFullscreen() || !mountable() ||
           document.visibilityState !== 'visible') return;
       if (session.openFromTimeline(id, video.currentTime, ownsPause)) {
+        const opened = session.active as PlaybackSession['active'];
+        if (historyReview && opened) opened.reviewOnly = true;
         feedbackState = null; analysisState = null; progressState = null;
         render(); focusPanel(); releaseEmptyPanel(video);
       }
@@ -349,6 +363,21 @@ export default defineContentScript({
       const movie = document.querySelector<HTMLElement>('#movie_player');
       const bar = movie?.querySelector<HTMLElement>('.ytp-progress-bar');
       const markers = video && playerReady && accountReady ? session.timelineMarkers(video.duration) : [];
+      // Local learner/exercise metadata stays in the fragment, not a request
+      // query sent to YouTube. Accept the older local query links as well.
+      const fragment = new URLSearchParams(location.hash.slice(1));
+      const query = fragment.has('bp_review') ? fragment : new URL(location.href).searchParams;
+      const requested = query.get('bp_review');
+      const historyKey = `${session.generation}/${accountId}/${requested}`;
+      if (requested && markers.length && video && video.readyState >= 2 && testMePlayer() === video && document.visibilityState === 'visible' &&
+          !session.active && !session.testMe && historyReviewHandled !== historyKey) {
+        historyReviewHandled = historyKey;
+        const breakpoint = session.data?.breakpoints.find(b => b.exercise.id === requested);
+        const planned = breakpoint && plan?.pauses.find(p => p.id === breakpoint.id);
+        const revision = (planned?.exercise ?? planned?.question)?.revision ?? session.data?.revision;
+        if (query.get('bp_account') === accountId && breakpoint && query.get('bp_revision') === revision) void selectTimeline(breakpoint.id, true);
+        else { layoutError = 'This saved challenge belongs to another learner or has changed. Choose a current challenge from the timeline.'; }
+      }
       if (!movie || !bar || !markers.length || isAd() || isFullscreen() || !mountable() || session.active || session.testMe) {
         if (timelineUi) timelineUi.shadowHost.style.display = 'none';
         return;

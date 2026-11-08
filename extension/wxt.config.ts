@@ -6,7 +6,7 @@ export default defineConfig({
   manifestVersion: 3,
   manifest: {
     name: 'Breakpoint',
-    description: 'Practice Python while watching YouTube tutorials.',
+    description: 'Practice coding and concepts while watching YouTube tutorials.',
     permissions: ['storage'],
     host_permissions: ['http://127.0.0.1/*'],
     action: {

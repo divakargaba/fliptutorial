@@ -82,7 +82,7 @@ test('v2 controls and refresher callbacks work', async ({ page }) => {
   await page.getByLabel('Never pause on this video').check();
   await expect(page.getByLabel('Never pause on this video')).toBeChecked();
   await page.goto('/tests/showcase/v2.html?state=refresher');
-  await page.getByRole('button', { name: 'Start refresher' }).click();
+  await page.getByRole('button', { name: 'Practice' }).click();
   await expect(page.getByRole('status')).toHaveText('lists');
   await page.goto('/tests/showcase/v2.html?state=unavailable');
   await page.getByRole('button', { name: 'Dismiss' }).click();
@@ -177,11 +177,11 @@ for (const theme of ['dark', 'light']) test(`v2 ${theme} showcase captures every
 for (const theme of ['dark', 'light']) test(`v2 ${theme} text contrast meets 4.5 to 1`, async ({ page }) => {
   await page.goto(`/tests/showcase/v2.html?state=profile&theme=${theme}`);
   // Profile rows: title (h3) and tertiary meta text on the group surface.
-  const ratios = await page.locator('.bp-v2-card').first().evaluate(card => {
+  const ratios = await page.locator('.bp-pf-skill').first().evaluate(card => {
     const rgb = (value: string) => value.match(/[\d.]+/g)!.slice(0, 3).map(Number);
     const luminance = (color: number[]) => color.map(value => { const c = value / 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; }).reduce((sum, value, index) => sum + value * [0.2126, 0.7152, 0.0722][index]!, 0);
     const bg = luminance(rgb(getComputedStyle(card).backgroundColor));
-    return [card.querySelector('h2') ? 'h2' : 'h3', card.querySelector('small') ? 'small' : '.bp-pf-meta'].map(selector => {
+    return ['h3', '.bp-learning-next'].map(selector => {
       const fg = luminance(rgb(getComputedStyle(card.querySelector(selector)!).color));
       return (Math.max(bg, fg) + 0.05) / (Math.min(bg, fg) + 0.05);
     });

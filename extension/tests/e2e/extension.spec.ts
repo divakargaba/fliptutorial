@@ -6,10 +6,10 @@ test('built extension pauses once, Run fails, Submit passes and resumes', async 
   await automaticPause(page);
   const panel = page.locator('.bp-panel');
   expect(await panel.evaluate(el => getComputedStyle(el).fontSize)).toBe('14px');
-  expect(await page.locator('.bp-body').evaluate(el => getComputedStyle(el).paddingLeft)).toBe('16px');
+  expect(await page.locator('.bp-body').evaluate(el => getComputedStyle(el).paddingLeft)).toBe(info.project.name.includes('narrow') ? '16px' : '20px');
   expect(await panel.evaluate(el => getComputedStyle(el).borderTopWidth)).toBe('1px');
   const parent = await page.locator('breakpoint-practice').evaluate(el => el.parentElement?.id);
-  expect(parent).toBe(info.project.name.includes('narrow') ? 'below' : 'secondary-inner');
+  expect(parent).toBe('below');
   await panel.scrollIntoViewIfNeeded();
   await page.screenshot({ path: info.outputPath('editing.png'), animations: 'disabled' });
   const editor = page.getByRole('textbox', { name: 'Python code' });
@@ -17,19 +17,20 @@ test('built extension pauses once, Run fails, Submit passes and resumes', async 
   for (const key of ['Space', 'j', 'k', 'l', 'f']) await editor.press(key);
   expect(await page.evaluate(() => (window as Window & { pageHotkeys: number }).pageHotkeys)).toBe(0);
   await editor.press('Tab');
-  await expect(page.getByRole('button', { name: 'Stuck? Get a hint' })).toBeFocused();
-  await page.keyboard.press('Tab');
+  // Locked hints are skipped in the tab order.
+
   await expect(page.getByRole('button', { name: 'More', exact: true })).toBeFocused();
   await editor.fill('def raise_to_power(base, exponent):\n    return base * exponent');
   await page.getByRole('button', { name: 'Run', exact: true }).click();
-  await expect(page.getByText('wrong answer', { exact: false })).toBeVisible();
+  await expect(page.getByText('What went wrong', { exact: true })).toBeVisible();
+  await page.locator('.bp-feedback-content summary').click();
   expect(await page.locator('video').evaluate(video => video.paused)).toBe(true);
   await page.locator('.bp-results').evaluate(el => el.scrollIntoView({ block: 'end' }));
   await page.locator('.bp-footer').scrollIntoViewIfNeeded();
   await page.screenshot({ path: info.outputPath('failed.png'), animations: 'disabled' });
   await editor.fill(correctCode);
   await page.getByRole('button', { name: 'Run', exact: true }).click();
-  await expect(page.getByText('Examples passed', { exact: false })).toBeVisible();
+  await expect(page.getByText('Run complete', { exact: true })).toBeVisible();
   expect(await page.locator('video').evaluate(video => video.paused)).toBe(true);
   await page.getByRole('button', { name: 'Submit', exact: true }).click();
   await expectPlaying(page);

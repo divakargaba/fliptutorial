@@ -11,6 +11,13 @@ const pick = { accountId: 'test-ana', concept: question.concepts[0], conceptName
   strength: 0.2, reason: 'Time to review', question };
 
 describe('refresher boundary', () => {
+  it('requests one selected skill and rejects a different skill response', async () => {
+    const fetcher = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => Response.json(pick));
+    const request = { type: 'refresherV2' as const, accountId: 'test-ana', concept: pick.concept };
+    expect((await requestPlanApi(request, 'http://127.0.0.1:8000', fetcher)).ok).toBe(true);
+    expect(fetcher.mock.calls[0]?.[0]).toBe(`http://127.0.0.1:8000/v2/refresher/test-ana?concept=${pick.concept}`);
+    expect((await requestPlanApi({ ...request, concept: 'functions' }, 'http://127.0.0.1:8000', fetcher)).ok).toBe(false);
+  });
   it('uses a bounded learner-specific GET and treats 204 as nothing due', async () => {
     const fetcher = vi.fn(async () => new Response(null, { status: 204 }));
     expect(await requestPlanApi({ type: 'refresherV2', accountId: 'test-ana' }, 'http://127.0.0.1:8000', fetcher)).toEqual({ ok: true, data: null });

@@ -12,6 +12,7 @@ export type BadgeProps = {
   solved: number;
   /** A practice panel is currently open. */
   active: boolean;
+  currentIndex?: number;
   /** Pause time of the next remaining breakpoint. */
   nextAtS: number | null;
   onOpen(): void;
@@ -20,7 +21,7 @@ export type BadgeProps = {
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 // Always one <button> element so React keeps the same DOM node (and focus) across states.
-export function Badge({ state, total, remaining, solved, active, nextAtS, onOpen }: BadgeProps) {
+export function Badge({ state, total, remaining, solved, active, currentIndex, nextAtS, onOpen }: BadgeProps) {
   let kind: string; let label: string; let icon: React.ReactNode = null; let text: string; let meta: React.ReactNode = null;
   if (state === 'loading') {
     kind = 'loading'; label = 'Breakpoint · finding practice'; text = 'Finding practice…';
@@ -32,7 +33,7 @@ export function Badge({ state, total, remaining, solved, active, nextAtS, onOpen
   } else if (active) {
     kind = 'active'; label = 'Breakpoint · practicing now'; text = 'Practicing now';
     icon = <span className="bp-live-dot" aria-hidden="true" />;
-    if (total > 1) meta = `${total - remaining} of ${total}`;
+    if (total > 1 && currentIndex !== undefined) meta = `Challenge ${currentIndex + 1} of ${total}`;
   } else if (remaining > 0) {
     kind = 'ready';
     label = `Breakpoint · ${plural(remaining, 'challenge')}${nextAtS !== null ? ` at ${formatTimestamp(nextAtS)}` : ''}`;
@@ -40,7 +41,7 @@ export function Badge({ state, total, remaining, solved, active, nextAtS, onOpen
     if (nextAtS !== null) meta = `at ${formatTimestamp(nextAtS)}`;
   } else {
     kind = solved > 0 ? 'solved' : 'done'; label = `Breakpoint · ${solved} of ${total} solved`;
-    text = solved === total ? (total === 1 ? 'Challenge solved' : 'All challenges solved') : `${solved} of ${total} solved`;
+    text = solved === total ? (total === 1 ? 'Challenge solved' : 'All challenges solved') : `${solved} solved · ${Math.max(0, total - solved)} skipped`;
     if (solved > 0) icon = <Check size={15} className="bp-pass" aria-hidden="true" />;
   }
   const clickable = kind === 'ready' || kind === 'unavailable';
