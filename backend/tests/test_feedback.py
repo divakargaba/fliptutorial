@@ -757,6 +757,39 @@ async def test_answer_has_schema_version(registered_question):
     assert data["feedback"]["schemaVersion"] == 2
 
 
+def _assert_frozen_feedback(fb):
+    """Mirror of the extension's strict FeedbackSchema outcome invariants."""
+    if fb["outcome"] == "passed":
+        assert fb["diagnosis"] is None
+        opt = fb["success"]["optimization"]
+        assert isinstance(opt, dict) and isinstance(opt["show"], bool)
+        for k in ("learner", "best"):
+            assert set(opt[k]) == {"time", "space"} and all(isinstance(v, str) for v in opt[k].values())
+        assert set(opt) == {"show", "learner", "best", "tip", "betterSolution"}
+    else:
+        assert fb["success"] is None
+        d = fb["diagnosis"]
+        assert d["misconception"]["id"] and isinstance(d["misconception"]["name"], str)
+        assert isinstance(d["lines"], list) and "failingCase" in d
+
+
+@pytest.mark.asyncio
+async def test_answer_matches_frozen_feedback_contract(registered_question):
+    """Correct and wrong /v2/answer responses satisfy the frozen FeedbackResult shape."""
+    q = registered_question
+    from app.main import app
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        for t in q["tests"]:
+            resp = await client.post("/v2/answer", json={
+                "questionId": q["id"], "revision": q["revision"], "answer": t["answer"],
+            })
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["correct"] == (data["feedback"]["outcome"] == "passed")
+            _assert_frozen_feedback(data["feedback"])
+
+
 @pytest.mark.asyncio
 async def test_submit_empty_code_rejected(registered_exercise):
     """POST /v2/submit with empty code returns 422."""

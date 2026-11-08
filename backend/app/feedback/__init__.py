@@ -387,8 +387,26 @@ async def answer(body: AnswerRequest) -> JSONResponse:
         "concept": {"id": concept_id, "name": concept_name},
         "assessedLevel": body.learnerLevel,
         "summary": explanation_text,
-        "success": {"explanation": explanation_text, "optimization": None} if result.correct else None,
-        "diagnosis": None,
+        # Concept answers have no code, so complexity is explicitly not applicable (frozen contract: never null).
+        "success": {
+            "explanation": explanation_text,
+            "optimization": {
+                "show": False,
+                "learner": {"time": "n/a", "space": "n/a"},
+                "best": {"time": "n/a", "space": "n/a"},
+                "tip": None,
+                "betterSolution": None,
+            },
+        } if result.correct else None,
+        "diagnosis": None if result.correct else {
+            "misconception": {
+                "id": f"{concept_id}-concept-misread",
+                "name": f"Misread of {concept_name}",
+                "explanation": explanation_text,
+            },
+            "lines": [],
+            "failingCase": None,
+        },
         "aiGenerated": result.aiGenerated,
     }
 
