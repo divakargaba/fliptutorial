@@ -91,6 +91,8 @@ async function realChecks(page, context) {
   await page.keyboard.press('ControlOrMeta+a');
   await page.keyboard.insertText('def raise_to_power(base, exponent):\n    return base * exponent');
   await page.keyboard.press('Tab');
+  await expect(page.getByRole('button', { name: 'Stuck? Get a hint' })).toBeFocused();
+  await page.keyboard.press('Tab');
   await expect(page.getByRole('button', { name: 'Skip and watch' })).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(page.getByRole('button', { name: 'Run', exact: true })).toBeFocused();
@@ -135,6 +137,8 @@ async function keyboardControl(page, close) {
     await expect(editor).toBeVisible();
     await page.keyboard.press('Tab');
     await expect(editor).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(page.getByRole('button', { name: 'Stuck? Get a hint' })).toBeFocused();
     await page.keyboard.press('Tab');
   }
   await expect(page.getByRole('button', { name: close ? 'Close practice' : 'Skip and watch' })).toBeFocused();

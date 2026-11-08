@@ -17,6 +17,8 @@ test('built extension pauses once, Run fails, Submit passes and resumes', async 
   for (const key of ['Space', 'j', 'k', 'l', 'f']) await editor.press(key);
   expect(await page.evaluate(() => (window as Window & { pageHotkeys: number }).pageHotkeys)).toBe(0);
   await editor.press('Tab');
+  await expect(page.getByRole('button', { name: 'Stuck? Get a hint' })).toBeFocused();
+  await page.keyboard.press('Tab');
   await expect(page.getByRole('button', { name: 'Skip and watch' })).toBeFocused();
   await editor.fill('def raise_to_power(base, exponent):\n    return base * exponent');
   await page.getByRole('button', { name: 'Run', exact: true }).click();

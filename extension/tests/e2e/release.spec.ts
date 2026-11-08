@@ -47,9 +47,11 @@ for (const failure of failures) {
     }
     await page.locator('.bp-results').scrollIntoViewIfNeeded();
     await page.screenshot({ path: info.outputPath(`${failure.code}.png`), animations: 'disabled' });
-    // Tab out of CodeMirror must reach Skip, including after a revision remount.
+    // Tab leaves CodeMirror for the hint coach, then reaches Skip, including after a revision remount.
     await editor.focus();
     await editor.press('Tab');
+    await expect(page.getByRole('button', { name: 'Stuck? Get a hint' })).toBeFocused();
+    await page.keyboard.press('Tab');
     await expect(skip).toBeFocused();
     expect(await page.locator('video').evaluate(v => v.currentTime)).toBe(pausedAt);
     await skip.press('Enter');
@@ -70,6 +72,8 @@ for (const theme of ['dark', 'light'] as const) {
     await page.getByRole('heading', { name: 'Raise a number to a power' }).press('Tab');
     await expect(editor).toBeFocused();
     await editor.press('Tab');
+    await expect(page.getByRole('button', { name: 'Stuck? Get a hint' })).toBeFocused();
+    await page.keyboard.press('Tab');
     const skip = page.getByRole('button', { name: 'Skip and watch' });
     await expect(skip).toBeFocused();
     expect(await skip.evaluate(el => getComputedStyle(el).outlineWidth)).toBe('2px');

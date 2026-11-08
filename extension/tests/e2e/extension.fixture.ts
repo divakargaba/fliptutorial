@@ -3,10 +3,14 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import type { PracticeResponse } from '../../src/contracts';
+import type { AnalysisResponse, HintResponse, LastResult, PracticeResponse } from '../../src/contracts';
 const practice: PracticeResponse = JSON.parse(readFileSync(new URL('../../../contracts/practice-response.fixture.json', import.meta.url), 'utf8'));
 const failed = JSON.parse(readFileSync(new URL('../../../contracts/submission-response.fixture.json', import.meta.url), 'utf8'));
 export const generated = JSON.parse(readFileSync(new URL('../../../contracts/testme-response.fixture.json', import.meta.url), 'utf8'));
+export const hintFixture: HintResponse = JSON.parse(readFileSync(new URL('../../../contracts/hint-response.fixture.json', import.meta.url), 'utf8'));
+export const analysisFixture: AnalysisResponse = JSON.parse(readFileSync(new URL('../../../contracts/analysis-response.fixture.json', import.meta.url), 'utf8'));
+type HintRequest = { exerciseId: string; revision: string; code: string; level: number; lastResult?: LastResult; previousHints?: string[] };
+type AnalysisRequest = { exerciseId: string; revision: string; code: string };
 
 export const watchUrl = 'https://www.youtube.com/watch?v=samplevid01';
 export const pauseAtS = 1.2;
@@ -25,6 +29,10 @@ type App = {
   generations: Array<{ videoId: string; timestampS: number }>;
   holdGeneration: boolean;
   generationFailure: { status: number; code: string; retryable: boolean } | null;
+  hints: HintRequest[];
+  analyses: AnalysisRequest[];
+  analysis: AnalysisResponse;
+  holdAnalysis: boolean;
   release(): Promise<void>;
   rejectResume(reject: boolean): Promise<void>;
 };
@@ -37,7 +45,9 @@ export const test = base.extend<{ app: App; breakpointCount: 1 | 2; preparedVide
     const pending: Array<() => void> = [];
     const releasePending = () => pending.splice(0).forEach(fn => fn());
     const app = { requests, hold: false, unavailable: false, failure: null, revision: practice.revision!, lookupCount: 0,
-      generations: [], holdGeneration: false, generationFailure: null } as App;
+      generations: [], holdGeneration: false, generationFailure: null,
+      hints: [], analyses: [], holdAnalysis: false,
+      analysis: { ...analysisFixture, optimal: true, best: analysisFixture.learner, betterSolution: null } } as App;
     const api = new URL(process.env.WXT_API_BASE_URL || 'http://127.0.0.1:8000');
     if (api.hostname !== '127.0.0.1' || api.protocol !== 'http:') throw new Error('The test API must use HTTP loopback.');
     const [original] = practice.breakpoints;
@@ -66,6 +76,18 @@ export const test = base.extend<{ app: App; breakpointCount: 1 | 2; preparedVide
           ? json(app.generationFailure.status, { error: { code: app.generationFailure.code, retryable: app.generationFailure.retryable, message: `Fixture ${app.generationFailure.code}.` }, requestId: 'fixture-generation' })
           : json(200, generated);
         if (app.holdGeneration) pending.push(respond); else respond();
+      } else if (req.method === 'POST' && req.url === '/v1/hints') {
+        let body = '';
+        for await (const chunk of req) body += chunk;
+        const input = JSON.parse(body) as HintRequest;
+        app.hints.push(input);
+        json(200, { ...hintFixture, level: input.level, hint: input.level === 0 ? null : `Hint ${input.level}: ${hintFixture.hint}` });
+      } else if (req.method === 'POST' && req.url === '/v1/analysis') {
+        let body = '';
+        for await (const chunk of req) body += chunk;
+        app.analyses.push(JSON.parse(body));
+        const respond = () => json(200, app.analysis);
+        if (app.holdAnalysis) pending.push(respond); else respond();
       } else if (req.method === 'POST' && req.url === '/v1/submissions') {
         let body = '';
         for await (const chunk of req) body += chunk;
@@ -97,7 +119,7 @@ export const test = base.extend<{ app: App; breakpointCount: 1 | 2; preparedVide
       app.release = async () => {
         if (!pending.length) return;
         const downloaded = context.waitForEvent('requestfinished', request =>
-          request.url() === `${api.origin}/v1/submissions` || request.url() === `${api.origin}/v1/test-me`);
+          ['/v1/submissions', '/v1/test-me', '/v1/analysis'].some(path => request.url() === `${api.origin}${path}`));
         releasePending();
         await downloaded;
         // Let the worker message and the content renderer run after the fetch finishes.

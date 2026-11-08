@@ -62,6 +62,34 @@ npm run test:e2e -- --project mv3-desktop --project mv3-narrow
 These deterministic checks do not replace the real YouTube and live Judge0
 walkthroughs owned by the integration lane in `PLAN.md`.
 
+## Hint coach and efficiency review
+
+`hints.spec.ts` runs the built MV3 extension at both viewport sizes, with local
+`POST /v1/hints` and `POST /v1/analysis` routes based on the shared contract fixtures:
+
+```sh
+npm run test:e2e -- --project mv3-desktop --project mv3-narrow --grep "wrong Run explains|inefficient Submit|efficient Submit"
+```
+
+It checks failing-case feedback, hint levels 1–3 with prior-hint history and
+official-doc links, no fourth hint, analysis only after a passed Submit, paused
+playback while analysis is pending and after an inefficient verdict, the faster
+solution disclosure, manual resume, and automatic resume after an efficient
+verdict. Existing grading tests default to an efficient fixture verdict.
+No Anthropic or Judge0 requests are made. The analysis fixture is an illustrative
+pair-search result, not a correctness claim about the exponent exercise.
+
+`ui.preview.spec.ts` also captures the existing showcase states `failed`, `solved`,
+`solved-slow` and `solved-checking` in dark/light themes at both viewport sizes:
+
+```sh
+npm run test:e2e -- --project preview-desktop --project preview-narrow --grep "hint and efficiency showcase"
+```
+
+Reviewed captures live in `assets/ui-checks/hints-efficiency/`; regenerate them
+from the matching Playwright PNG artifacts in `test-results/`. Showcase captures
+use component stubs; the `mv3-` captures exercise the real extension messaging.
+
 ## Release failure matrix and contrast regression
 
 `release.spec.ts` runs against the built MV3 worker at both viewport sizes:
@@ -75,7 +103,7 @@ The local API returns real HTTP errors for `GRADER_UNAVAILABLE` (503),
 `INVALID_CODE` (422). The network timeout case withholds the HTTP response until
 the production worker's 15-second fetch deadline; timers and worker replies are
 not replaced. Every case checks the exact multiline draft, re-enabled grading
-controls, unchanged paused media time, Tab from the editor to Skip, Enter to
+controls, unchanged paused media time, Tab from the editor through the hint button to Skip, Enter to
 resume, and draft recovery from Chrome storage after reload. The stale case
 also changes the catalog revision/title, observes another lookup and verifies
 the next request uses the new revision with the original code.
@@ -129,8 +157,8 @@ at `chrome://extensions` (Developer mode), then open
 
 1. Let the video play through 2:43:23.32. Check that it pauses and focus moves to
    the exercise heading. Tab into the editor, select all and type
-   ` jklf`. Video stays paused; no seek or fullscreen occurs. Tab must reach Skip,
-   then Run and Submit. Shift+Tab from the heading must reach Close practice.
+   ` jklf`. Video stays paused; no seek or fullscreen occurs. Tab must reach
+   Stuck? Get a hint, then Skip, Run and Submit. Shift+Tab from the heading must reach Close practice.
 2. Toggle theater with the native player control during the open panel; the panel
    belongs below the player and never covers captions or the scrub bar. Check native
    controls with the mouse as well. Tab to Skip and press Enter to resume. Use Skip

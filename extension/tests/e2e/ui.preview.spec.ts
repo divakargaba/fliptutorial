@@ -62,3 +62,18 @@ test('skip is reachable during grading and after provider failure', async ({ pag
   await page.getByRole('button', { name: 'Skip and watch' }).click();
   await expect(page.locator('.bp-panel')).toHaveCount(0);
 });
+
+test('hint and efficiency showcase screenshots', async ({ page }, info) => {
+  for (const theme of ['dark', 'light']) {
+    for (const state of ['failed', 'solved', 'solved-slow', 'solved-checking']) {
+      await page.goto(`/tests/showcase/index.html?state=${state}&theme=${theme}`);
+      await expect(page.locator('.bp-panel')).toBeVisible();
+      if (state === 'failed') await expect(page.getByText('What went wrong', { exact: true })).toBeVisible();
+      if (state === 'solved') await expect(page.locator('.bp-efficiency.is-optimal')).toBeVisible();
+      if (state === 'solved-slow') await expect(page.getByRole('button', { name: 'Show a faster solution' })).toBeVisible();
+      if (state === 'solved-checking') await expect(page.getByText('Checking how efficient your solution is…')).toBeVisible();
+      await page.locator('.bp-panel').scrollIntoViewIfNeeded();
+      await page.screenshot({ path: info.outputPath(`showcase-${theme}-${state}.png`), animations: 'disabled' });
+    }
+  }
+});
