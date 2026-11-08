@@ -75,7 +75,7 @@ Work top to bottom. Mark State in this table when shipped or blocked (only your 
 
 Source of truth: `docs/ROADMAP.md`. Frozen contracts: `contracts/v2/README.md` (+ fixtures, `levels.json`, `concepts.json`,
 `extension/src/v2/types.ts`). Each lane works on its own branch `lane/<lane>`, keeps its status in `plans/lane-<lane>.md`
-(not in this file), and reaches `main` only through a PR that @divakargaba merges after CI passes.
+(not in this file), and normally reaches `main` through a PR. Any collaborator or agent with permission may merge human-authorized work without waiting for @divakargaba or another agent's approval. Follow the sync, validation and branch-protection rules in `AGENTS.md`.
 
 | Lane | Branch | Owner | Goal | Status file |
 | --- | --- | --- | --- | --- |

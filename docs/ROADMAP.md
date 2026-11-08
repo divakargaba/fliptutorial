@@ -103,7 +103,7 @@ Component 1 gets three agents because it is priority #1; Profile and Network sit
 1. **One owner per file.** Every path belongs to exactly one lane. Need a change elsewhere? Ask that owner with the exact change.
 2. **Contracts first, then freeze.** Before coding, the lead writes four schemas with sample files: exercise plan, feedback result, practice event, public profile. Changes go through the lead only.
 3. **Build against fakes.** Each lane starts from the sample files, not from another lane's running code. Profile reads fake events; Network reads sample profiles; the extension reads a sample plan.
-4. **Branch per lane.** Each agent works on its own branch (or git worktree), opens small pull requests, and rebases daily. Only the lead merges into `main`.
+4. **Branch per lane.** Each agent works on its own branch (or git worktree), opens small pull requests, and syncs current `main`. Any collaborator or agent with permission may merge human-authorized work without a lead-agent approval gate. Preserve teammate changes, run relevant checks, report validation limits and respect GitHub-enforced branch protections as described in `AGENTS.md`.
 5. **Pre-wire shared entry points once.** The lead adds one router line per lane in `main.py` and one mount point per lane in the extension up front, so lanes never touch them again.
 6. **Status in separate files.** One status file per lane (`plans/lane-a1.md` and so on) replaces the shared `PLAN.md` table, which caused rebase conflicts.
 7. **Outcome goals, not task chains.** Each lane gets a goal and a test that proves it (for example, "A1: classifier picks the right sections on 20 labelled videos").
