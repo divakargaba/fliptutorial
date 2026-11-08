@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import type { PublicProfile } from '../v2/types';
 import levels from '../../../contracts/v2/levels.json';
 import { conceptName, defaultSettings, LearnerSettings, type LearnerSettingsValue } from '../ui/v2';
 import { z } from 'zod';
+import './profile.css';
 
 const accountSchema = z.object({ accountId: z.string().min(1), displayName: z.string() });
 const profileSchema = z.object({
@@ -42,29 +43,98 @@ async function get(path: string, signal: AbortSignal): Promise<unknown> {
 function safeVideo(url: string) {
   try { const parsed = new URL(url); return parsed.protocol === 'https:' && ['www.youtube.com', 'youtube.com', 'youtu.be'].includes(parsed.hostname); } catch { return false; }
 }
-export function ProfileView({ profile, onViewProfile }: { profile: PublicProfile; onViewProfile?(accountId: string): void }) {
-  return <article className="bp-v2" aria-label="Skill profile"><h1>{profile.displayName}</h1><p>{profile.public ? 'Public profile enabled' : 'Private profile'} · Local test account</p>
-    <section className="bp-v2-card"><h2>Skills</h2>{!profile.skills.length && <p>Complete a challenge to start building your skills. Every concept starts at Beginner I.</p>}
-      {profile.skills.map(skill => {
-        const index = levels.levels.findIndex(level => level.id === skill.level);
-        const current = levels.levels[index];
-        const next = levels.levels[index + 1];
-        const progress = current && next ? Math.max(0, Math.min(1, (skill.xp - current.minXp) / (next.minXp - current.minXp))) : 1;
-        return <section className="bp-v2-skill" key={skill.concept}><h3>{conceptName(skill.concept)} · {skill.levelName}</h3>
-          <label>{skill.xp} XP{next ? ` · Next: ${next.name} at ${next.minXp} XP` : ' · Highest level'}<progress aria-label={`${conceptName(skill.concept)} level progress`} value={progress} max={1} /></label>
-          <label>Strength {Math.round(skill.strength * 100)}%<meter aria-label={`${conceptName(skill.concept)} strength`} value={skill.strength} min={0} max={1} low={0.35} high={0.7} optimum={1} /></label>
-          <p>{skill.passed} challenges passed across {skill.tutorials} tutorials</p><small>Last practiced: {new Date(skill.lastPracticedAt).toLocaleDateString()}</small>
-        </section>;
-      })}</section>
-    {!!profile.highlights.length && <section className="bp-v2-card"><h2>Highlights</h2><ul>{profile.highlights.map(item => <li key={item}>{item}</li>)}</ul></section>}
-    {!!profile.refresherDue.length && <section className="bp-v2-card"><h2>Time to refresh</h2><p>Skill strength fades without practice. A refresher can help.</p><ul>{profile.refresherDue.map(item => <li key={item.concept}>{conceptName(item.concept)}: {item.reason}</li>)}</ul></section>}
-    <section className="bp-v2-card"><h2>In-demand skills</h2>{!profile.topInDemand.length && <p>No recommendations yet.</p>}{profile.topInDemand.slice(0, 3).map(item => <div key={item.concept}><h3>{conceptName(item.concept)}</h3><p>{item.reason}</p>{safeVideo(item.videoUrl) && <a href={item.videoUrl} target="_blank" rel="noreferrer">Watch a tutorial on {conceptName(item.concept)}</a>}</div>)}</section>
-    <section className="bp-v2-card"><h2>Complementary teammates</h2>{!profile.complements.length && <p>No complementary profiles yet.</p>}{profile.complements.map(person => <div key={person.accountId}>
-      <h3>{onViewProfile ? <button type="button" className="bp-v2-link" onClick={() => onViewProfile(person.accountId)}>{person.displayName}</button> : person.displayName}</h3><p>{person.why}</p>
-    </div>)}</section>
+type Skill = PublicProfile['skills'][number];
+const rankOf = (level: string) => Math.max(0, levels.levels.findIndex(item => item.id === level));
+const STRONG = 5; // index of Intermediate I
+function initials(name: string) {
+  return name.replace(/\(.*?\)/g, '').trim().split(/\s+/).map(part => part[0] ?? '').join('').slice(0, 2).toUpperCase() || '?';
+}
+function Avatar({ name, size = 40 }: { name: string; size?: number }) {
+  let hue = 0; for (const char of name) hue = (hue * 31 + char.charCodeAt(0)) % 360;
+  return <span className="bp-pf-avatar" aria-hidden="true" style={{ width: size, height: size, fontSize: size * 0.4, background: `hsl(${hue} 55% 42%)` }}>{initials(name)}</span>;
+}
+function progressFor(skill: Skill) {
+  const index = rankOf(skill.level);
+  const current = levels.levels[index]; const next = levels.levels[index + 1];
+  const progress = current && next ? Math.max(0, Math.min(1, (skill.xp - current.minXp) / (next.minXp - current.minXp))) : 1;
+  return { next, progress };
+}
+function topSkills(profile: PublicProfile, count = 3) {
+  return [...profile.skills].sort((a, b) => rankOf(b.level) - rankOf(a.level) || b.xp - a.xp).slice(0, count);
+}
+function SkillRow({ skill }: { skill: Skill }) {
+  const { next, progress } = progressFor(skill);
+  const name = conceptName(skill.concept);
+  const fading = skill.strength < 0.35;
+  return <li className="bp-pf-skill">
+    <div className="bp-pf-skill-top"><h3>{name}</h3><span className={`bp-pf-level${rankOf(skill.level) >= STRONG ? ' is-strong' : ''}`}>{skill.levelName}</span></div>
+    <progress aria-label={`${name} level progress`} value={progress} max={1} />
+    <div className="bp-pf-skill-meta">
+      <small>{skill.xp} XP{next ? ` · ${next.minXp - skill.xp} to ${next.name}` : ' · Max level'}</small>
+      <small className={fading ? 'is-fading' : ''} title="Strength fades without practice">{fading ? 'Fading' : 'Strength'} {Math.round(skill.strength * 100)}%</small>
+    </div>
+    <small>{skill.passed} solved · {skill.tutorials} {skill.tutorials === 1 ? 'tutorial' : 'tutorials'} · last {new Date(skill.lastPracticedAt).toLocaleDateString()}</small>
+  </li>;
+}
+function Hero({ profile, extra }: { profile: PublicProfile; extra?: ReactNode }) {
+  const xp = profile.skills.reduce((sum, skill) => sum + skill.xp, 0);
+  const solved = profile.skills.reduce((sum, skill) => sum + skill.passed, 0);
+  const best = topSkills(profile, 1)[0];
+  return <section className="bp-pf-hero">
+    <Avatar name={profile.displayName} size={52} />
+    <div className="bp-pf-hero-text"><h1>{profile.displayName}</h1>
+      <p>{best ? <>Top skill: <strong>{conceptName(best.concept)}</strong> · {best.levelName}</> : 'Just getting started'}</p></div>
+    <dl className="bp-pf-stats">
+      <div><dt>Total XP</dt><dd>{xp}</dd></div>
+      <div><dt>Solved</dt><dd>{solved}</dd></div>
+      <div><dt>Skills</dt><dd>{profile.skills.length}</dd></div>
+    </dl>
+    {extra}
+  </section>;
+}
+function SkillsSection({ profile }: { profile: PublicProfile }) {
+  return <section className="bp-v2-card bp-pf-card"><h2>Skills</h2>
+    {!profile.skills.length ? <small>Complete a challenge to start building your skills. Every concept starts at Beginner I.</small>
+      : <ul className="bp-pf-skills">{[...profile.skills].sort((a, b) => rankOf(b.level) - rankOf(a.level) || b.xp - a.xp).map(skill => <SkillRow key={skill.concept} skill={skill} />)}</ul>}
+  </section>;
+}
+function GrowthSection({ profile }: { profile: PublicProfile }) {
+  return <>
+    {!!profile.refresherDue.length && <section className="bp-v2-card bp-pf-card"><h2>Time to refresh</h2><small>Skill strength fades without practice. A quick refresher brings it back.</small>
+      <ul className="bp-pf-chips">{profile.refresherDue.map(item => <li key={item.concept} className="bp-pf-chip is-warn">{conceptName(item.concept)}</li>)}</ul></section>}
+    {!!profile.topInDemand.length && <section className="bp-v2-card bp-pf-card"><h2>In demand right now</h2>
+      <ul className="bp-pf-demand">{profile.topInDemand.slice(0, 3).map(item => <li key={item.concept}><h3>{conceptName(item.concept)}</h3><small>{item.reason}</small>
+        {safeVideo(item.videoUrl) && <a href={item.videoUrl} target="_blank" rel="noreferrer">Watch a tutorial →</a>}</li>)}</ul></section>}
+  </>;
+}
+function TeammateCard({ person, onView }: { person: PublicProfile['complements'][number]; onView?(): void }) {
+  const [lead = person.why, ...rest] = person.why.split('. ');
+  return <li className="bp-pf-mate">
+    <Avatar name={person.displayName} />
+    <div className="bp-pf-mate-text"><h3>{person.displayName}</h3><p>{lead}{lead.endsWith('.') ? '' : '.'}</p>{!!rest.length && <small>{rest.join('. ')}</small>}</div>
+    {onView && <button type="button" className="bp-pf-view" onClick={onView} aria-label={`View ${person.displayName}'s profile`}>View</button>}
+  </li>;
+}
+function TeammatesSection({ profile, onViewProfile }: { profile: PublicProfile; onViewProfile?(accountId: string): void }) {
+  return <section className="bp-v2-card bp-pf-card"><h2>Complementary teammates</h2>
+    <small>People strong where you're still learning, and who can learn from you. Great for pairing, hackathons and study buddies.</small>
+    {!profile.complements.length ? <p className="bp-pf-empty">No matches yet. Keep practicing — matches appear as your skills grow.</p>
+      : <ul className="bp-pf-mates">{profile.complements.map(person => <TeammateCard key={person.accountId} person={person} onView={onViewProfile ? () => onViewProfile(person.accountId) : undefined} />)}</ul>}
+  </section>;
+}
+export function ProfileView({ profile, onViewProfile, heroExtra }: { profile: PublicProfile; onViewProfile?(accountId: string): void; heroExtra?: ReactNode }) {
+  const [tab, setTab] = useState<'skills' | 'teammates'>('skills');
+  return <article className="bp-v2 bp-pf" aria-label="Skill profile">
+    <Hero profile={profile} extra={heroExtra} />
+    {!!profile.highlights.length && <ul className="bp-pf-chips bp-pf-highlights" aria-label="Highlights">{profile.highlights.slice(0, 3).map(item => <li key={item} className="bp-pf-chip">{item}</li>)}</ul>}
+    <div className="bp-pf-tabs" role="tablist" aria-label="Profile sections">
+      <button type="button" role="tab" aria-selected={tab === 'skills'} onClick={() => setTab('skills')}>Skills</button>
+      <button type="button" role="tab" aria-selected={tab === 'teammates'} onClick={() => setTab('teammates')}>Teammates{profile.complements.length ? ` · ${profile.complements.length}` : ''}</button>
+    </div>
+    {tab === 'skills' ? <><SkillsSection profile={profile} /><GrowthSection profile={profile} /></> : <TeammatesSection profile={profile} onViewProfile={onViewProfile} />}
   </article>;
 }
-function TeammateProfile({ accountId, myName, onBack }: { accountId: string; myName: string; onBack(): void }) {
+function TeammateProfile({ accountId, me, why, onBack }: { accountId: string; me: PublicProfile | null; why: string; onBack(): void }) {
   const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
@@ -73,29 +143,49 @@ function TeammateProfile({ accountId, myName, onBack }: { accountId: string; myN
     setProfile(null); setError('');
     void get(`/v2/profile/${encodeURIComponent(accountId)}/public`, controller.signal).then(data => {
       if (controller.signal.aborted) return;
-      const parsed = profileSchema.parse(data);
-      setProfile(parsed);
+      setProfile(profileSchema.parse(data));
     }).catch(cause => { if (!controller.signal.aborted) setError(loadError(cause)); });
     return () => controller.abort();
   }, [accountId]);
+  const mine = new Map((me?.skills ?? []).map(skill => [skill.concept, rankOf(skill.level)]));
+  const theyTeach = (profile?.skills ?? []).filter(s => rankOf(s.level) >= STRONG && (mine.get(s.concept) ?? 0) < STRONG).slice(0, 3);
+  const theirs = new Map((profile?.skills ?? []).map(skill => [skill.concept, rankOf(skill.level)]));
+  const youTeach = (me?.skills ?? []).filter(s => rankOf(s.level) >= STRONG && (theirs.get(s.concept) ?? 0) < STRONG).slice(0, 3);
   const connect = () => {
     if (!profile) return;
-    const strongSkills = profile.skills.filter(s => {
-      const rank = levels.levels.findIndex(l => l.id === s.level);
-      return rank >= 5; // Intermediate I and up
-    }).slice(0, 3).map(s => conceptName(s.concept));
-    const skillText = strongSkills.length ? ` I see you're strong in ${strongSkills.join(' and ')}.` : '';
-    const message = `Hi ${profile.displayName}, I'm ${myName} on Breakpoint.${skillText} I think we'd make a great team. Want to collaborate?`;
-    void navigator.clipboard.writeText(message).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); }).catch(() => {});
+    const first = profile.displayName.split(' ')[0];
+    const learn = theyTeach.map(s => conceptName(s.concept));
+    const give = youTeach.map(s => conceptName(s.concept));
+    const message = `Hi ${first}! I'm ${me?.displayName ?? 'a learner'} on Breakpoint.`
+      + (learn.length ? ` You're strong in ${learn.join(', ')}, which I'm working on.` : '')
+      + (give.length ? ` I can help with ${give.join(', ')} in return.` : '')
+      + ' Want to pair up on a project or hackathon and learn from each other?';
+    void navigator.clipboard.writeText(message).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2500); }).catch(() => setError('Could not copy to the clipboard.'));
   };
-  return <div className="bp-v2">
-    <nav><button type="button" className="bp-v2-link" onClick={onBack} aria-label="Back to your profile">&larr; Back</button></nav>
-    {error ? <div role="alert"><p>{error}</p></div> : profile
-      ? <><ProfileView profile={profile} />
-        <div className="bp-v2-card bp-v2-actions"><button type="button" className="bp-v2-primary" onClick={connect}>{copied ? 'Copied!' : 'Connect'}</button>
-          <small>Copies a short intro message to your clipboard.</small></div></>
-      : <p role="status">Loading profile…</p>}
+  return <div className="bp-v2 bp-pf">
+    <nav className="bp-pf-nav"><button type="button" className="bp-pf-back" onClick={onBack} aria-label="Back to your profile">← Back</button></nav>
+    {error ? <div role="alert"><p>{error}</p></div> : !profile ? <p role="status">Loading profile…</p> : <>
+      <Hero profile={profile} />
+      <section className="bp-v2-card bp-pf-card bp-pf-match"><h2>Why you match</h2><small>{why}</small>
+        <div className="bp-pf-swap">
+          <div><h3>They can teach you</h3>{theyTeach.length ? <ul className="bp-pf-chips">{theyTeach.map(s => <li key={s.concept} className="bp-pf-chip is-good">{conceptName(s.concept)}</li>)}</ul> : <small>Nothing yet</small>}</div>
+          <div><h3>You can teach them</h3>{youTeach.length ? <ul className="bp-pf-chips">{youTeach.map(s => <li key={s.concept} className="bp-pf-chip">{conceptName(s.concept)}</li>)}</ul> : <small>Nothing yet</small>}</div>
+        </div>
+        <button type="button" className="bp-pf-connect" onClick={connect}>{copied ? '✓ Intro copied — paste it in a DM' : `Connect with ${profile.displayName.split(' ')[0]}`}</button>
+        <small>Copies a short intro message you can send them.</small>
+      </section>
+      <SkillsSection profile={profile} />
+    </>}
   </div>;
+}
+function PublicToggle({ profile, onChange }: { profile: PublicProfile; onChange(next: boolean): void }) {
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+  return <label className="bp-pf-public"><input type="checkbox" role="switch" checked={profile.public} disabled={busy} onChange={event => {
+    const next = event.target.checked; setBusy(true); setFailed(false);
+    void fetch(`${base}/v2/profile/${encodeURIComponent(profile.accountId)}/public`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ public: next }) })
+      .then(response => { if (!response.ok) throw new Error(); onChange(next); }).catch(() => setFailed(true)).finally(() => setBusy(false));
+  }} /><span>{profile.public ? 'Visible to teammates' : 'Hidden from teammates'}</span>{failed && <small role="alert">Could not save.</small>}</label>;
 }
 export function ProfilePage({ preferences: prefs = preferences }: { preferences?: Preferences } = {}) {
   const [accounts, setAccounts] = useState<LocalAccount[]>([]);
@@ -107,13 +197,12 @@ export function ProfilePage({ preferences: prefs = preferences }: { preferences?
   const [settings, setSettings] = useState<LearnerSettingsValue>(defaultSettings);
   const [storageReady, setStorageReady] = useState(false);
   const [viewing, setViewing] = useState<string | null>(null);
+  const [reload, setReload] = useState(0);
   useEffect(() => {
     const controller = new AbortController();
     setError(''); setProfile(null); setAccount('');
     const saved = Promise.all([prefs.loadActiveAccount(), prefs.loadLearnerSettings()]).then(([accountId, settings]) => {
-      if (!controller.signal.aborted) {
-        setSettings(settings); setStorageReady(true);
-      }
+      if (!controller.signal.aborted) { setSettings(settings); setStorageReady(true); }
       return accountId;
     });
     void Promise.all([get('/v2/accounts', controller.signal), saved]).then(([data, stored]) => {
@@ -128,7 +217,7 @@ export function ProfilePage({ preferences: prefs = preferences }: { preferences?
   useEffect(() => {
     if (!account) return;
     const controller = new AbortController();
-    setProfile(null); setError('');
+    setError('');
     void get(`/v2/profile/${encodeURIComponent(account)}`, controller.signal).then(data => {
       if (controller.signal.aborted) return;
       const parsed = profileSchema.parse(data);
@@ -136,19 +225,22 @@ export function ProfilePage({ preferences: prefs = preferences }: { preferences?
       setProfile(parsed);
     }).catch(cause => { if (!controller.signal.aborted) setError(loadError(cause)); });
     return () => controller.abort();
-  }, [account]);
-  if (viewing) {
-    return <main className="bp-v2 bp-v2-profile"><header><strong>Breakpoint</strong></header>
-      <TeammateProfile accountId={viewing} myName={profile?.displayName ?? 'a learner'} onBack={() => setViewing(null)} />
-    </main>;
-  }
-  return <main className="bp-v2 bp-v2-profile"><header><strong>Breakpoint</strong></header>
-    {!!accounts.length && <label className="bp-v2-setting">Test account<select value={account} onChange={event => {
+  }, [account, reload]);
+  const header = <header className="bp-pf-top"><strong className="bp-pf-brand">Breakpoint</strong>
+    {!!accounts.length && <label className="bp-pf-account"><span>Test account</span><select value={account} onChange={event => {
       const accountId = event.target.value;
-      setAccount(accountId); setSavingError('');
+      setProfile(null); setViewing(null); setAccount(accountId); setSavingError('');
       void persist(() => prefs.setActiveAccount(accountId)).catch(() => setSavingError('Account selection could not be saved.'));
     }}>{accounts.map(item => <option key={item.accountId} value={item.accountId}>{item.displayName}</option>)}</select></label>}
-    {error ? <div role="alert"><p>{error}</p><button onClick={() => setRetry(value => value + 1)}>Retry</button></div> : profile ? <ProfileView profile={profile} onViewProfile={setViewing} /> : <p role="status">Loading profile…</p>}
+  </header>;
+  if (viewing) {
+    const why = profile?.complements.find(person => person.accountId === viewing)?.why ?? '';
+    return <main className="bp-v2 bp-v2-profile">{header}<TeammateProfile accountId={viewing} me={profile} why={why} onBack={() => setViewing(null)} /></main>;
+  }
+  return <main className="bp-v2 bp-v2-profile">{header}
+    {error ? <div role="alert" className="bp-pf-error"><p>{error}</p><button onClick={() => setRetry(value => value + 1)}>Retry</button></div>
+      : profile ? <ProfileView profile={profile} onViewProfile={setViewing} heroExtra={<PublicToggle profile={profile} onChange={() => setReload(value => value + 1)} />} />
+      : <p role="status">Loading profile…</p>}
     {storageReady && <LearnerSettings value={settings} onChange={value => {
       setSettings(value); setSavingError('');
       void persist(() => prefs.saveLearnerSettings(value)).catch(() => setSavingError('Practice settings could not be saved.'));

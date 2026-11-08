@@ -5,7 +5,36 @@ Scores complementarity across all concept groups, not only frontend/backend.
 
 from __future__ import annotations
 
+import json
+from functools import lru_cache
+from pathlib import Path
+
 from .engine import Replay
+
+CONCEPTS_PATH = Path(__file__).resolve().parents[3] / "contracts" / "v2" / "concepts.json"
+
+# Plain-language names for the groups, used in the "why" sentence.
+GROUP_LABELS: dict[str, str] = {
+    "fundamentals": "fundamentals", "control-flow": "control flow", "data-structures": "data structures",
+    "algorithms": "algorithms", "theory": "complexity analysis", "paradigms": "OOP & functional design",
+    "databases": "databases", "web-frontend": "frontend", "web-backend": "backend APIs", "tools": "tooling",
+}
+
+
+@lru_cache(maxsize=1)
+def _names() -> dict[str, str]:
+    try:
+        return {c["id"]: c["name"] for c in json.loads(CONCEPTS_PATH.read_text(encoding="utf-8"))["concepts"]}
+    except (OSError, ValueError, KeyError):
+        return {}
+
+
+def _name(concept: str) -> str:
+    return _names().get(concept, concept.replace("-", " "))
+
+
+def _join(items: list[str]) -> str:
+    return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " and " + items[-1]
 
 STRONG_RANK = 6  # Intermediate I and up
 TOP_N = 3  # only the strongest few complements count, so breadth alone does not win
@@ -98,20 +127,23 @@ def match(me: dict, my_rep: Replay, others: list[tuple[dict, Replay]], limit: in
             (my_groups & {"web-backend"} and their_groups & {"web-frontend"})
         )
         shown = gives[:2]
-        why = f"{_tier_word(min(theirs[c] for c in shown))} in {' and '.join(shown)}, where {first} is a beginner"
-        # Describe the complementary relationship more specifically.
-        pair_labels = []
+        why = (f"{_tier_word(min(theirs[c] for c in shown))} in {_join([_name(c) for c in shown])}, "
+               f"where {first} is a beginner")
+        pair = None
         for group_a, group_b, _ in COMPLEMENTARY_PAIRS:
-            if (my_groups & {group_a} and their_groups & {group_b}):
-                pair_labels.append(f"{group_b} + {group_a}")
-            elif (my_groups & {group_b} and their_groups & {group_a}):
-                pair_labels.append(f"{group_a} + {group_b}")
+            if my_groups & {group_a} and their_groups & {group_b}:
+                pair = (group_a, group_b)
+                break
+            if my_groups & {group_b} and their_groups & {group_a}:
+                pair = (group_b, group_a)
+                break
+        if gets:
+            why += f". {first} can help back with {_join([_name(c) for c in gets[:2]])}"
         if full_stack:
-            why += "; together a full-stack pair"
-        elif pair_labels:
-            why += f"; together cover {pair_labels[0]}"
-        elif gets:
-            why += f"; {first} can help back with {gets[0]}"
+            why += ". Together a full-stack pair (frontend + backend)"
+        elif pair:
+            why += f". Together you cover {GROUP_LABELS[pair[0]]} + {GROUP_LABELS[pair[1]]}"
+        why += "."
         results.append({"accountId": acct["accountId"], "displayName": acct["displayName"], "why": why,
                         "score": round(score, 1), "fullStack": full_stack})
     results.sort(key=lambda m: (-m["score"], m["accountId"]))
