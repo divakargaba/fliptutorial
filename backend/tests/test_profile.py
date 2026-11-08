@@ -68,7 +68,7 @@ def test_fixture_events_ingest_idempotently(empty):
 
 def test_fixture_stream_levels_and_private_stats(empty):
     empty.post("/v2/events", json=_fixture("practice-events.fixture.json"))
-    q = {"now": "2026-11-09T18:00:00Z"}
+    q = {"now": "2026-11-09T18:00:00Z", "detail": "true"}
     loops = empty.get("/v2/profile/test-ana/level/loops", params=q).json()
     # failed 3 + passed (beginner-1, 2nd try, 1 hint) 30*0.8=24 + correct refresher 15 = 42 -> Beginner II (40).
     assert (loops["xp"], loops["level"], loops["levelName"], loops["tier"]) == (42, "beginner-2", "Beginner II", "beginner")
@@ -148,7 +148,22 @@ def test_generated_stream_levels_up_through_tiers(empty):
 
 def test_everyone_starts_at_beginner_one(seeded):
     lv = seeded.get("/v2/profile/test-eli/level/sql-joins", params=NOW_Q).json()
-    assert (lv["level"], lv["xp"], lv["strength"], lv["refresherDue"]) == ("beginner-1", 0, 0.0, False)
+    assert lv == {"accountId": "test-eli", "concept": "sql-joins", "level": "beginner-1", "levelName": "Beginner I",
+                  "rank": 1, "xp": 0, "strength": 0.0}
+    # Unknown concept or account: same beginner-1 default, never an error (contract §4).
+    for path in ("/v2/profile/test-ana/level/quantum", "/v2/profile/nobody/level/loops"):
+        r = seeded.get(path, params=NOW_Q)
+        assert r.status_code == 200 and (r.json()["level"], r.json()["rank"], r.json()["xp"]) == ("beginner-1", 1, 0)
+    assert seeded.get("/v2/profile/nobody/levels").json() == {"accountId": "nobody", "levels": {}}
+
+
+def test_level_info_is_exact_contract_shape_and_levels_map(seeded):
+    lv = seeded.get("/v2/profile/test-ben/level/sql-joins", params=NOW_Q).json()
+    assert set(lv) == {"accountId", "concept", "level", "levelName", "rank", "xp", "strength"}
+    assert (lv["level"], lv["rank"]) == ("advanced-1", 11) and lv["strength"] > 0.9
+    levels = seeded.get("/v2/profile/test-ben/levels", params=NOW_Q).json()
+    assert levels == {"accountId": "test-ben", "levels": {
+        "http-apis": "advanced-1", "react-state": "beginner-1", "sql-joins": "advanced-1", "sql-select": "intermediate-4"}}
 
 
 # --- decay and refreshers ---------------------------------------------------------------------------
@@ -169,11 +184,11 @@ def test_strength_decays_and_spaced_practice_lasts_longer():
 
 def test_refresher_due_after_simulated_days_and_cleared_by_answer(empty):
     empty.post("/v2/events", json={"events": [_pass(1, "sorting", NOW)]})
-    fresh = empty.get("/v2/profile/test-x/level/sorting", params=NOW_Q).json()
+    fresh = empty.get("/v2/profile/test-x/level/sorting", params={**NOW_Q, "detail": "true"}).json()
     assert fresh["strength"] == 1.0 and not fresh["refresherDue"]
     assert empty.get("/v2/refresher/test-x", params=NOW_Q).status_code == 204
     later = {"now": engine.iso(NOW + timedelta(days=3))}
-    assert empty.get("/v2/profile/test-x/level/sorting", params=later).json()["refresherDue"]
+    assert empty.get("/v2/profile/test-x/level/sorting", params={**later, "detail": "true"}).json()["refresherDue"]
     prof = empty.get("/v2/profile/test-x", params=later).json()
     assert prof["refresherDue"] == [{"concept": "sorting", "reason": "strength below 0.35"}]
     r = empty.get("/v2/refresher/test-x", params=later)
@@ -184,7 +199,7 @@ def test_refresher_due_after_simulated_days_and_cleared_by_answer(empty):
     answered = {"id": "r1", "accountId": "test-x", "at": later["now"], "type": "refresher_answered",
                 "exerciseId": body["question"]["id"], "concepts": ["sorting"], "correct": True}
     empty.post("/v2/events", json={"events": [answered]})
-    after = empty.get("/v2/profile/test-x/level/sorting", params=later).json()
+    after = empty.get("/v2/profile/test-x/level/sorting", params={**later, "detail": "true"}).json()
     assert after["strength"] == 1.0 and not after["refresherDue"] and after["xp"] == 52  # 37 + 15
     assert empty.get("/v2/refresher/test-x", params=later).status_code == 204
 
@@ -229,7 +244,6 @@ def test_profile_matches_public_contract_shape(seeded):
 
 def test_unknown_account_concept_and_bad_now(seeded):
     assert seeded.get("/v2/profile/nobody").status_code == 404
-    assert seeded.get("/v2/profile/test-ana/level/quantum").json()["error"]["code"] == "UNKNOWN_CONCEPT"
     assert seeded.get("/v2/refresher/nobody").status_code == 404
     assert seeded.get("/v2/matches/nobody").status_code == 404
     assert seeded.get("/v2/profile/test-ana", params={"now": "yesterday"}).status_code == 400

@@ -19,7 +19,7 @@ pytest driven by `practice-events.fixture.json` + generated event streams: level
 
 ## Status
 - [x] Goals 1–7 implemented in `backend/app/profile/` (engine, store, seed, skills, matching); router stays at
-  `app.profile.router` (already wired in `main.py`). Check: `cd backend && python -m pytest -q tests/test_profile.py` → 20 passed, offline.
+  `app.profile.router` (already wired in `main.py`). Check: `cd backend && python -m pytest -q tests/test_profile.py` → 21 passed, offline.
 - Storage: SQLite `backend/data/profile.sqlite3` (gitignored; override `BREAKPOINT_PROFILE_DB`). Events are the source
   of truth; profiles are replayed per request. Seeded on first open: `test-ana` (Python beginner, `lists` refresher due),
   `test-ben` (Advanced SQL joins + HTTP APIs), `test-cam` (Advanced React), `test-dee` (Intermediate algorithms),
@@ -35,7 +35,10 @@ pytest driven by `practice-events.fixture.json` + generated event streams: level
 - In-demand: `backend/content/skills/in-demand.json`, dated 2026-11-08, sources = Stack Overflow 2025 survey + GitHub
   Octoverse 2025, video links verified via YouTube oEmbed. Swap via `BREAKPOINT_IN_DEMAND_FILE` or `skills.set_source()`.
   `GET /v2/skills/in-demand?accountId=` skips skills the learner is already Advanced in.
-- Extras beyond the contract (additive): read endpoints accept `?now=<ISO>` to simulate decay for the demo;
-  `/level/{concept}` also returns `tier`, `rank`, `nextLevel`, `refresherDue` and private `stats` (watchedS, practiced,
+- Level endpoints (contract clarification `5874edc`): `/level/{concept}` returns exactly
+  `{accountId, concept, level, levelName, rank, xp, strength}`; unknown account or concept → `beginner-1`, rank 1, xp 0,
+  strength 0. `/levels` → `{accountId, levels: {conceptId: levelId}}` for practiced concepts (empty for unknown accounts).
+- Extras beyond the contract (opt-in): read endpoints accept `?now=<ISO>` to simulate decay for the demo;
+  `/level/{concept}?detail=true` adds `tier`, `nextLevel`, `refresherDue` and private `stats` (watchedS, practiced,
   passed, failed, skipped, hintsUsed). Events for an unknown local id create a private account.
 - Not done: toggling `public` (seed data only; no endpoint in the contract); generated refreshers from lane A2.
