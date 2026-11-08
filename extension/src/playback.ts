@@ -1,5 +1,5 @@
 import type { ApiError, AttemptState, Breakpoint, PracticeResponse, SubmissionResponse, TestMeResponse, WorkerReply } from './contracts';
-import type { ExercisePlan, PlanPause } from './v2/types';
+import type { ExercisePlan, PlanPause, PlanQuestion } from './v2/types';
 import { pausesFor } from './plan';
 import type { LearnerSettings } from './plan/settings';
 
@@ -20,6 +20,8 @@ export type ActiveAttempt = {
   breakpoint: Breakpoint; revision: string; state: AttemptState; result: SubmissionResponse | null;
   error: ApiError['error'] | null; ownsPause: boolean; pausedAt: number; canResume: boolean; generated: boolean;
   planPause?: PlanPause;
+  refresher?: boolean;
+  refresherAnswered?: boolean;
   // A solved task may be reopened deliberately, but its review must not emit
   // another progress award. Capture this before grading changes solvedIds.
   reviewOnly?: boolean;
@@ -174,6 +176,23 @@ export class PlaybackSession {
     if (!this.videoId || this.active || this.testMe || !Number.isFinite(time) || time < 0) return null;
     this.testMe = { pausedAt: time, ownsPause, error: null };
     this.attempt++;
+    this.reset();
+    return this.ticket();
+  }
+
+  /** A deliberate refresher is independent of this video's plan. Keep its
+   * pause ownership/ticket semantics, but never insert it into timeline or
+   * consumed/solved sets belonging to the current lesson. */
+  startRefresher(question: PlanQuestion, time: number, ownsPause: boolean): Ticket | null {
+    if (!this.videoId || this.active || this.testMe || !Number.isFinite(time) || time < 0) return null;
+    const breakpoint: Breakpoint = { id: question.id, pauseAtS: time, revealAtS: Number.MAX_VALUE,
+      exercise: { id: question.id, title: question.title, language: 'pseudocode',
+        statement: question.prompt, starterCode: '', examples: [] } };
+    this.attempt++;
+    this.active = { breakpoint, revision: question.revision, state: 'editing', result: null, error: null,
+      ownsPause, pausedAt: time, canResume: false, generated: false, refresher: true,
+      planPause: { id: question.id, sectionId: 'refresher', pauseAtS: time, revealAtS: null,
+        kind: 'concept', rank: 1, ready: true, question } };
     this.reset();
     return this.ticket();
   }

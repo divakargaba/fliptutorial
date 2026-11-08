@@ -16,14 +16,14 @@ import { TestMeControls } from '../src/ui/TestMeControls';
 import { PracticePanel, SOLVED_HOLD_MS, type PracticePanelProps } from '../src/ui/PracticePanel';
 import { HintsContext, type AnalysisState } from '../src/hints';
 import { sendPlanRequest, LevelResultSchema, LevelsResultSchema } from '../src/plan/api';
-import { AnswerResultSchema, ExercisePlanSchema, SubmitResultSchema, type PlanMessage } from '../src/plan/schemas';
+import { AnswerResultSchema, ExercisePlanSchema, RefresherSchema, SubmitResultSchema, type PlanMessage, type Refresher } from '../src/plan/schemas';
 import { ACCOUNT_KEY, SETTINGS_KEY, readAccount, readSettings, type LearnerSettings } from '../src/plan/settings';
 import { EventQueue } from '../src/plan/events';
 import { WatchSegments } from '../src/plan/watch';
 import { PlanLoader } from '../src/plan/loader';
 import { planSolved, markPlanSolved } from '../src/plan/progress';
 import type { ExercisePlan, FeedbackResult, PracticeEvent } from '../src/v2/types';
-import { ConceptQuestionPanel, LearnerSettings as LearnerSettingsView, TopicNotAvailable, TimelineMarkers } from '../src/ui/v2';
+import { ConceptQuestionPanel, LearnerSettings as LearnerSettingsView, TopicNotAvailable, TimelineMarkers, RefresherPrompt } from '../src/ui/v2';
 import { saveLearnerSettings } from '../src/plan/preferences';
 import { seekForPractice } from '../src/plan/timeline';
 
@@ -58,6 +58,8 @@ export default defineContentScript({
     let dismissedUnavailable = false;
     let settingsError: string | null = null;
     let feedbackState: { ticket: Ticket; feedback: FeedbackResult; code: string } | null = null;
+    let refresher: Refresher | null = null;
+    let refresherSequence = 0;
     const attemptEvents = new WeakMap<object, { accountId: string; attempts: number; hintsUsed: number }>();
     // Content persists events directly, so navigation or worker cold-start cannot
     // lose them before delivery. The worker is the sole network queue drainer.
@@ -78,7 +80,7 @@ export default defineContentScript({
     function practiceEvent(type: PracticeEvent['type'], active = session.active, extra: Partial<PracticeEvent> = {}) {
       const item = active?.planPause?.exercise ?? active?.planPause?.question;
       const context = eventContext(active);
-      if (!active || active.reviewOnly || !item || !context || !session.videoId) return;
+      if (!active || active.reviewOnly || active.refresher || !item || !context || !session.videoId) return;
       emitEvent({ type, videoId: session.videoId, exerciseId: item.id, concepts: item.concepts, level: item.level,
         attempts: context.attempts, hintsUsed: context.hintsUsed, ...extra }, context.accountId);
     }
@@ -250,6 +252,9 @@ export default defineContentScript({
               active={!!active && !active.generated} nextAtS={remaining[0]?.pauseAtS ?? null} onOpen={openFromBadge} />
           </div>}
           <TestMeControls />
+          {refresher && !active && !request && accountReady && playerReady &&
+            <RefresherPrompt due={[{ concept: refresher.concept, reason: refresher.reason }]}
+              onStart={startRefresher} onDismiss={() => { refresher = null; render(); }} />}
           {accountReady && session.videoId && <details className="bp-v2">
             <summary>Practice settings</summary>
             <LearnerSettingsView value={settings} videoId={session.videoId} onChange={next => {
@@ -383,6 +388,31 @@ export default defineContentScript({
       session.autoPause = settings.autoPause && !settings.disabledVideos.includes(videoId);
       void lookup();
       void loadPlan(generation, videoId, accountId);
+      void loadRefresher(generation, accountId);
+    }
+
+    async function loadRefresher(generation: number, account: string) {
+      const sequence = ++refresherSequence;
+      refresher = null;
+      if (!accountReady) return;
+      const reply = await sendPlanRequest({ type: 'refresherV2', accountId: account }, RefresherSchema, sendV2);
+      // Neither a response from a previous watch page nor a previous learner
+      // may offer their question in the current tab. Failures leave playback alone.
+      if (sequence !== refresherSequence || generation !== session.generation || account !== accountId || !isCurrent()) return;
+      refresher = reply.ok ? reply.data : null;
+      render();
+    }
+
+    function startRefresher(concept: string) {
+      const offer = refresher, video = player;
+      if (!offer || offer.concept !== concept || offer.accountId !== accountId || !video || !accountReady ||
+          !playerReady || !isCurrent() || video !== currentPlayer() || video.seeking || isAd() || isFullscreen() ||
+          document.visibilityState !== 'visible' || !mountable()) return;
+      const ticket = session.startRefresher(offer.question, video.currentTime, !video.paused);
+      if (!ticket) return;
+      refresher = null; feedbackState = null;
+      eventContext(); // Capture the learner before any async answer work starts.
+      video.pause(); render(); focusPanel(); releaseEmptyPanel(video);
     }
 
     async function loadPlan(generation: number, videoId: string, account: string) {
@@ -577,13 +607,21 @@ export default defineContentScript({
       if (!reply.ok) { active.state = 'failed'; active.error = reply.error.error; }
       else {
         active.state = reply.data.correct ? 'passed' : 'failed';
-        if (reply.data.correct) {
+        if (reply.data.correct && !active.refresher) {
           session.solvedIds.add(item.id);
           void markPlanSolved(context.accountId, session.videoId!, item.id, item.revision).catch(() => {});
         }
         feedbackState = { ticket, feedback: reply.data.feedback, code: '' };
-        practiceEvent(reply.data.correct ? 'passed' : 'failed', active,
-          reply.data.feedback.diagnosis ? { misconception: reply.data.feedback.diagnosis.misconception.id } : {});
+        if (active.refresher && !active.refresherAnswered) {
+          // B1 scores a refresher question once. Retrying a wrong answer may
+          // teach the concept, but cannot stack ordinary pass or refresher XP.
+          active.refresherAnswered = true;
+          emitEvent({ type: 'refresher_answered', exerciseId: item.id, concepts: item.concepts,
+            level, attempts: context.attempts, correct: reply.data.correct }, context.accountId);
+        } else if (!active.refresher) {
+          practiceEvent(reply.data.correct ? 'passed' : 'failed', active,
+            reply.data.feedback.diagnosis ? { misconception: reply.data.feedback.diagnosis.misconception.id } : {});
+        }
       }
       render();
     }
@@ -794,6 +832,7 @@ export default defineContentScript({
       cancelTimelineSelection();
       timelineUi?.remove(); timelineUi = undefined; timelineMounting = false; timelineSignature = '';
       watch.reset(); planLoader?.stop(); planLoader = undefined;
+      refresher = null; refresherSequence++;
       plan = null; planSolvedIds.clear(); prepared = null; dismissedUnavailable = false; feedbackState = null; accountReady = false;
       oldPlayer = player; oldSource = player?.currentSrc ?? '';
       stopPlayer(); observer?.disconnect(); observer = undefined;
@@ -826,6 +865,7 @@ export default defineContentScript({
           session.canResume(session.ticket(), video.currentTime, video.paused);
         session.interrupt(); feedbackState = null;
         accountId = readAccount(changes[ACCOUNT_KEY]?.newValue);
+        void loadRefresher(session.generation, accountId);
         if (prepared === false) {
           session.solvedIds.clear(); session.consumed.clear();
           // An old learner's plan may contain a different difficulty. Stop
