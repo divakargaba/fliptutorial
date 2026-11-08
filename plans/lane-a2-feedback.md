@@ -29,7 +29,9 @@ A labelled set (`backend/tests/fixtures/submissions/`) of ≥30 right/wrong subm
 - [x] 103 offline pytest tests: 45 runner tests + 58 feedback tests (all passing, stubbed Claude/Judge0)
 - [x] Planner integration: `/v2/submit`, `/v2/answer`, `/v2/hint` resolve exercises/questions from A1's `find_exercise`/`find_question`
 - [x] Refresher integration: `/v2/answer` resolves refresher questions from B1's `lookup_refresher`
-- [ ] Language-specific docs for hints (JS, Java, C++, SQL) — currently all use Python docs
+- [x] Language-specific docs for hints: JS (21 chunks), Java (18), C++ (17), SQL (16); hint service loads per-language index
+- [x] Fix LEVELS_PATH/CONCEPTS_PATH bug (parents[3] instead of parent.parent.parent)
+- [x] v2 hint endpoint passes exercise language to hint service (was hardcoded to Python)
 - [ ] Live integration test with real Judge0 + Anthropic key
 
 ## Architecture

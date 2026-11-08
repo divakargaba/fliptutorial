@@ -33,8 +33,9 @@ logger = logging.getLogger("breakpoint.feedback")
 
 router = APIRouter(prefix="/v2", tags=["feedback"])
 
-LEVELS_PATH = Path(__file__).resolve().parents[3] / "contracts" / "v2" / "levels.json"
-CONCEPTS_PATH = Path(__file__).resolve().parents[3] / "contracts" / "v2" / "concepts.json"
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+LEVELS_PATH = _REPO_ROOT / "contracts" / "v2" / "levels.json"
+CONCEPTS_PATH = _REPO_ROOT / "contracts" / "v2" / "concepts.json"
 
 _levels: list[dict] | None = None
 _concepts: dict[str, str] | None = None
@@ -461,11 +462,12 @@ async def hint(body: V2HintRequest) -> JSONResponse:
     from .. import hints as hints_mod
     from ..hints import LastResult
 
+    hint_lang = exercise.language if exercise.language in ("python", "javascript", "java", "cpp", "sql") else "python"
     approved = ApprovedExercise(
         id=exercise.id,
         title=exercise.title,
         statement=exercise.statement,
-        language="python",
+        language=hint_lang,
         functionName=exercise.functionName,
         starterCode=exercise.starterCode,
         conceptTags=exercise.concepts,
@@ -482,7 +484,7 @@ async def hint(body: V2HintRequest) -> JSONResponse:
         except Exception:
             pass
 
-    resp = await hints_mod.service().hint(approved, body.code, effective_level, last, [])
+    resp = await hints_mod.service().hint(approved, body.code, effective_level, last, [], language=hint_lang)
 
     return JSONResponse(
         content=resp.model_dump(),
