@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { auditPanel } from './panel-audit';
 
-test('Test me is opt-in and disabled without a ready player', async ({ page }) => {
+test('Test me supports opt-out and is disabled without a ready player', async ({ page }) => {
   await page.goto('/tests/e2e/preview.html?testme=off');
   await expect(page.getByRole('button', { name: 'Test me', exact: true })).toHaveCount(0);
   await page.goto('/tests/e2e/preview.html?testme=on&unready');

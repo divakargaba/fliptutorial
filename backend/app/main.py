@@ -372,7 +372,7 @@ async def get_analysis(body: AnalysisRequest):
 # Test me (T4)
 # ---------------------------------------------------------------------------
 
-TESTME_ENABLED = os.environ.get("BREAKPOINT_TESTME", "").lower() in ("1", "true", "yes")
+TESTME_ENABLED = os.environ.get("BREAKPOINT_TESTME", "true").lower() not in ("0", "false", "no", "off")
 
 
 class TestMeRequest(BaseModel):
@@ -416,7 +416,9 @@ async def test_me(body: TestMeRequest, request: Request):
         return error_response(status, code, exc.message, retryable=retryable, request_id=request_id)
 
     try:
-        clipped = clip(transcript, body.timestampS)
+        # On-demand practice has no arbitrary three-minute wait. The generator
+        # still requires a taught, codeable concept in the past-caption window.
+        clipped = clip(transcript, body.timestampS, min_transcript_s=0)
     except TranscriptError as exc:
         status, retryable = _TRANSCRIPT_ERROR_MAP.get(exc.code, (422, False))
         return error_response(status, exc.code, exc.message, retryable=retryable, request_id=request_id)
@@ -448,6 +450,7 @@ async def test_me(body: TestMeRequest, request: Request):
     except TestMeError as exc:
         code_map: dict[str, tuple[int, bool]] = {
             "NOT_PYTHON": (422, False),
+            "TOO_EARLY": (422, False),
             "GENERATOR_UNAVAILABLE": (503, True),
             "GENERATOR_TIMEOUT": (504, True),
             "BUSY": (429, True),

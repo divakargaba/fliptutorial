@@ -671,12 +671,48 @@ def testme_client(approved_dir: Path) -> TestClient:
             main_mod.TESTME_ENABLED = original
 
 
-class TestTestMeDisabled:
-    def test_testme_off_by_default(self, client: TestClient) -> None:
-        """When BREAKPOINT_TESTME is not set, endpoint returns 404."""
+class TestTestMeAvailability:
+    def test_enabled_by_default(self, client: TestClient) -> None:
+        resp = client.post("/v1/test-me", json={"videoId": "bad!id", "timestampS": 0})
+        assert resp.status_code == 422
+        assert resp.json()["error"]["code"] == "INVALID_VIDEO_ID"
+
+    def test_explicitly_disabled(self, client: TestClient, monkeypatch) -> None:
+        monkeypatch.setattr("app.main.TESTME_ENABLED", False)
         resp = client.post("/v1/test-me", json={"videoId": "rfscVS0vtbw", "timestampS": 500})
         assert resp.status_code == 404
         assert resp.json()["error"]["code"] == "NOT_FOUND"
+
+    @pytest.mark.parametrize("timestamp", [45, 300, 900])
+    def test_generation_receives_past_context_without_three_minute_gate(self, client, timestamp):
+        from app.transcripts import Transcript, Cue
+        from app.testme import TestMeError
+        transcript = Transcript("rfscVS0vtbw", "manual", "en", "Python loops", (
+            Cue("c1", 0, 20, "A for loop repeats work."),
+            Cue("c2", 50, 100, "Use range to select loop values."),
+            Cue("c3", 400, 450, "Sum the values."),
+            Cue("c4", 1000, 1010, "This later concept is not watched yet."),
+        ))
+        with patch("app.main.fetcher") as fetcher, patch("app.testme.generate", new_callable=AsyncMock) as generate:
+            fetcher.get = AsyncMock(return_value=transcript)
+            generate.side_effect = TestMeError("TOO_EARLY", "Nothing codeable yet.")
+            resp = client.post("/v1/test-me", json={"videoId": "rfscVS0vtbw", "timestampS": timestamp})
+        assert resp.status_code == 422
+        assert resp.json()["error"]["code"] == "TOO_EARLY"
+        assert resp.json()["error"]["retryable"] is False
+        clipped = generate.call_args.args[0]
+        assert clipped.timestamp_s == timestamp
+        assert all(c.start_s < timestamp for c in clipped.cues)
+        assert "c4" not in [c.id for c in clipped.cues]
+
+    def test_zero_has_no_future_context_and_does_not_call_generator(self, client):
+        from app.transcripts import Transcript, Cue
+        with patch("app.main.fetcher") as fetcher, patch("app.testme.generate", new_callable=AsyncMock) as generate:
+            fetcher.get = AsyncMock(return_value=Transcript("rfscVS0vtbw", "manual", "en", "Python", (Cue("c1", 0, 10, "A future lesson"),)))
+            resp = client.post("/v1/test-me", json={"videoId": "rfscVS0vtbw", "timestampS": 0})
+        assert resp.status_code == 422
+        assert resp.json()["error"]["code"] == "TOO_EARLY"
+        generate.assert_not_called()
 
 
 class TestTestMeValidation:
