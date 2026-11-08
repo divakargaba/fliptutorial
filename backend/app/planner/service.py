@@ -35,6 +35,7 @@ from ..transcripts import Transcript, TranscriptError
 from .classify import (
     Block, Evidence, Numberer, PauseSlot, Section, WindowOut, build_prompt, make_blocks, validate_window, windows,
 )
+from .grading import register_item
 from .generate import (
     GenerationFailed, ModelCall, PrivateExercise, PrivateQuestion, Verify, generate_coding, generate_question,
     public_exercise,
@@ -242,6 +243,7 @@ class Planner:
         if not st:
             return None
         last_level, levels = self._specs.get(video_id, (DEFAULT_LEVEL, {}))
+        _register_served(st, level or last_level, levels)
         return public_plan(st, level or last_level, levels)
 
     def request(self, video_id: str, level: str, levels: Levels | None = None) -> dict:
@@ -263,6 +265,7 @@ class Planner:
                 ts.want |= concepts
                 if not st.classified or _unstarted(st, ts):
                     self._spawn(f"g:{video_id}:{tier}", self._generate(st, tier))
+        _register_served(st, level, levels)
         return public_plan(st, level, levels)
 
     async def wait_idle(self) -> None:
@@ -440,6 +443,7 @@ class Planner:
             if item.kind == "concept":
                 item.question = await generate_question(self.model_call, transcript, st.video_id, section, slot, tier)
             item.status = "ready"
+            register_item(item.exercise, item.question)
         except (GenerationFailed, PlannerUnavailable, TranscriptError) as exc:
             logger.info("planner %s/%s dropped: %s", st.video_id, slot.id, exc)
             item.status = "failed"
@@ -459,6 +463,14 @@ class Planner:
 def _unstarted(st: VideoState, ts: TierState) -> bool:
     return any(s.concept in ts.want and (s.id not in ts.items or ts.items[s.id].status == "pending")
                for s in st.slots)
+
+
+def _register_served(st: VideoState, level: str, levels: Levels | None) -> None:
+    """Refresh A2's grading store with every ready item this learner's plan shows (survives restarts and its TTL)."""
+    for slot in st.slots:
+        _, it = _slot_item(st, slot, level, levels)
+        if it is not None and it.status == "ready":
+            register_item(it.exercise, it.question)
 
 
 def _slot_item(st: VideoState, slot: PauseSlot, level: str, levels: Levels | None) -> tuple[str, Item | None]:
