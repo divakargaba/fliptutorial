@@ -507,3 +507,8 @@ async def generate(clip: Clip, verify: EndpointVerify) -> GeneratedSet:
 
 def get_set(set_id: str) -> GeneratedSet | None:
     return default_generator().get_set(set_id)
+
+
+def find_exercise(exercise_id: str) -> GeneratedSet | None:
+    """Catalog fallback: look up a generated set by exercise id."""
+    return default_generator().find_exercise(exercise_id)

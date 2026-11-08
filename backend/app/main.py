@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import logging
 import os
-import time
 import uuid
 from contextlib import asynccontextmanager
 from typing import Literal
@@ -27,8 +26,6 @@ from .transcripts import TranscriptFetcher, TranscriptError, clip
 
 logger = logging.getLogger("breakpoint")
 
-SET_TTL_S = 30 * 60  # 30 minutes
-
 # ---------------------------------------------------------------------------
 # Lifespan: load catalog and init grader
 # ---------------------------------------------------------------------------
@@ -36,8 +33,6 @@ SET_TTL_S = 30 * 60  # 30 minutes
 catalog: Catalog
 grader: Grader
 fetcher: TranscriptFetcher
-# set cache: setId → (expires_at, ApprovedExercise)
-_set_cache: dict[str, tuple[float, ApprovedExercise]] = {}
 
 
 @asynccontextmanager
@@ -167,20 +162,22 @@ async def submit(body: SubmissionRequest, request: Request):
         record, exercise = found
         revision = record.revision
     else:
-        # Fall back to the generated-set cache
-        cached = _set_cache.get(body.revision)
-        if cached is not None:
-            expires_at, cached_exercise = cached
-            if time.monotonic() > expires_at:
-                _set_cache.pop(body.revision, None)
+        # Fall back to the generated-set cache in testme
+        try:
+            from .testme import find_exercise as find_generated
+        except ImportError:
+            find_generated = None
+        if find_generated is not None:
+            gen_set = find_generated(body.exerciseId)
+            if gen_set is None and body.exerciseId.startswith("tm-"):
                 return error_response(
                     410, "SET_EXPIRED",
                     "this generated exercise has expired; press Test me again",
                     request_id=request_id,
                 )
-            if cached_exercise.id == body.exerciseId:
-                exercise = cached_exercise
-                revision = body.revision
+            if gen_set is not None and gen_set.exercise.id == body.exerciseId:
+                exercise = gen_set.exercise
+                revision = gen_set.set_id
 
     if exercise is None:
         return error_response(404, "EXERCISE_NOT_FOUND", "unknown exercise", request_id=request_id)
@@ -306,12 +303,6 @@ async def test_me(body: TestMeRequest, request: Request):
         return error_response(504, "GENERATOR_TIMEOUT", str(exc), retryable=True, request_id=request_id)
     except grader.Busy as exc:
         return error_response(429, "BUSY", str(exc), retryable=True, request_id=request_id)
-
-    # Store in set cache for /v1/submissions lookups
-    _set_cache[gen_set.set_id] = (
-        time.monotonic() + SET_TTL_S,
-        gen_set.exercise,
-    )
 
     # Build public response (no hidden tests, reference, or wrong solution)
     response = {

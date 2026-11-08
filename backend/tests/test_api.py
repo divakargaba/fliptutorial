@@ -763,11 +763,12 @@ class TestSetExpired:
     def test_submission_against_expired_set(self, testme_client: TestClient) -> None:
         """Submitting code against an expired generated set returns SET_EXPIRED."""
         import time
-        import app.main as main_mod
         from app.catalog import ApprovedExercise, Example, HiddenTest
+        from app.testme import GeneratedSet, default_generator
 
+        set_id = "tm-expiredsetabc"
         exercise = ApprovedExercise(
-            id="tm-test-exercise",
+            id=f"{set_id}-1",
             title="Test",
             statement="Test statement",
             language="python",
@@ -778,12 +779,18 @@ class TestSetExpired:
             referenceSolution="def test_fn(x):\n    return x\n",
             knownWrongSolution="def test_fn(x):\n    return 0\n",
         )
-        # Store with an already-expired timestamp
-        main_mod._set_cache["tm-expired-set"] = (time.monotonic() - 1, exercise)
+        # Seed testme's generator cache with an already-expired set
+        gen = default_generator()
+        now = time.monotonic()
+        gen._sets[set_id] = GeneratedSet(
+            set_id=set_id, video_id="test12345ab", timestamp_s=100.0,
+            exercise=exercise, concept_tags=("functions",), model="test",
+            created_at=now - 3600, expires_at=now - 1,
+        )
 
         resp = testme_client.post("/v1/submissions", json={
-            "exerciseId": "tm-test-exercise",
-            "revision": "tm-expired-set",
+            "exerciseId": f"{set_id}-1",
+            "revision": set_id,
             "mode": "run",
             "code": "def test_fn(x):\n    return x\n",
         })
@@ -793,11 +800,12 @@ class TestSetExpired:
     def test_submission_against_valid_set(self, testme_client: TestClient) -> None:
         """Submitting code against a valid generated set grades through Judge0."""
         import time
-        import app.main as main_mod
         from app.catalog import ApprovedExercise, Example, HiddenTest
+        from app.testme import GeneratedSet, default_generator
 
+        set_id = "tm-validsetabcde"
         exercise = ApprovedExercise(
-            id="tm-test-exercise",
+            id=f"{set_id}-1",
             title="Test",
             statement="Test statement",
             language="python",
@@ -808,8 +816,14 @@ class TestSetExpired:
             referenceSolution="def test_fn(x):\n    return x\n",
             knownWrongSolution="def test_fn(x):\n    return 0\n",
         )
-        # Store with a future expiry
-        main_mod._set_cache["tm-valid-set"] = (time.monotonic() + 3600, exercise)
+        # Seed testme's generator cache with a valid set
+        gen = default_generator()
+        now = time.monotonic()
+        gen._sets[set_id] = GeneratedSet(
+            set_id=set_id, video_id="test12345ab", timestamp_s=100.0,
+            exercise=exercise, concept_tags=("functions",), model="test",
+            created_at=now, expires_at=now + 3600,
+        )
 
         mock_submit = AsyncMock(return_value="token-1")
         mock_poll = AsyncMock(return_value=_judge0_success(1))
@@ -817,8 +831,8 @@ class TestSetExpired:
         with patch("app.grader.Grader._submit_case", mock_submit), \
              patch("app.grader.Grader._poll_result", mock_poll):
             resp = testme_client.post("/v1/submissions", json={
-                "exerciseId": "tm-test-exercise",
-                "revision": "tm-valid-set",
+                "exerciseId": f"{set_id}-1",
+                "revision": set_id,
                 "mode": "run",
                 "code": "def test_fn(x):\n    return x\n",
             })
