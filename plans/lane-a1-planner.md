@@ -55,4 +55,12 @@ Any YouTube video id → a cached, timestamped exercise plan before the learner 
 - [ ] Goal 6: answer-on-screen check with storyboard frames (today: `question_posed` pauses before the reveal; demonstrations get a new problem).
 - [ ] Proof: `backend/content/eval/` with ≥20 labelled videos and a precision/recall report; auto-pause bar to post.
 - [ ] Classification progress is persisted only when a video is fully classified (a restart mid-way re-classifies it).
-- [ ] Coding exercises in other languages once A2's runners exist.
+- [x] Coding exercises in JavaScript, Java and C++ via A2's runners (`app.runners`). `vocab.coding_languages()` turns them on only when
+  `app.runners` imports, so before A2 merges they stay concept questions. Each language has a prompt shape that matches A2's wrappers
+  (JS `function f(...)`; Java `class Solution { public static T f(...) }`; C++ a free function using the wrapper's std headers),
+  plus static checks for required shape, banned I/O/process/includes and no null for Java/C++. Verify (`planner.runner_verify`) needs the
+  reference to pass all cases, the known-wrong to compile and fail at least one, and the starter to compile. Otherwise the pause
+  falls back to a concept question. `PrivateExercise.exercise` is a `PlannedExercise` (an `ApprovedExercise` subclass with `language: str`), so
+  A2's `find_exercise` fallback gets the real language. Offline: `tests/test_planner_languages.py` 26/26. Live 2026-11-08: A2's
+  runners at `8a8cacc` on ce.judge0.com verified JS/Java/C++ sum loops, a Java String and a C++ bool exercise; a Java known-wrong
+  that does not compile was rejected. SQL is not planned (its exercises have a different shape).
