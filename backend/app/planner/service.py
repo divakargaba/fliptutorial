@@ -35,6 +35,7 @@ from .classify import (
     Block, Evidence, Numberer, PauseSlot, Section, WindowOut, build_prompt, make_blocks, validate_window, windows,
 )
 from .grading import register_item
+from .screen import ScreenCheck
 from .generate import (
     GenerationFailed, ModelCall, PlannedExercise, PrivateExercise, PrivateQuestion, Verify, generate_coding,
     generate_question, public_exercise,
@@ -256,6 +257,7 @@ class Planner:
     model_call: ModelCall
     verify: Verify
     store: PlanStore = field(default_factory=PlanStore)
+    screen_check: ScreenCheck | None = None  # Goal 6: answer-already-on-screen check (screen.py)
     gen_concurrency: int = GEN_CONCURRENCY
     max_new_videos_per_hour: int = MAX_NEW_VIDEOS_PER_HOUR
     clock: Callable[[], float] = time.monotonic
@@ -407,6 +409,8 @@ class Planner:
                 nxt = wins[wi + 1][0].start_s if wi + 1 < len(wins) else None
                 out = await self._classify_window(transcript.title, win, wi == 0, wi == len(wins) - 1)
                 res = validate_window(out, win, nxt)
+                if self.screen_check is not None:  # before numbering, so saved ids/ranks already reflect it
+                    await self._check_screens(st.video_id, res.sections, win)
                 window_s = (nxt or win[-1].end_s) - win[0].start_s
                 numberer.add(res.sections, window_s)
                 st.sections.extend(res.sections)
@@ -446,6 +450,17 @@ class Planner:
             self._fail(st, "error", "Planning failed for this video.", ERROR_TTL_S)
         finally:
             st.progress.set()
+
+    async def _check_screens(self, video_id: str, sections: list[Section], win: list[Block]) -> None:
+        assert self.screen_check is not None
+        jobs = []
+        for s in sections:
+            for p in s.pauses:
+                if p.trigger == "question_posed" and p.ask_start_s is not None:
+                    asked = " ".join(b.text for b in win if p.ask_start_s - 0.01 <= b.start_s < p.pause_at_s)
+                    jobs.append(self.screen_check.check(video_id, p, asked))
+        if jobs:
+            await asyncio.gather(*jobs)
 
     async def _classify_window(self, title: str, win: list[Block], first: bool, last: bool) -> WindowOut:
         prompt = build_prompt(title, win, first, last)

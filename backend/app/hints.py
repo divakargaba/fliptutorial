@@ -69,6 +69,7 @@ class DocChunk:
     tags: tuple[str, ...]
     text: str
     nudge: str
+    language: str = "python"
 
     @property
     def searchable(self) -> str:
@@ -90,12 +91,15 @@ class DocIndex:
         self.tf = [Counter(d) for d in self.docs]
 
     @classmethod
-    def load(cls, directory: Path = DOCS_DIR) -> "DocIndex":
+    def load(cls, directory: Path = DOCS_DIR, language: str | None = None) -> "DocIndex":
         chunks: list[DocChunk] = []
         for path in sorted(directory.glob("*.json")):
             data = json.loads(path.read_text(encoding="utf-8"))
+            file_lang = data.get("language", path.stem)
+            if language and file_lang != language:
+                continue
             for c in data["chunks"]:
-                chunks.append(DocChunk(c["id"], c["title"], c["url"], tuple(c["tags"]), c["text"], c["nudge"]))
+                chunks.append(DocChunk(c["id"], c["title"], c["url"], tuple(c["tags"]), c["text"], c["nudge"], language=file_lang))
         return cls(chunks)
 
     def search(self, query: str, k: int = TOP_K) -> list[DocChunk]:
@@ -180,7 +184,7 @@ HINT_SCHEMA = {
     "additionalProperties": False,
 }
 
-SYSTEM_PROMPT = """You are Breakpoint's hint coach. A learner paused a coding tutorial to solve a short Python exercise and is stuck. Your job is to help them get unstuck while leaving the solving to them.
+SYSTEM_PROMPT = """You are Breakpoint's hint coach. A learner paused a coding tutorial to solve a short coding exercise and is stuck. Your job is to help them get unstuck while leaving the solving to them.
 
 Rules that always apply:
 - Never write the solution, the function body, or any code that would pass the tests. No code blocks. You may mention a single built-in name, operator or keyword inline (for example `range()` or `**`) when the level allows it.
@@ -331,6 +335,19 @@ class HintService:
     model_call: ModelCall | None = None
     _cache: dict[str, HintResponse] = field(default_factory=dict)
     _calls: deque = field(default_factory=deque)
+    _lang_indices: dict[str, DocIndex] = field(default_factory=dict)
+
+    def _get_index(self, language: str | None = None) -> DocIndex:
+        """Return a language-specific doc index, falling back to the default (all languages)."""
+        if not language:
+            return self.index
+        if language not in self._lang_indices:
+            idx = DocIndex.load(language=language)
+            if not idx.chunks:
+                # No docs for this language; fall back to default
+                return self.index
+            self._lang_indices[language] = idx
+        return self._lang_indices[language]
 
     def _rate_ok(self) -> bool:
         now = time.monotonic()
@@ -342,13 +359,14 @@ class HintService:
         return True
 
     async def hint(self, exercise: ApprovedExercise, code: str, level: int, last: LastResult | None,
-                   previous: list[str]) -> HintResponse:
+                   previous: list[str], language: str | None = None) -> HintResponse:
         level = max(0, min(MAX_LEVEL, level))
-        key = hashlib.sha256(json.dumps([exercise.id, code, level, last.model_dump() if last else None, previous],
+        key = hashlib.sha256(json.dumps([exercise.id, code, level, last.model_dump() if last else None, previous, language],
                                         sort_keys=True, default=str).encode()).hexdigest()
         if key in self._cache:
             return self._cache[key]
-        docs = self.index.search(build_query(exercise, code, last))
+        index = self._get_index(language)
+        docs = index.search(build_query(exercise, code, last))
         by_id = {d.id: d for d in docs}
         out: HintOutput | None = None
         ai = False

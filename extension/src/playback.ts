@@ -1,4 +1,7 @@
 import type { ApiError, AttemptState, Breakpoint, PracticeResponse, SubmissionResponse, TestMeResponse, WorkerReply } from './contracts';
+import type { ExercisePlan, PlanPause } from './v2/types';
+import { pausesFor } from './plan';
+import type { LearnerSettings } from './plan/settings';
 
 export function watchVideoId(url: string): string | null {
   try {
@@ -16,6 +19,7 @@ export type Ticket = { generation: number; attempt: number };
 export type ActiveAttempt = {
   breakpoint: Breakpoint; revision: string; state: AttemptState; result: SubmissionResponse | null;
   error: ApiError['error'] | null; ownsPause: boolean; pausedAt: number; canResume: boolean; generated: boolean;
+  planPause?: PlanPause;
 };
 type TestMeAttempt = Pick<ActiveAttempt, 'ownsPause' | 'pausedAt' | 'error'>;
 
@@ -31,6 +35,8 @@ export class PlaybackSession {
   readonly solvedIds = new Set<string>();
   private previous: Sample | null = null;
   private attempt = 0;
+  private planPauses = new Map<string, PlanPause>();
+  autoPause = true;
 
   navigate(videoId: string | null): number {
     this.generation++;
@@ -39,6 +45,7 @@ export class PlaybackSession {
     this.route = videoId ? 'loading' : 'unsupported';
     this.active = null;
     this.testMe = null;
+    this.planPauses.clear();
     this.attempt++;
     this.consumed.clear();
     this.solvedIds.clear();
@@ -62,12 +69,41 @@ export class PlaybackSession {
 
   reset(): void { this.previous = null; }
 
+  acceptPlan(generation: number, plan: ExercisePlan, settings: LearnerSettings): boolean {
+    if (generation !== this.generation || plan.videoId !== this.videoId) return false;
+    const pauses = pausesFor(plan, settings.frequency);
+    const previous = this.previous;
+    const unchanged = plan.planId === this.data?.revision && pauses.length === this.planPauses.size && pauses.every(p => {
+      const old = this.planPauses.get(p.id);
+      return old && old.pauseAtS === p.pauseAtS && old.revealAtS === p.revealAtS && old.kind === p.kind &&
+        (old.exercise ?? old.question)?.revision === (p.exercise ?? p.question)?.revision;
+    });
+    this.planPauses = new Map(pauses.map(p => [p.id, p]));
+    const breakpoints: Breakpoint[] = pauses.map(p => ({
+      id: p.id, pauseAtS: p.pauseAtS, revealAtS: p.revealAtS ?? Number.MAX_VALUE,
+      exercise: p.exercise ?? {
+        id: p.question!.id, title: p.question!.title, language: 'pseudocode',
+        statement: p.question!.prompt, starterCode: '', examples: [],
+      },
+    }));
+    this.autoPause = settings.autoPause && !settings.disabledVideos.includes(plan.videoId);
+    // Do not interrupt an open attempt when a later polling result arrives.
+    // Its captured revision and content remain authoritative until it closes.
+    const accepted = this.acceptLookup(generation, ['ready', 'planning'].includes(plan.status)
+      ? { schemaVersion: 1, videoId: plan.videoId, revision: plan.planId, status: 'ready', breakpoints }
+      : { schemaVersion: 1, videoId: plan.videoId, revision: null, status: 'unsupported', breakpoints: [] });
+    // An unchanged poll must not erase a valid crossing for already-ready
+    // content. Newly ready content still requires a fresh playback baseline.
+    if (unchanged) this.previous = previous;
+    return accepted;
+  }
+
   available(breakpoint: Breakpoint): boolean {
     return !this.consumed.has(breakpoint.id) && !this.solvedIds.has(breakpoint.exercise.id);
   }
 
   sample(sample: Sample): Breakpoint | null {
-    if (this.route !== 'ready' || !this.data || this.active || this.testMe || !sample.playing || !sample.visible ||
+    if (!this.autoPause || this.route !== 'ready' || !this.data || this.active || this.testMe || !sample.playing || !sample.visible ||
         sample.ad || sample.fullscreen || sample.seeking || !sample.mountable || !sample.ready ||
         !Number.isFinite(sample.time) || !Number.isFinite(sample.wallMs) || !Number.isFinite(sample.rate) || sample.rate <= 0) {
       this.reset(); return null;
@@ -91,6 +127,11 @@ export class PlaybackSession {
     this.attempt++;
     this.active = { breakpoint, revision: this.data.revision, state: 'editing', result: null,
       error: null, ownsPause, pausedAt: time, canResume: false, generated: false };
+    const planned = this.planPauses.get(breakpoint.id);
+    if (planned) {
+      this.active.planPause = planned;
+      this.active.revision = (planned.exercise ?? planned.question)!.revision;
+    }
     this.reset();
     return this.ticket();
   }

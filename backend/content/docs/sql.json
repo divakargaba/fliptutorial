@@ -1,0 +1,134 @@
+{
+ "language": "sql",
+ "source": "SQLite documentation (sqlite.org) and SQL standard references, summarized",
+ "chunks": [
+  {
+   "id": "sql-select",
+   "title": "SELECT statement",
+   "url": "https://www.sqlite.org/lang_select.html",
+   "tags": ["select", "query", "basics"],
+   "text": "SELECT columns FROM table retrieves data. Use * for all columns. Add WHERE condition to filter rows. ORDER BY column ASC|DESC sorts results. LIMIT n restricts the row count. DISTINCT removes duplicate rows.",
+   "nudge": "Start with the columns you need, the table they're in, and the condition that picks the right rows."
+  },
+  {
+   "id": "sql-where",
+   "title": "WHERE clause",
+   "url": "https://www.sqlite.org/lang_expr.html",
+   "tags": ["where", "filter", "conditions"],
+   "text": "WHERE filters rows before grouping. Supports =, <>, <, >, <=, >=, BETWEEN, IN, LIKE (% for any chars, _ for one char), IS NULL, IS NOT NULL. Combine with AND, OR and NOT. Parentheses control precedence.",
+   "nudge": "Check your comparison operators and whether you need AND or OR. Use parentheses to be explicit about order."
+  },
+  {
+   "id": "sql-join",
+   "title": "JOIN operations",
+   "url": "https://www.sqlite.org/lang_select.html#fromclause",
+   "tags": ["join", "inner-join", "left-join", "tables"],
+   "text": "INNER JOIN keeps rows that match in both tables. LEFT JOIN keeps all rows from the left table plus matching right rows (NULL where unmatched). ON specifies the join condition. CROSS JOIN gives the Cartesian product. Self-joins join a table to itself.",
+   "nudge": "Decide whether you need all rows from one side (LEFT JOIN) or only matches (INNER JOIN). The ON clause must match the right key columns."
+  },
+  {
+   "id": "sql-group-by",
+   "title": "GROUP BY and aggregates",
+   "url": "https://www.sqlite.org/lang_select.html#resultset",
+   "tags": ["group-by", "aggregates", "having"],
+   "text": "GROUP BY groups rows by column values. Aggregate functions operate on each group: COUNT(*), SUM(col), AVG(col), MIN(col), MAX(col). COUNT(col) ignores NULLs; COUNT(*) counts all rows. HAVING filters groups after aggregation (WHERE filters before).",
+   "nudge": "Every column in SELECT must be in GROUP BY or inside an aggregate function. Use HAVING to filter groups, not WHERE."
+  },
+  {
+   "id": "sql-subqueries",
+   "title": "Subqueries",
+   "url": "https://www.sqlite.org/lang_select.html#compound_select",
+   "tags": ["subquery", "nested", "in"],
+   "text": "A subquery is a SELECT inside another statement. Scalar subquery returns one value: WHERE col = (SELECT ...). IN subquery: WHERE col IN (SELECT ...). EXISTS checks if any rows match. Correlated subqueries reference the outer query and run per row.",
+   "nudge": "If you need a value computed from another query, put it in parentheses as a subquery. Check that it returns the right shape (one value vs. a list)."
+  },
+  {
+   "id": "sql-insert",
+   "title": "INSERT statement",
+   "url": "https://www.sqlite.org/lang_insert.html",
+   "tags": ["insert", "write", "data"],
+   "text": "INSERT INTO table (col1, col2) VALUES (val1, val2) adds a row. INSERT INTO ... SELECT ... copies rows from a query. SQLite supports INSERT OR REPLACE and INSERT OR IGNORE for conflict handling.",
+   "nudge": "List the column names explicitly so the values go into the right columns regardless of table order."
+  },
+  {
+   "id": "sql-update",
+   "title": "UPDATE statement",
+   "url": "https://www.sqlite.org/lang_update.html",
+   "tags": ["update", "write", "modify"],
+   "text": "UPDATE table SET col = value WHERE condition changes existing rows. Without WHERE, every row is updated. SET can use expressions: SET count = count + 1. Multiple columns: SET a = 1, b = 2.",
+   "nudge": "Always include a WHERE clause unless you intentionally want to update every row."
+  },
+  {
+   "id": "sql-delete",
+   "title": "DELETE statement",
+   "url": "https://www.sqlite.org/lang_delete.html",
+   "tags": ["delete", "write", "remove"],
+   "text": "DELETE FROM table WHERE condition removes matching rows. Without WHERE, all rows are deleted. Deleted rows are gone permanently (no undo). Use a SELECT with the same WHERE first to verify which rows match.",
+   "nudge": "Always add a WHERE clause. Run a SELECT with the same condition first to confirm which rows will be removed."
+  },
+  {
+   "id": "sql-order-by",
+   "title": "ORDER BY clause",
+   "url": "https://www.sqlite.org/lang_select.html#orderby",
+   "tags": ["order", "sort", "asc", "desc"],
+   "text": "ORDER BY col ASC sorts ascending (default). ORDER BY col DESC sorts descending. Multiple columns: ORDER BY a ASC, b DESC. NULLs sort first by default in SQLite. ORDER BY applies after WHERE, GROUP BY and HAVING.",
+   "nudge": "If your results aren't in the expected order, check ASC vs DESC and whether NULLs are affecting the sort."
+  },
+  {
+   "id": "sql-null",
+   "title": "NULL handling",
+   "url": "https://www.sqlite.org/nulls.html",
+   "tags": ["null", "coalesce", "is-null"],
+   "text": "NULL means unknown/absent. NULL = NULL is NULL (not true). Use IS NULL or IS NOT NULL to test. COALESCE(a, b) returns the first non-NULL argument. IFNULL(a, b) is the same as COALESCE with two arguments. Aggregates (SUM, AVG) skip NULLs.",
+   "nudge": "If your condition misses rows, check whether the column has NULLs. Use IS NULL, not = NULL."
+  },
+  {
+   "id": "sql-case",
+   "title": "CASE expression",
+   "url": "https://www.sqlite.org/lang_expr.html#the_case_expression",
+   "tags": ["case", "conditional", "expression"],
+   "text": "CASE WHEN condition THEN result [WHEN ...] ELSE default END provides conditional values inside a query. Can be used in SELECT, WHERE, ORDER BY and SET. ELSE is optional but recommended to handle unmatched rows (returns NULL without it).",
+   "nudge": "If you need different values depending on a condition inside a query, use CASE WHEN."
+  },
+  {
+   "id": "sql-string-functions",
+   "title": "String functions",
+   "url": "https://www.sqlite.org/lang_corefunc.html",
+   "tags": ["strings", "functions"],
+   "text": "LENGTH(str), UPPER(str), LOWER(str), TRIM(str), LTRIM(str), RTRIM(str), SUBSTR(str, start, length) (1-based), REPLACE(str, from, to), INSTR(str, find) returns position (0 if not found). || concatenates strings.",
+   "nudge": "SQLite string positions are 1-based (SUBSTR starts at 1, not 0). Use || for concatenation."
+  },
+  {
+   "id": "sql-create-table",
+   "title": "CREATE TABLE",
+   "url": "https://www.sqlite.org/lang_createtable.html",
+   "tags": ["ddl", "table", "schema"],
+   "text": "CREATE TABLE name (col1 TYPE, col2 TYPE, ...) defines a table. Common types: INTEGER, TEXT, REAL, BLOB. PRIMARY KEY identifies rows. NOT NULL prevents NULLs. UNIQUE prevents duplicates. DEFAULT sets a fallback. FOREIGN KEY references another table.",
+   "nudge": "Define the right constraints (NOT NULL, UNIQUE, PRIMARY KEY) when creating the table to catch data problems early."
+  },
+  {
+   "id": "sql-alias",
+   "title": "Aliases (AS)",
+   "url": "https://www.sqlite.org/lang_select.html",
+   "tags": ["alias", "naming"],
+   "text": "Column alias: SELECT col AS name. Table alias: FROM table AS t. Aliases simplify long names and are required when a subquery appears in FROM. Column aliases can be used in ORDER BY but not in WHERE.",
+   "nudge": "Use AS to give readable names to computed columns. Remember column aliases don't work in WHERE."
+  },
+  {
+   "id": "sql-union",
+   "title": "UNION and compound SELECT",
+   "url": "https://www.sqlite.org/lang_select.html#compound_select",
+   "tags": ["union", "compound", "set-operations"],
+   "text": "UNION combines results from two SELECTs and removes duplicates. UNION ALL keeps duplicates. INTERSECT returns common rows. EXCEPT returns rows in the first but not the second. All parts must have the same number of columns.",
+   "nudge": "Use UNION ALL unless you specifically need to remove duplicates (it's faster). Ensure both SELECTs have matching column counts."
+  },
+  {
+   "id": "sql-window-functions",
+   "title": "Window functions",
+   "url": "https://www.sqlite.org/windowfunctions.html",
+   "tags": ["window", "over", "partition", "rank"],
+   "text": "Window functions compute values over a set of rows related to the current row. Syntax: func() OVER (PARTITION BY col ORDER BY col). ROW_NUMBER(), RANK(), DENSE_RANK() number rows. SUM/AVG/COUNT can also be used as window functions. PARTITION BY groups; ORDER BY orders within groups.",
+   "nudge": "If you need a running total, ranking, or per-group aggregate without collapsing rows, use a window function with OVER()."
+  }
+ ]
+}

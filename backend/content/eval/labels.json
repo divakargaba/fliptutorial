@@ -1,0 +1,124 @@
+{
+ "about": "Hand labels for the planner eval (lane A1). Labelled by Abdullah from the English captions (python -m app.planner.evaluate view) and storyboard frames where the captions were unclear, before running the classifier. A segment qualifies when it teaches or demonstrates something concrete the learner can do or reason about in code (writing, reading, debugging, testing, tracing an algorithm, or a CS concept with something to compute/trace). Intros, course ads, install/IDE setup, sponsors, opinions, career talk, math without code, music and talks never qualify. Long videos are labelled (and classified) only up to labelledUntilS. challenges: instructor-posed tasks; a question_posed pause at or after answerS (and before endS) is wrong.",
+ "videos": [
+  {"videoId": "kqtD5dpn9C8", "title": "Python for Beginners - Learn Coding with Python in 1 Hour (Mosh)", "category": "tutorial", "language": "python", "labelledUntilS": 2400,
+   "segments": [
+    {"startS": 0, "endS": 240, "qualifies": false, "note": "intro, uses of Python, install Python/PyCharm"},
+    {"startS": 240, "endS": 2400, "qualifies": true, "note": "first program, variables, input, type conversion, strings, arithmetic, comparison/logical operators, if statements, weight converter"}],
+   "challenges": [
+    {"askS": 529, "answerS": 552, "endS": 552, "note": "hospital variables exercise (no solution shown)"},
+    {"askS": 889, "answerS": 905.5, "endS": 1140, "note": "calculator exercise"},
+    {"askS": 1567, "answerS": 1577.4, "endS": 1640, "note": "10 + 3 * 2 precedence question"},
+    {"askS": 2180, "answerS": 2223, "endS": 2400, "note": "weight converter exercise"}]},
+  {"videoId": "ZDa-Z5JzLYM", "title": "Python OOP Tutorial 1: Classes and Instances (Corey Schafer)", "category": "tutorial", "language": "python",
+   "segments": [
+    {"startS": 0, "endS": 34, "qualifies": false, "note": "series intro"},
+    {"startS": 34, "endS": 862, "qualifies": true, "note": "classes vs instances, __init__, methods, self"},
+    {"startS": 862, "endS": 914, "qualifies": false, "note": "recap and outro"}]},
+  {"videoId": "W6NZfCO5SIk", "title": "JavaScript Course for Beginners (Mosh)", "category": "tutorial", "language": "javascript",
+   "segments": [
+    {"startS": 0, "endS": 220, "qualifies": false, "note": "what is JavaScript, history, ECMAScript"},
+    {"startS": 220, "endS": 285, "qualifies": true, "note": "browser console demo: console.log, 2 + 2"},
+    {"startS": 285, "endS": 480, "qualifies": false, "note": "install VS Code, Node, live server"},
+    {"startS": 480, "endS": 836, "qualifies": true, "note": "script element placement, statements, comments, separate js file"},
+    {"startS": 836, "endS": 974, "qualifies": false, "note": "run with node (tooling), course ad"},
+    {"startS": 974, "endS": 2870, "qualifies": true, "note": "variables, constants, primitive types, dynamic typing, objects, arrays, functions"},
+    {"startS": 2870, "endS": 2897, "qualifies": false, "note": "course ad outro"}]},
+  {"videoId": "eIrMbAQSU34", "title": "Java Full Course for Beginners (Mosh)", "category": "tutorial", "language": "java", "labelledUntilS": 2400,
+   "segments": [
+    {"startS": 0, "endS": 240, "qualifies": false, "note": "intro, sponsor, install JDK and IntelliJ"},
+    {"startS": 240, "endS": 540, "qualifies": true, "note": "anatomy of a Java program: functions, classes, main, naming"},
+    {"startS": 540, "endS": 780, "qualifies": false, "note": "create IntelliJ project"},
+    {"startS": 780, "endS": 960, "qualifies": true, "note": "hello world: static, void, System.out.println"},
+    {"startS": 960, "endS": 1020, "qualifies": false, "note": "cheat sheet promo"},
+    {"startS": 1020, "endS": 1260, "qualifies": true, "note": "compile and run from terminal, bytecode, JVM"},
+    {"startS": 1260, "endS": 1560, "qualifies": false, "note": "Java facts, editions, course outline"},
+    {"startS": 1560, "endS": 2400, "qualifies": true, "note": "variables, primitive types, literals (L/F), reference types, Date"}]},
+  {"videoId": "vLnPwxZdW4Y", "title": "C++ Tutorial for Beginners - Full Course (Giraffe Academy)", "category": "tutorial", "language": "cpp", "labelledUntilS": 2400,
+   "segments": [
+    {"startS": 0, "endS": 120, "qualifies": false, "note": "intro"},
+    {"startS": 120, "endS": 780, "qualifies": false, "note": "IDE / compiler install on Windows and Mac, create project"},
+    {"startS": 780, "endS": 2400, "qualifies": true, "note": "program structure, cout, drawing a shape, variables, data types"}]},
+  {"videoId": "KJgsSFOSQv0", "title": "C Programming Tutorial for Beginners (Giraffe Academy)", "category": "tutorial", "language": "c", "labelledUntilS": 2400,
+   "segments": [
+    {"startS": 0, "endS": 120, "qualifies": false, "note": "intro"},
+    {"startS": 120, "endS": 780, "qualifies": false, "note": "install Code::Blocks / compiler, create first project"},
+    {"startS": 780, "endS": 2400, "qualifies": true, "note": "main, printf, drawing a shape, variables, data types, strings as char arrays"}]},
+  {"videoId": "GhQdlIFylQ8", "title": "C# Tutorial - Full Course for Beginners (Giraffe Academy)", "category": "tutorial", "language": "csharp", "labelledUntilS": 2400,
+   "segments": [
+    {"startS": 0, "endS": 300, "qualifies": false, "note": "intro, install Visual Studio"},
+    {"startS": 300, "endS": 540, "qualifies": false, "note": "boilerplate tour, explicitly deferred (namespaces, classes later)"},
+    {"startS": 540, "endS": 2400, "qualifies": true, "note": "Console.WriteLine, drawing a shape, variables, data types, strings"}]},
+  {"videoId": "HXV3zeQKqGY", "title": "SQL Tutorial - Full Database Course for Beginners", "category": "tutorial", "language": "sql", "labelledUntilS": 2400,
+   "segments": [
+    {"startS": 0, "endS": 180, "qualifies": false, "note": "course intro"},
+    {"startS": 180, "endS": 960, "qualifies": false, "note": "what is a database (phone book, shopping list analogies)"},
+    {"startS": 960, "endS": 2400, "qualifies": true, "note": "DBMS, CRUD, relational vs non-relational, SQL and queries, tables, primary/surrogate/natural/foreign/composite keys"}]},
+  {"videoId": "SqcY0GlETPk", "title": "React Tutorial for Beginners (Mosh)", "category": "tutorial", "language": "typescript", "labelledUntilS": 2400,
+   "segments": [
+    {"startS": 0, "endS": 300, "qualifies": false, "note": "course intro, prerequisites, what is React"},
+    {"startS": 300, "endS": 600, "qualifies": false, "note": "Node, VS Code, Vite project setup, npm install"},
+    {"startS": 600, "endS": 1140, "qualifies": true, "note": "project structure, function components, JSX, virtual DOM, React DOM"},
+    {"startS": 1140, "endS": 1380, "qualifies": false, "note": "React vs frameworks, course ad, install Bootstrap"},
+    {"startS": 1380, "endS": 2400, "qualifies": true, "note": "ListGroup component, map with keys, fragments, conditional rendering, events"}]},
+  {"videoId": "rfscVS0vtbw", "title": "Learn Python - Full Course for Beginners (freeCodeCamp)", "category": "tutorial", "language": "python", "labelledUntilS": 2400,
+   "segments": [
+    {"startS": 0, "endS": 120, "qualifies": false, "note": "intro"},
+    {"startS": 120, "endS": 540, "qualifies": false, "note": "install Python 2 vs 3, PyCharm"},
+    {"startS": 540, "endS": 2400, "qualifies": true, "note": "hello world, drawing a shape, variables, data types, strings and string functions, numbers"}]},
+  {"videoId": "kCc8FmEb1nY", "title": "Let's build GPT: from scratch, in code, spelled out. (Karpathy)", "category": "tutorial", "language": "python", "labelledUntilS": 2400,
+   "segments": [
+    {"startS": 0, "endS": 480, "qualifies": false, "note": "ChatGPT, transformer paper, tiny Shakespeare and nanoGPT overview"},
+    {"startS": 480, "endS": 2400, "qualifies": true, "note": "vocabulary and tokenizer, data tensor, train/val split, batching, bigram model, cross-entropy loss, generate, AdamW training loop"}]},
+  {"videoId": "0IAPZzGSbME", "title": "1. Introduction to Algorithms (Abdul Bari)", "category": "theory", "language": "pseudocode",
+   "segments": [
+    {"startS": 0, "endS": 180, "qualifies": false, "note": "course intro, asks for feedback"},
+    {"startS": 180, "endS": 710, "qualifies": false, "note": "definitional: algorithm vs program, design vs implementation, a priori analysis vs testing; nothing to trace or compute (hard case)"}]},
+  {"videoId": "mB5HXBb_HY8", "title": "2.7.2. Merge Sort Algorithm (Abdul Bari)", "category": "theory", "language": "pseudocode",
+   "segments": [
+    {"startS": 0, "endS": 1221, "qualifies": true, "note": "merge sort algorithm, tracing, recursion tree, n log n via master theorem"}]},
+  {"videoId": "pTB0EiLXUC8", "title": "Object-Oriented Programming, Simplified (Mosh)", "category": "theory", "language": "javascript",
+   "segments": [
+    {"startS": 0, "endS": 420, "qualifies": true, "note": "encapsulation (getWage example), abstraction, inheritance, polymorphism"},
+    {"startS": 420, "endS": 456, "qualifies": false, "note": "outro"}]},
+  {"videoId": "oBt53YbR9Kk", "title": "Dynamic Programming - Learn to Solve Algorithmic Problems (freeCodeCamp)", "category": "theory", "language": "javascript", "labelledUntilS": 2400,
+   "segments": [
+    {"startS": 0, "endS": 180, "qualifies": false, "note": "course intro and prerequisites"},
+    {"startS": 180, "endS": 2400, "qualifies": true, "note": "recursive Fibonacci, recursion trees, time/space complexity, memoization in JS, grid traveler"}]},
+  {"videoId": "x7X9w_GIm1s", "title": "Python in 100 Seconds (Fireship)", "category": "mixed", "language": "python",
+   "segments": [
+    {"startS": 0, "endS": 60, "qualifies": false, "note": "history and uses"},
+    {"startS": 60, "endS": 135, "qualifies": true, "note": "variables, typing, indentation, functions, classes shown in code"},
+    {"startS": 135, "endS": 146, "qualifies": false, "note": "ecosystem and outro"}]},
+  {"videoId": "446E-r0rXHI", "title": "Go in 100 Seconds (Fireship)", "category": "mixed", "language": "go",
+   "segments": [
+    {"startS": 0, "endS": 60, "qualifies": false, "note": "history and uses"},
+    {"startS": 60, "endS": 140, "qualifies": true, "note": "package main, func main, var and :=, pointers, goroutines"},
+    {"startS": 140, "endS": 152, "qualifies": false, "note": "outro"}]},
+  {"videoId": "8mAITcNt710", "title": "Harvard CS50 – Full Computer Science University Course (lecture 0)", "category": "mixed", "language": "pseudocode", "labelledUntilS": 2400,
+   "segments": [
+    {"startS": 0, "endS": 360, "qualifies": false, "note": "course hype, Malan's background, who takes CS50"},
+    {"startS": 360, "endS": 2400, "qualifies": true, "note": "binary counting, bits/bytes, ASCII, Unicode, RGB, images/video, algorithms and phone-book search"}]},
+  {"videoId": "-DVyjdw4t9I", "title": "Guido van Rossum: Python and the Future of Programming (Lex Fridman Podcast)", "category": "code_mentioning", "language": "python", "labelledUntilS": 2400,
+   "segments": [
+    {"startS": 0, "endS": 2400, "qualifies": false, "note": "podcast: Python 4, readability, indentation opinions, bugs per kloc, keyboards; mentions code, teaches none"}]},
+  {"videoId": "zjkBMFhNj_g", "title": "[1hr Talk] Intro to Large Language Models (Karpathy)", "category": "code_mentioning", "language": "unknown", "labelledUntilS": 2400,
+   "segments": [
+    {"startS": 0, "endS": 2400, "qualifies": false, "note": "conceptual talk on LLMs, training stages, tool use, scaling; no code taught"}]},
+  {"videoId": "aircAruvnKk", "title": "But what is a neural network? (3Blue1Brown)", "category": "code_mentioning", "language": "pseudocode",
+   "segments": [
+    {"startS": 0, "endS": 180, "qualifies": false, "note": "motivation (recognising a 3), what the series covers"},
+    {"startS": 180, "endS": 990, "qualifies": true, "note": "layers, activations, weights, weighted sum, sigmoid, bias, matrix-vector form (hard case: theory you can compute)"},
+    {"startS": 990, "endS": 1107, "qualifies": false, "note": "subscribe, patreon, ReLU chat with guest"}]},
+  {"videoId": "dQw4w9WgXcQ", "title": "Rick Astley - Never Gonna Give You Up", "category": "non_coding", "language": "none",
+   "segments": [{"startS": 0, "endS": 212, "qualifies": false, "note": "song lyrics"}]},
+  {"videoId": "iG9CE55wbtY", "title": "Do schools kill creativity? | Sir Ken Robinson | TED", "category": "non_coding", "language": "none",
+   "segments": [{"startS": 0, "endS": 1166, "qualifies": false, "note": "education talk"}]},
+  {"videoId": "UF8uR6Z6KLc", "title": "Steve Jobs' 2005 Stanford Commencement Address", "category": "non_coding", "language": "none",
+   "segments": [{"startS": 0, "endS": 905, "qualifies": false, "note": "commencement speech (mentions Apple, computers)"}]},
+  {"videoId": "arj7oStGLkU", "title": "Inside the Mind of a Master Procrastinator | Tim Urban | TED", "category": "non_coding", "language": "none",
+   "segments": [{"startS": 0, "endS": 844, "qualifies": false, "note": "talk on procrastination"}]},
+  {"videoId": "spUNpyF58BY", "title": "But what is the Fourier Transform? A visual introduction. (3Blue1Brown)", "category": "non_coding", "language": "none",
+   "segments": [{"startS": 0, "endS": 1173, "qualifies": false, "note": "math visualisation, no code or algorithm (hard case)"}]}
+ ]
+}

@@ -130,6 +130,13 @@ def build_prompt(title: str, blocks: list[Block], is_first: bool, is_last: bool)
         "- qualifies: true only if the section teaches or demonstrates something concrete the learner can "
         "do or reason about in code (writing, reading, debugging, testing, tracing an algorithm). A career "
         "vlog, news or opinion that only mentions code does NOT qualify. Music, gaming, cooking etc. never qualify.\n"
+        "- Setup is NOT teaching: installing tools/libraries, downloading an IDE or editor, creating a "
+        "project from a template, touring the generated files or the IDE, and typing or running the "
+        "starter Hello World / first print just to check the setup works. Put such setup in its own "
+        "section (split it from the teaching that follows, at the block where the instructor starts "
+        "explaining a language idea such as variables, types or how a statement works), with "
+        "qualifies false and no pauses. A section qualifies only once the instructor explains "
+        "something the learner could practise in code beyond running the template.\n"
         f"- language: one of {', '.join(LANGUAGES)}. Use what the captions show (keywords, syntax read "
         "aloud, the language named). If the concept is clear but the language is not, use \"pseudocode\" "
         "for algorithm/theory content, else \"unknown\". languageEvidence quotes the words that show it.\n"
@@ -174,6 +181,8 @@ class PauseSlot:
     importance: int
     id: str = ""
     rank: int = 3
+    ask_start_s: float | None = None  # question_posed: start of the block where the task is asked
+    screen: str = ""  # answer-on-screen check (screen.py): clear | moved | new_problem | unchecked | "" (not checked)
 
 
 @dataclass
@@ -289,7 +298,8 @@ def _validate_pauses(
             continue
         importance = po.importance if po.importance in (1, 2, 3) else 3
         slots.append(PauseSlot(section_index, round(pause_at, 1), round(reveal, 1) if reveal is not None else None,
-                               trigger, concept, po.idea.strip()[:300], importance))
+                               trigger, concept, po.idea.strip()[:300], importance,
+                               ask_start_s=after.start_s if trigger == "question_posed" else None))
     return slots
 
 
