@@ -143,7 +143,7 @@ function Panel(props: PracticePanelProps & { draftKey: string }) {
     </header>
 
     {props.levelUp && !props.progress && <LevelUp {...props.levelUp} />}
-    {solved ? <><Solved heading={heading} result={result} canResume={props.canResume} ownsPause={props.ownsPause} manualResume={props.manualResume ?? false} analysis={props.analysis ?? null}
+    {solved ? <>{aiGenerated && <p className="bp-generated-label bp-generated-panel">AI-generated practice</p>}<Solved heading={heading} result={result} canResume={props.canResume} ownsPause={props.ownsPause} manualResume={props.manualResume ?? false} analysis={props.analysis ?? null}
       resumeAtS={props.breakpoint.pauseAtS} holdMs={props.holdMs ?? SOLVED_HOLD_MS} onResume={props.onResume} />
       {props.progress && <div className="bp-v2-panel-levels"><ProgressCard award={props.progress} /></div>}</> : <>
       <div className="bp-body bp-workbench-body">

@@ -73,6 +73,9 @@ for (const theme of ['dark', 'light'] as const) {
     await expect(page.locator('.breakpoint-shell')).toHaveAttribute('data-theme', theme);
     const editor = page.getByRole('textbox', { name: 'Python code' });
     await page.getByRole('heading', { name: 'Raise a number to a power' }).press('Tab');
+    const instructions = page.getByText('Instructions & examples', { exact: true });
+    await expect(instructions).toBeFocused();
+    await instructions.press('Tab');
     await expect(editor).toBeFocused();
     await editor.press('Tab');
     await expect(page.getByRole('button', { name: 'Stuck? Get a hint' })).toBeFocused();
