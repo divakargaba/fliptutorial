@@ -518,3 +518,68 @@ def test_api_validation_and_get(client):
                                       "learnerLevels": {"loops": "advanced-1", "not-a-concept": "expert-1"}})
     assert r.status_code == 200 and r.json()["learnerLevel"] == "beginner-2"
     assert client.get("/v2/plan/vidPlanner1").json()["learnerLevel"] == "beginner-2"
+
+
+# ---------------------------------------------------------------------------
+# Restart mid-classification
+# ---------------------------------------------------------------------------
+
+
+def crash_on_window(n: int):
+    """Stub model whose n-th window classification call fails (a crash/restart mid-way)."""
+    model = StubModel()
+
+    async def call(prompt, out_model):
+        if out_model is WindowOut and model.count("WindowOut") == n - 1:
+            model.calls.append(("WindowOut", prompt))
+            for _ in range(200):  # let the earlier windows' items finish first
+                await asyncio.sleep(0)
+            raise RuntimeError("server stopped")
+        return await model(prompt, out_model)
+
+    return call
+
+
+def test_restart_resumes_classification_at_next_window(tmp_path):
+    long = make_transcript(5400)  # 3 windows
+    baseline = asyncio.run(run_to_ready(make_planner(tmp_path / "full", transcript=long)))[1]
+
+    p1 = make_planner(tmp_path / "c", model=crash_on_window(3), transcript=long)
+    asyncio.run(run_to_ready(p1))
+    saved = json.loads((tmp_path / "c" / "vidPlanner1.json").read_text())
+    assert saved["status"] == "planning" and saved["classifyProgress"]["windows"] == 2
+
+    model = StubModel()
+    p2 = make_planner(tmp_path / "c", model=model, transcript=long)  # restarted backend
+    _, plan = asyncio.run(run_to_ready(p2))
+    assert plan["status"] == "ready"
+    assert model.count("WindowOut") == 1  # only the window that never finished
+    assert [x["id"] for x in plan["pauses"]] == [x["id"] for x in baseline["pauses"]]
+    assert [s["id"] for s in plan["sections"]] == [s["id"] for s in baseline["sections"]]
+    assert [x["pauseAtS"] for x in plan["pauses"]] == [x["pauseAtS"] for x in baseline["pauses"]]
+    assert [x["rank"] for x in plan["pauses"]] == [x["rank"] for x in baseline["pauses"]]
+    # items generated before the restart are reused, not regenerated
+    reused = sum(1 for x in saved["tiers"]["beginner"]["items"].values() if x["status"] == "ready")
+    assert reused > 0
+    assert model.count("GenOutput") + model.count("QuestionOut") == len(plan["pauses"]) - reused
+    assert_no_secrets(plan)
+    done = json.loads((tmp_path / "c" / "vidPlanner1.json").read_text())
+    assert done["status"] == "classified" and "classifyProgress" not in done
+
+
+def test_restart_with_different_captions_reclassifies_from_scratch(tmp_path):
+    asyncio.run(run_to_ready(make_planner(tmp_path, model=crash_on_window(3), transcript=make_transcript(5400))))
+    model = StubModel()
+    edited = make_transcript(5400, fn=lambda t: cue_text(t) + (" (edited)" if t == 3000 else ""))
+    p2 = make_planner(tmp_path, model=model, transcript=edited)  # same windows, changed captions
+    _, plan = asyncio.run(run_to_ready(p2))
+    assert plan["status"] == "ready"
+    assert model.count("WindowOut") == 3
+    assert [s["id"] for s in plan["sections"]][:3] == ["s1", "s2", "s3"]
+
+
+def test_failed_classification_is_not_cached_as_error(tmp_path):
+    p1 = make_planner(tmp_path, model=crash_on_window(3), transcript=make_transcript(5400))
+    _, plan = asyncio.run(run_to_ready(p1))
+    assert plan["status"] == "error"
+    assert json.loads((tmp_path / "vidPlanner1.json").read_text())["status"] == "planning"

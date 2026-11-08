@@ -103,6 +103,12 @@ class VideoState:
     expires_at: float | None = None  # in-memory only states (no_captions / error)
     tiers: dict[str, TierState] = field(default_factory=dict)
     progress: asyncio.Event = field(default_factory=asyncio.Event)
+    # Classification progress while ``planning`` (saved after every window so a restart resumes):
+    # {"windows": done, "windowCount", "nextStartS", "numberer", "reasons", "about"}.
+    classify_progress: dict | None = None
+    # Loaded from disk mid-classification: sections/tiers held back until the transcript confirms
+    # the same windows (so generation never starts on sections that might be discarded).
+    resume: tuple[list[Section], dict[str, TierState]] | None = None
 
     @property
     def slots(self) -> list[PauseSlot]:
@@ -138,12 +144,15 @@ def _dump_state(st: VideoState) -> dict:
             d["question"] = it.question.dump()
         return d
 
-    return {
+    d = {
         "cacheVersion": CACHE_VERSION, "videoId": st.video_id, "status": st.status, "reason": st.reason,
         "verdictEvidence": [e.dump() for e in st.verdict_evidence], "generatedAt": st.generated_at,
         "sections": [sec(s) for s in st.sections],
         "tiers": {t: {"items": {k: item(v) for k, v in ts.items.items()}} for t, ts in st.tiers.items()},
     }
+    if st.status == "planning" and st.classify_progress:
+        d["classifyProgress"] = st.classify_progress
+    return d
 
 
 def _load_state(d: dict) -> VideoState:
@@ -166,9 +175,42 @@ def _load_state(d: dict) -> VideoState:
                 it.question = PrivateQuestion.load(v["question"])
             tier.items[k] = it
         st.tiers[t] = tier
-    if st.status == "planning":  # interrupted classification: redo it
+    if st.status == "planning":  # interrupted classification: resume it (or redo it if there's no progress)
+        prog = d.get("classifyProgress")
+        if prog and st.sections:
+            st.classify_progress = prog
+            st.resume = (st.sections, st.tiers)
         st.sections, st.tiers = [], {}
     return st
+
+
+def _windows_digest(wins: list[list[Block]]) -> str:
+    """Fingerprint of the captions in these windows (a re-uploaded/changed track must be reclassified)."""
+    h = hashlib.sha256()
+    for win in wins:
+        for b in win:
+            for c in b.cues:
+                h.update(f"{c.id}|{c.start_s}|{c.end_s}|{c.text}\n".encode())
+    return h.hexdigest()[:16]
+
+
+def _resume_point(st: VideoState, wins: list[list[Block]]) -> int:
+    """Number of windows already classified, if the saved progress matches this transcript's windows."""
+    prog = st.classify_progress
+    if not prog or st.resume is None:
+        return 0
+    try:
+        done, count = int(prog["windows"]), int(prog["windowCount"])
+        if count != len(wins) or not 0 < done < count or abs(wins[done][0].start_s - float(prog["nextStartS"])) > 1e-6:
+            return 0
+        if prog.get("digest") != _windows_digest(wins[:done]):
+            return 0
+        Numberer(**prog["numberer"])
+        list(prog["reasons"])
+        bool(prog["about"])
+    except (KeyError, TypeError, ValueError):
+        return 0
+    return done
 
 
 class PlanStore:
@@ -337,7 +379,31 @@ class Planner:
             numberer = Numberer()
             reasons: list[str] = []
             about = False
+            start = _resume_point(st, wins)
+            if start:
+                prog = st.classify_progress or {}
+                numberer = Numberer(**prog["numberer"])
+                reasons, about = list(prog["reasons"]), bool(prog["about"])
+                sections, tiers = st.resume or ([], {})
+                st.sections = sections
+                for t, held in tiers.items():  # keep the ``want`` sets requests added meanwhile
+                    st.tiers.setdefault(t, TierState()).items.update(held.items)
+                logger.info("planner classify video=%s resuming at window %d/%d", st.video_id, start + 1, len(wins))
+            else:
+                st.sections = []
+                for ts in st.tiers.values():
+                    ts.items.clear()
+            st.resume = None
+            if st.sections:
+                qual = [s for s in st.sections if s.qualifies]
+                if qual:
+                    st.reason = st.reason or (reasons[0] if reasons else "")
+                    st.verdict_evidence = [e for s in qual[:3] for e in s.evidence[:1]]
+                st.progress.set()
+                st.progress = asyncio.Event()
             for wi, win in enumerate(wins):
+                if wi < start:
+                    continue
                 nxt = wins[wi + 1][0].start_s if wi + 1 < len(wins) else None
                 out = await self._classify_window(transcript.title, win, wi == 0, wi == len(wins) - 1)
                 res = validate_window(out, win, nxt)
@@ -352,6 +418,11 @@ class Planner:
                     st.verdict_evidence = [e for s in qual[:3] for e in s.evidence[:1]]
                 st.progress.set()
                 st.progress = asyncio.Event()
+                if nxt is not None:  # save progress so a restart resumes at the next window
+                    st.classify_progress = {"windows": wi + 1, "windowCount": len(wins), "nextStartS": nxt,
+                                            "numberer": asdict(numberer), "reasons": reasons, "about": about,
+                                            "digest": _windows_digest(wins[: wi + 1])}
+                    self.store.save(st)
                 if wi == 0 and not about and not any(s.qualifies for s in res.sections):
                     break  # clearly not a programming video: say so now, don't spend more
             qualifying = [s for s in st.sections if s.qualifies]
@@ -364,6 +435,7 @@ class Planner:
                 st.reason = (reasons[0] if reasons else "") or "No section teaches or demonstrates code."
                 st.verdict_evidence = [e for s in st.sections[:3] for e in s.evidence[:1]]
             st.generated_at = _now_iso()
+            st.classify_progress = None
             self.store.save(st)
             logger.info("planner classify video=%s status=%s sections=%d pauses=%d ms=%d", st.video_id, st.status,
                         len(st.sections), len(st.slots), int((time.monotonic() - started) * 1000))
@@ -426,6 +498,8 @@ class Planner:
             await self._one(st, ts, tier, slot)
 
     async def _one(self, st: VideoState, ts: TierState, tier: str, slot: PauseSlot) -> None:
+        if st.status not in ("planning", "classified") or slot.section_index >= len(st.sections):
+            return  # classification failed meanwhile (sections were cleared)
         section = st.sections[slot.section_index]
         kind = planned_kind(section, slot)
         item = Item(kind)
@@ -449,7 +523,8 @@ class Planner:
         except Exception:
             logger.exception("planner %s/%s failed", st.video_id, slot.id)
             item.status = "failed"
-        if st.classified:
+        # Never persist an in-memory failure (error / no_captions expire; on disk they would stick).
+        if st.status == "classified" or (st.status == "planning" and st.classify_progress):
             self.store.save(st)
 
 

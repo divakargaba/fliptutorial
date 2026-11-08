@@ -54,7 +54,9 @@ Any YouTube video id → a cached, timestamped exercise plan before the learner 
   pause was ready in about 1 min; the 2 coding exercises passed Judge0 verify. No secrets were in the public plan. `python -m app.planner.inspect_plan <videoId> <port> [--wait s]` prints a summary.
 - [ ] Goal 6: answer-on-screen check with storyboard frames (today: `question_posed` pauses before the reveal; demonstrations get a new problem).
 - [ ] Proof: `backend/content/eval/` with ≥20 labelled videos and a precision/recall report; auto-pause bar to post.
-- [ ] Classification progress is persisted only when a video is fully classified (a restart mid-way re-classifies it).
+- [x] Classification progress is saved after every ~40-min window (`classifyProgress` in the plan cache: windows done, numberer state, caption digest).
+  A restarted backend resumes at the next window with the same section/pause ids and ranks, and reuses items already generated. If the captions changed
+  (digest or window boundaries differ) it reclassifies from scratch. An in-memory `error` is never written to disk. Offline: `test_planner.py` 25 passed + 1 skipped until A2 merges; full backend suite 290 passed / 5 skipped.
 - [x] Coding exercises in JavaScript, Java and C++ via A2's runners (`app.runners`). `vocab.coding_languages()` turns them on only when
   `app.runners` imports, so before A2 merges they stay concept questions. Each language has a prompt shape that matches A2's wrappers
   (JS `function f(...)`; Java `class Solution { public static T f(...) }`; C++ a free function using the wrapper's std headers),
