@@ -331,11 +331,9 @@ class Grader:
             raise self.Busy("too many concurrent grades")
 
         async with self._active:
-            ref_passed = await self._run_solution(
-                function_name, reference_solution, test_cases
-            )
-            wrong_passed = await self._run_solution(
-                function_name, known_wrong_solution, test_cases
+            ref_passed, wrong_passed = await asyncio.gather(
+                self._run_solution(function_name, reference_solution, test_cases),
+                self._run_solution(function_name, known_wrong_solution, test_cases),
             )
 
         ref_passed_count = sum(ref_passed)
