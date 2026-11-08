@@ -458,7 +458,8 @@ def test_frontend_and_backend_pair_up_as_full_stack(seeded):
 def test_matches_explain_why_and_skip_private_accounts(seeded):
     ana = seeded.get("/v2/profile/test-ana", params=NOW_Q).json()["complements"]
     ben = next(m for m in ana if m["accountId"] == "test-ben")
-    assert "http-apis" in ben["why"] and "Ana is a beginner" in ben["why"]
+    assert "HTTP & APIs" in ben["why"] and "Ana is a beginner" in ben["why"]
+    assert "-" not in ben["why"].split(".")[0].replace("full-stack", ""), ben["why"]  # readable names, no raw ids
     for acct in ("test-ana", "test-ben", "test-cam", "test-dee"):
         ms = seeded.get(f"/v2/matches/{acct}", params=NOW_Q).json()["matches"]
         assert ms and all(m["accountId"] not in {acct, "test-eli"} for m in ms)
