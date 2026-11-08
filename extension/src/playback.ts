@@ -1,4 +1,4 @@
-import type { ApiError, AttemptState, Breakpoint, PracticeResponse, SubmissionResponse, WorkerReply } from './contracts';
+import type { ApiError, AttemptState, Breakpoint, PracticeResponse, SubmissionResponse, TestMeResponse, WorkerReply } from './contracts';
 
 export function watchVideoId(url: string): string | null {
   try {
@@ -15,8 +15,9 @@ export type Sample = {
 export type Ticket = { generation: number; attempt: number };
 export type ActiveAttempt = {
   breakpoint: Breakpoint; revision: string; state: AttemptState; result: SubmissionResponse | null;
-  error: ApiError['error'] | null; ownsPause: boolean; pausedAt: number; canResume: boolean;
+  error: ApiError['error'] | null; ownsPause: boolean; pausedAt: number; canResume: boolean; generated: boolean;
 };
+type TestMeAttempt = Pick<ActiveAttempt, 'ownsPause' | 'pausedAt' | 'error'>;
 
 // DOM-free state and pause decisions. Every async continuation carries a generation/attempt ticket.
 export class PlaybackSession {
@@ -25,6 +26,7 @@ export class PlaybackSession {
   route: 'loading' | 'ready' | 'unsupported' | 'unavailable' = 'unsupported';
   data: PracticeResponse | null = null;
   active: ActiveAttempt | null = null;
+  testMe: TestMeAttempt | null = null;
   readonly consumed = new Set<string>();
   readonly solvedIds = new Set<string>();
   private previous: Sample | null = null;
@@ -36,6 +38,7 @@ export class PlaybackSession {
     this.data = null;
     this.route = videoId ? 'loading' : 'unsupported';
     this.active = null;
+    this.testMe = null;
     this.attempt++;
     this.consumed.clear();
     this.solvedIds.clear();
@@ -64,7 +67,7 @@ export class PlaybackSession {
   }
 
   sample(sample: Sample): Breakpoint | null {
-    if (this.route !== 'ready' || !this.data || this.active || !sample.playing || !sample.visible ||
+    if (this.route !== 'ready' || !this.data || this.active || this.testMe || !sample.playing || !sample.visible ||
         sample.ad || sample.fullscreen || sample.seeking || !sample.mountable || !sample.ready ||
         !Number.isFinite(sample.time) || !Number.isFinite(sample.wallMs) || !Number.isFinite(sample.rate) || sample.rate <= 0) {
       this.reset(); return null;
@@ -82,19 +85,53 @@ export class PlaybackSession {
   }
 
   open(breakpoint: Breakpoint, time: number, ownsPause: boolean): Ticket | null {
-    if (this.active || this.data?.status !== 'ready' || !this.available(breakpoint) ||
+    if (this.active || this.testMe || this.data?.status !== 'ready' || !this.available(breakpoint) ||
         !this.data.breakpoints.some(b => b.id === breakpoint.id)) return null;
     this.consumed.add(breakpoint.id);
     this.attempt++;
     this.active = { breakpoint, revision: this.data.revision, state: 'editing', result: null,
-      error: null, ownsPause, pausedAt: time, canResume: false };
+      error: null, ownsPause, pausedAt: time, canResume: false, generated: false };
     this.reset();
     return this.ticket();
   }
 
+  startTestMe(time: number, ownsPause: boolean): Ticket | null {
+    if (!this.videoId || this.active || this.testMe || !Number.isFinite(time) || time < 0) return null;
+    this.testMe = { pausedAt: time, ownsPause, error: null };
+    this.attempt++;
+    this.reset();
+    return this.ticket();
+  }
+
+  retryTestMe(): Ticket | null {
+    if (!this.testMe?.error?.retryable) return null;
+    this.testMe.error = null;
+    this.attempt++;
+    return this.ticket();
+  }
+
+  finishTestMe(ticket: Ticket, reply: WorkerReply<TestMeResponse>): boolean {
+    const request = this.testMe;
+    if (!request || request.error || !this.isTestMeCurrent(ticket)) return false;
+    if (!reply.ok) { request.error = reply.error.error; return true; }
+    const { setId, exercise } = reply.data;
+    // The shared panel displays the pause time. A manual exercise has no scheduled reveal.
+    const breakpoint = { id: setId, pauseAtS: request.pausedAt, revealAtS: Number.MAX_VALUE, exercise };
+    this.active = { breakpoint, revision: setId, state: 'editing', result: null,
+      error: null, ownsPause: request.ownsPause, pausedAt: request.pausedAt, canResume: false, generated: true };
+    this.testMe = null;
+    return true;
+  }
+
   ticket(): Ticket { return { generation: this.generation, attempt: this.attempt }; }
+  private matches(ticket: Ticket): boolean {
+    return ticket.generation === this.generation && ticket.attempt === this.attempt;
+  }
   isCurrent(ticket: Ticket): boolean {
-    return ticket.generation === this.generation && ticket.attempt === this.attempt && this.active !== null;
+    return this.matches(ticket) && this.active !== null;
+  }
+  isTestMeCurrent(ticket: Ticket): boolean {
+    return this.matches(ticket) && this.testMe !== null;
   }
 
   beginGrade(): Ticket | null {
@@ -115,7 +152,7 @@ export class PlaybackSession {
     }
     active.result = reply.data;
     if (reply.data.outcome === 'passed' && mode === 'submit') {
-      this.solvedIds.add(active.breakpoint.exercise.id);
+      if (!active.generated) this.solvedIds.add(active.breakpoint.exercise.id);
       active.state = 'passed';
       return active.ownsPause ? 'resume' : 'stay';
     }
@@ -133,7 +170,8 @@ export class PlaybackSession {
   }
 
   canResume(ticket: Ticket, time: number, paused: boolean): boolean {
-    return this.isCurrent(ticket) && this.active!.ownsPause && paused && Math.abs(time - this.active!.pausedAt) < 0.25;
+    const practice = this.active ?? this.testMe;
+    return this.matches(ticket) && practice?.ownsPause === true && paused && Math.abs(time - practice.pausedAt) < 0.25;
   }
 
   resumeRejected(ticket: Ticket): void {
@@ -141,13 +179,14 @@ export class PlaybackSession {
   }
 
   releaseFailedMount(): void {
-    if (this.active) this.consumed.delete(this.active.breakpoint.id);
+    if (this.active && !this.active.generated) this.consumed.delete(this.active.breakpoint.id);
     this.interrupt();
   }
 
   interrupt(): void {
     this.attempt++;
     this.active = null;
+    this.testMe = null;
     this.reset();
   }
 }

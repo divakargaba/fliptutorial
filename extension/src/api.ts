@@ -1,8 +1,14 @@
 import { z } from 'zod';
 import {
-  ApiErrorSchema, PracticeResponseSchema, SubmissionResponseSchema, WorkerMessageSchema,
-  type ApiError, type PracticeResponse, type SubmissionResponse, type WorkerMessage, type WorkerReply,
+  ApiErrorSchema, PracticeResponseSchema, SubmissionResponseSchema, TestMeResponseSchema, WorkerMessageSchema,
+  type ApiError, type PracticeResponse, type SubmissionResponse, type TestMeResponse, type WorkerMessage, type WorkerReply,
 } from './contracts';
+
+const requests = {
+  lookup: { timeoutMs: 3000, schema: PracticeResponseSchema },
+  grade: { timeoutMs: 15000, schema: SubmissionResponseSchema, path: '/v1/submissions' },
+  testMe: { timeoutMs: 20000, schema: TestMeResponseSchema, path: '/v1/test-me' },
+};
 
 export function apiError(code: string, message: string, retryable = true): ApiError {
   return { error: { code, message, retryable }, requestId: crypto.randomUUID() };
@@ -21,20 +27,27 @@ export function apiOrigin(base: string): string {
   return url.origin;
 }
 
-export async function requestApi(raw: unknown, base: string, fetcher: typeof fetch = fetch): Promise<WorkerReply<PracticeResponse | SubmissionResponse>> {
+export async function requestApi(raw: unknown, base: string, fetcher: typeof fetch = fetch): Promise<WorkerReply<PracticeResponse | SubmissionResponse | TestMeResponse>> {
   const parsed = WorkerMessageSchema.safeParse(raw);
-  if (!parsed.success) return { ok: false, error: apiError('INVALID_CODE', 'Invalid lookup or grading request.', false) };
+  if (!parsed.success) {
+    const testMe = typeof raw === 'object' && raw !== null && 'type' in raw && raw.type === 'testMe';
+    return { ok: false, error: testMe
+      ? apiError('INVALID_REQUEST', 'Invalid Test me request.', false)
+      : apiError('INVALID_CODE', 'Invalid lookup or grading request.', false) };
+  }
   const message = parsed.data;
+  const request = requests[message.type];
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), message.type === 'lookup' ? 3000 : 15000);
+  const timeout = setTimeout(() => controller.abort(), request.timeoutMs);
   try {
     const origin = apiOrigin(base);
     const { type, ...body } = message;
-    const response = await fetcher(message.type === 'lookup'
-      ? `${origin}/v1/videos/${encodeURIComponent(message.videoId)}/practice`
-      : `${origin}/v1/submissions`, {
+    const path = message.type === 'lookup'
+      ? `/v1/videos/${encodeURIComponent(message.videoId)}/practice`
+      : requests[message.type].path;
+    const response = await fetcher(`${origin}${path}`, {
       method: type === 'lookup' ? 'GET' : 'POST',
-      ...(type === 'grade' ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {}),
+      ...(type === 'lookup' ? {} : { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
       signal: controller.signal, credentials: 'omit', redirect: 'error', cache: 'no-store',
     });
     let json: unknown;
@@ -46,7 +59,7 @@ export async function requestApi(raw: unknown, base: string, fetcher: typeof fet
       const failure = ApiErrorSchema.safeParse(json);
       return { ok: false, error: failure.success ? failure.data : apiError('INVALID_RESPONSE', 'The local API returned an invalid error.') };
     }
-    const result = (message.type === 'lookup' ? PracticeResponseSchema : SubmissionResponseSchema).safeParse(json);
+    const result = request.schema.safeParse(json);
     if (!result.success || (message.type === 'lookup' && 'videoId' in result.data && result.data.videoId !== message.videoId)) {
       return { ok: false, error: apiError('INVALID_RESPONSE', 'The local API returned an invalid response.') };
     }
@@ -61,6 +74,7 @@ export async function requestApi(raw: unknown, base: string, fetcher: typeof fet
 export async function sendRequest<T>(message: WorkerMessage, schema: z.ZodType<T>, send: (message: WorkerMessage) => Promise<unknown>): Promise<WorkerReply<T>> {
   // Also bound the content-side wait if the worker is restarted while handling a message.
   let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeoutMs = requests[message.type].timeoutMs + (message.type === 'testMe' ? 0 : 500);
   const sendWhenReady = async () => {
     for (let attempt = 0; ; attempt++) {
       try { return await send(message); }
@@ -75,7 +89,7 @@ export async function sendRequest<T>(message: WorkerMessage, schema: z.ZodType<T
   };
   try {
     const reply = await Promise.race([
-      sendWhenReady(), new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('TIMEOUT')), message.type === 'lookup' ? 3500 : 15500); }),
+      sendWhenReady(), new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('TIMEOUT')), timeoutMs); }),
     ]);
     const parsed = z.discriminatedUnion('ok', [
       z.object({ ok: z.literal(true), data: schema }), z.object({ ok: z.literal(false), error: ApiErrorSchema }),

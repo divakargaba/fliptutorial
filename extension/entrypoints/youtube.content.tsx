@@ -5,12 +5,15 @@ import { flushSync } from 'react-dom';
 import { browser } from 'wxt/browser';
 import { createShadowRootUi, type ShadowRootContentScriptUi } from 'wxt/utils/content-script-ui/shadow-root';
 import { sendRequest } from '../src/api';
-import { PracticeResponseSchema, SubmissionResponseSchema, type WorkerMessage } from '../src/contracts';
+import { PracticeResponseSchema, SubmissionResponseSchema, TestMeResponseSchema, type WorkerMessage } from '../src/contracts';
 import { flushDraft, loadDraft, saveDraft } from '../src/drafts';
 import { listSolved, markSolved } from '../src/progress';
 import { PlaybackSession, watchVideoId, type Ticket } from '../src/playback';
+import { TestMeContext } from '../src/test-me';
 import { Badge } from '../src/ui/Badge';
 import { PracticePanel, SOLVED_HOLD_MS, type PracticePanelProps } from '../src/ui/PracticePanel';
+
+type RenderedPanel = PracticePanelProps & { aiGenerated: boolean };
 
 export default defineContentScript({
   matches: ['https://www.youtube.com/*'],
@@ -22,6 +25,7 @@ export default defineContentScript({
   // WXT still owns isolation, mounting and cleanup; no styles reach YouTube.
   cssInjectionMode: 'manual',
   main(ctx) {
+    const testMeEnabled = import.meta.env.WXT_TESTME_ENABLED === 'true';
     const debug = new URL(location.href).searchParams.has('breakpoint-debug');
     const trace = (stage: string) => { if (debug) performance.mark(`breakpoint:${stage}`); };
     trace('start');
@@ -44,8 +48,8 @@ export default defineContentScript({
     // A passed attempt lingers on its solved moment briefly before playback resumes.
     let holdTimer: ReturnType<typeof setTimeout> | undefined;
     // The last rendered panel, kept mounted for its exit animation after the attempt ends.
-    let shownPanel: PracticePanelProps | null = null;
-    let leavingPanel: PracticePanelProps | null = null;
+    let shownPanel: RenderedPanel | null = null;
+    let leavingPanel: RenderedPanel | null = null;
     let leavingTimer: ReturnType<typeof setTimeout> | undefined;
     const noop = () => {};
     const theme = () => document.documentElement.hasAttribute('dark') ? 'dark' : 'light';
@@ -82,6 +86,11 @@ export default defineContentScript({
       const target = findAnchor();
       return !!target && target.id !== 'player' && ui.shadowHost.parentElement === target;
     };
+    const testMePlayer = () => {
+      const video = player;
+      return video && playerReady && isCurrent() && video === currentPlayer() && !video.seeking && !video.ended &&
+        !isAd() && !isFullscreen() && mountable() ? video : null;
+    };
     const focusBadge = () => ui?.shadow.querySelector<HTMLElement>('[data-breakpoint-badge] .bp-badge')?.focus({ preventScroll: true });
     const focusPanel = () => {
       const panel = ui?.shadow.querySelector<HTMLElement>('[data-breakpoint-panel]');
@@ -95,12 +104,15 @@ export default defineContentScript({
       const breakpoints = session.data?.breakpoints ?? [];
       const remaining = breakpoints.filter(b => session.available(b));
       const solved = breakpoints.filter(b => session.solvedIds.has(b.exercise.id)).length;
-      let panel: PracticePanelProps | null = null;
+      let panel: RenderedPanel | null = null;
       if (active && session.videoId) {
         panel = {
           videoId: session.videoId, revision: active.revision, breakpoint: active.breakpoint,
           attempt: active.state, result: active.result, error: active.error, canResume: active.canResume,
-          index: Math.max(0, breakpoints.findIndex(b => b.id === active.breakpoint.id)), total: breakpoints.length,
+          aiGenerated: active.generated,
+          ...(active.generated ? {} : {
+            index: Math.max(0, breakpoints.findIndex(b => b.id === active.breakpoint.id)), total: breakpoints.length,
+          }),
           holdMs: SOLVED_HOLD_MS,
           onRun: code => void grade('run', code), onSubmit: code => void grade('submit', code),
           onSkip: skip, onClose: skip, onResume: resumeNow,
@@ -114,17 +126,24 @@ export default defineContentScript({
       }
       shownPanel = panel;
       const visiblePanel = panel ?? leavingPanel;
+      const request = session.testMe;
+      const testMe = testMeEnabled ? {
+        canStart: !active && !request && document.visibilityState === 'visible' && !!testMePlayer(),
+        request: request ? (request.error ? { status: 'error' as const, error: request.error } : { status: 'loading' as const }) : null,
+        aiGenerated: !!visiblePanel?.aiGenerated,
+        onStart: startTestMe, onRetry: retryTestMe, onClose: closeTestMe,
+      } : null;
       try {
-        flushSync(() => ui!.mounted!.render(<div className="breakpoint-shell" data-theme={theme()}
+        flushSync(() => ui!.mounted!.render(<TestMeContext.Provider value={testMe}><div className="breakpoint-shell" data-theme={theme()}
           data-placement={anchor?.id === 'secondary-inner' || anchor?.id === 'secondary' ? 'side' : 'below'}>
           {session.route !== 'unsupported' && <div data-breakpoint-badge>
             <Badge state={state} total={breakpoints.length} remaining={remaining.length} solved={solved}
-              active={!!active} nextAtS={remaining[0]?.pauseAtS ?? null} onOpen={openFromBadge} />
+              active={!!active && !active.generated} nextAtS={remaining[0]?.pauseAtS ?? null} onOpen={openFromBadge} />
           </div>}
-          {visiblePanel && <div data-breakpoint-panel tabIndex={-1} style={{ width: '100%' }}>
+          {visiblePanel && <div data-breakpoint-panel data-ai-generated={visiblePanel.aiGenerated || undefined} tabIndex={-1} style={{ width: '100%' }}>
             <PracticePanel key={`${session.generation}/${visiblePanel.breakpoint.exercise.id}`} {...visiblePanel} />
           </div>}
-        </div>));
+        </div></TestMeContext.Provider>));
       } catch { failMount(); }
     }
 
@@ -220,7 +239,7 @@ export default defineContentScript({
     async function grade(mode: 'run' | 'submit', code: string) {
       const active = session.active;
       const videoId = session.videoId;
-      if (!videoId || !active || active.error?.code === 'EXERCISE_NOT_FOUND') return;
+      if (!videoId || !active || active.error?.code === 'EXERCISE_NOT_FOUND' || active.error?.code === 'SET_EXPIRED') return;
       const ticket = session.beginGrade();
       if (!ticket) return;
       render();
@@ -228,11 +247,11 @@ export default defineContentScript({
       if (!isCurrent()) return;
       const action = session.finishGrade(ticket, mode, reply);
       if (action === 'ignored') return;
-      if (!reply.ok && reply.error.error.code === 'STALE_EXERCISE') {
+      if (!active.generated && !reply.ok && reply.error.error.code === 'STALE_EXERCISE') {
         session.active!.state = 'checking'; render(); await lookup({ ticket, submittedCode: code });
       } else {
         render();
-        if (mode === 'submit' && active.state === 'passed') {
+        if (!active.generated && mode === 'submit' && active.state === 'passed') {
           await markSolved(videoId, active.breakpoint.exercise.id, active.revision).catch(() => {});
         }
         if (action === 'resume') {
@@ -240,6 +259,55 @@ export default defineContentScript({
           holdTimer = setTimeout(() => { holdTimer = undefined; void resume(ticket); }, SOLVED_HOLD_MS);
         }
       }
+    }
+
+    function startTestMe() {
+      if (!testMeEnabled || document.visibilityState !== 'visible') return;
+      const video = testMePlayer();
+      if (!video) return;
+      const ticket = session.startTestMe(video.currentTime, !video.paused);
+      if (!ticket) return;
+      video.pause();
+      render();
+      void loadTestMe(ticket, video);
+    }
+
+    function retryTestMe() {
+      const video = testMePlayer();
+      const request = session.testMe;
+      if (!video?.paused || !request || Math.abs(video.currentTime - request.pausedAt) >= 0.25) return;
+      const ticket = session.retryTestMe();
+      if (!ticket) return;
+      render();
+      void loadTestMe(ticket, video);
+    }
+
+    async function loadTestMe(ticket: Ticket, video: HTMLVideoElement) {
+      const videoId = session.videoId;
+      const request = session.testMe;
+      if (!videoId || !request) return;
+      const source = video.currentSrc;
+      const reply = await sendRequest({ type: 'testMe', videoId, timestampS: request.pausedAt }, TestMeResponseSchema, send);
+      if (!session.isTestMeCurrent(ticket)) return;
+      if (video.currentSrc !== source) { session.interrupt(); render(); return; }
+      if (testMePlayer() !== video || !video.paused ||
+          Math.abs(video.currentTime - request.pausedAt) >= 0.25) {
+        closeTestMe(); return;
+      }
+      if (session.finishTestMe(ticket, reply)) {
+        render();
+        if (reply.ok && document.visibilityState === 'visible') focusPanel();
+      }
+    }
+
+    function closeTestMe() {
+      if (!session.testMe) return;
+      const video = player;
+      const ownsPause = video && isCurrent() && currentPlayer() === video && !video.seeking && !isAd() && !isFullscreen() &&
+        session.canResume(session.ticket(), video.currentTime, video.paused);
+      session.interrupt();
+      render();
+      if (ownsPause) void video.play().catch(() => video.focus());
     }
 
     async function resume(ticket: Ticket) {
@@ -277,7 +345,7 @@ export default defineContentScript({
         bindExpired = false; uiFailed = false; observePlayer(); void lookup(); return;
       }
       const video = player;
-      if (session.active || !video || !playerReady || !isCurrent() || video !== currentPlayer() || isAd() || isFullscreen() || !mountable()) return;
+      if (session.active || session.testMe || !video || !playerReady || !isCurrent() || video !== currentPlayer() || isAd() || isFullscreen() || !mountable()) return;
       const breakpoint = session.data?.breakpoints.find(b => session.available(b));
       if (!breakpoint) return;
       if (session.open(breakpoint, video.currentTime, !video.paused)) {
@@ -289,7 +357,7 @@ export default defineContentScript({
       const video = player;
       if (!video || !isCurrent() || video !== currentPlayer()) { session.reset(); return; }
       const ad = isAd();
-      if (ad !== lastAd) { lastAd = ad; session.reset(); if (session.active) session.interrupt(); render(); }
+      if (ad !== lastAd) { lastAd = ad; session.reset(); if (session.active || session.testMe) session.interrupt(); render(); }
       const claimed = session.sample({ time: video.currentTime, wallMs: performance.now(), rate: video.playbackRate,
         playing: !video.paused && !video.ended, visible: document.visibilityState === 'visible',
         ad, fullscreen: isFullscreen(), seeking: video.seeking, mountable: mountable(), ready: playerReady });
@@ -312,15 +380,16 @@ export default defineContentScript({
       const controller = new AbortController();
       const on = (name: string, listener: EventListener) => video.addEventListener(name, listener, { signal: controller.signal });
       const interrupt = () => { session.interrupt(); render(); };
-      on('loadedmetadata', () => { playerReady = video.readyState >= 1; session.reset(); });
+      on('loadedmetadata', () => { playerReady = video.readyState >= 1; session.reset(); if (testMeEnabled) render(); });
       on('canplay', () => {
         // canplay without a metadata/source change may belong to the previous route.
         if (video !== oldPlayer || (!!video.currentSrc && video.currentSrc !== oldSource)) playerReady = true;
-        session.reset();
+        session.reset(); if (testMeEnabled) render();
       });
       on('emptied', () => { playerReady = false; interrupt(); });
       on('seeking', interrupt);
-      on('seeked', () => session.reset());
+      on('seeked', () => { session.reset(); if (testMeEnabled) render(); });
+      if (testMeEnabled) on('ended', render);
       on('ratechange', () => session.reset());
       on('play', interrupt);
       on('pause', () => session.reset());
@@ -375,8 +444,12 @@ export default defineContentScript({
     }
 
     ctx.addEventListener(document, 'yt-navigate-finish', routeChanged);
-    ctx.addEventListener(document, 'visibilitychange', () => session.reset());
-    ctx.addEventListener(document, 'fullscreenchange', () => { session.reset(); });
+    ctx.addEventListener(document, 'visibilitychange', () => { session.reset(); if (testMeEnabled) render(); });
+    ctx.addEventListener(document, 'fullscreenchange', () => {
+      session.reset();
+      if (isFullscreen()) closeTestMe();
+      if (testMeEnabled) render();
+    });
     ctx.addEventListener(window, 'resize', () => { session.reset(); void ensureUi(); });
     ctx.setInterval(() => {
       if (lastHref !== location.href) routeChanged();

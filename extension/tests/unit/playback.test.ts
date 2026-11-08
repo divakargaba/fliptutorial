@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import fixture from '../../../contracts/practice-response.fixture.json';
-import { PracticeResponseSchema, type SubmissionResponse } from '../../src/contracts';
+import testMeFixture from '../../../contracts/testme-response.fixture.json';
+import { PracticeResponseSchema, TestMeResponseSchema, type SubmissionResponse } from '../../src/contracts';
 import { PlaybackSession, watchVideoId, type Sample } from '../../src/playback';
 
 const data = PracticeResponseSchema.parse(fixture);
@@ -191,5 +192,53 @@ describe('multiple breakpoints and saved progress', () => {
     expect(session.sample(sample(76, 4100))).toEqual(second);
     session.acceptLookup(session.generation, { ...multiple, status: 'ready', revision: 'new-revision' });
     expect(session.available(breakpoint)).toBe(true);
+  });
+});
+
+describe('Test Me playback', () => {
+  const generated = TestMeResponseSchema.parse(testMeFixture);
+  const success = { ok: true, data: generated } as const;
+  const error = { code: 'GENERATOR_TIMEOUT', message: 'Try again.', retryable: true };
+
+  it('opens a generated attempt on an unsupported video without adding prepared progress', () => {
+    const session = new PlaybackSession();
+    const videoId = 'otherVideo1';
+    session.acceptLookup(session.navigate(videoId), {
+      videoId, status: 'unsupported', schemaVersion: 1, revision: null, breakpoints: [],
+    });
+    const ticket = session.startTestMe(180.5, true)!;
+    expect(session.startTestMe(181, true)).toBeNull();
+    expect(session.finishTestMe(ticket, success)).toBe(true);
+    expect(session.active).toMatchObject({ generated: true, revision: generated.setId,
+      breakpoint: { pauseAtS: 180.5, exercise: generated.exercise } });
+    const grade = session.beginGrade()!;
+    expect(session.finishGrade(grade, 'submit', { ok: true, data: passed })).toBe('resume');
+    expect(session.canResume(grade, 180.5, true)).toBe(true);
+    expect(session.solvedIds.size).toBe(0);
+    expect(session.consumed.size).toBe(0);
+  });
+
+  it('keeps a failed request paused and retries without transferring pause ownership', () => {
+    const session = ready();
+    const ticket = session.startTestMe(72, false)!;
+    expect(session.open(breakpoint, 72, true)).toBeNull();
+    expect(session.finishTestMe(ticket, { ok: false, error: { error, requestId: 'id' } })).toBe(true);
+    expect(session.testMe?.error).toEqual(error);
+    const retry = session.retryTestMe()!;
+    expect(session.finishTestMe(ticket, success)).toBe(false);
+    expect(session.finishTestMe(retry, success)).toBe(true);
+    expect(session.canResume(retry, 72, true)).toBe(false);
+  });
+
+  it('ignores a reply after a native playback interruption or navigation', () => {
+    const session = ready();
+    const interrupted = session.startTestMe(190, true)!;
+    expect(session.canResume(interrupted, 190, true)).toBe(true);
+    session.interrupt();
+    expect(session.finishTestMe(interrupted, success)).toBe(false);
+    const navigated = session.startTestMe(195, true)!;
+    session.navigate('otherVideo1');
+    expect(session.finishTestMe(navigated, success)).toBe(false);
+    expect(session.active).toBeNull();
   });
 });

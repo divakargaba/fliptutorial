@@ -8,6 +8,9 @@ export const ExerciseSchema = z.object({
   starterCode: z.string(),
   examples: z.array(z.object({ args: z.array(z.json()), expected: z.json() }).strict()).min(1),
 }).strict();
+export const TestMeResponseSchema = z.object({
+  setId: text, generated: z.literal(true), aiGenerated: z.literal(true), exercise: ExerciseSchema,
+}).strict();
 export const BreakpointSchema = z.object({
   id: text, pauseAtS: time, revealAtS: time, exercise: ExerciseSchema,
 }).strict().refine(b => b.pauseAtS < b.revealAtS, 'Pause must precede reveal');
@@ -58,11 +61,14 @@ export const GradeMessageSchema = z.object({
   ),
 }).strict();
 export const WorkerMessageSchema = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('lookup'), videoId: VideoIdSchema }).strict(), GradeMessageSchema,
+  z.object({ type: z.literal('lookup'), videoId: VideoIdSchema }).strict(),
+  GradeMessageSchema,
+  z.object({ type: z.literal('testMe'), videoId: VideoIdSchema, timestampS: time }).strict(),
 ]);
 
 export type Breakpoint = z.infer<typeof BreakpointSchema>;
 export type PracticeResponse = z.infer<typeof PracticeResponseSchema>;
+export type TestMeResponse = z.infer<typeof TestMeResponseSchema>;
 export type SubmissionResponse = z.infer<typeof SubmissionResponseSchema>;
 export type ApiError = z.infer<typeof ApiErrorSchema>;
 export type WorkerMessage = z.infer<typeof WorkerMessageSchema>;
