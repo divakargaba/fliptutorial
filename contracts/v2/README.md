@@ -21,7 +21,9 @@ fixtures, not against another lane's running code. Field changes go through the 
   - `exercise` (coding): `{ id, revision, title, language, statement, starterCode, examples[], concepts[], level, aiGenerated }`.
   - `question` (concept): `{ id, revision, title, style: multiple_choice|short_answer|predict_output, prompt, choices[]?, concepts[], level, aiGenerated }`.
   - Answers, reference solutions and hidden tests never appear in the plan.
-- Endpoints (A1): `POST /v2/plan { videoId, learnerLevel? }` → plan (may be `planning`); `GET /v2/plan/{videoId}` → latest plan.
+- Endpoints (A1): `POST /v2/plan { videoId, learnerLevel?, learnerLevels? }` → plan (may be `planning`); `GET /v2/plan/{videoId}` → latest plan.
+  `learnerLevel` is the default level (omit → `beginner-1`); `learnerLevels` is an optional map `{ conceptId: levelId }` the
+  planner uses once a section's concepts are known. A3 sends the active account's known concept levels in this map.
   Plans are cached per video so the next viewer gets it instantly.
 
 ## 2. Feedback result (lane A2 produces, A3/B2 consume): `feedback-result.*.fixture.json`
@@ -42,7 +44,14 @@ fixtures, not against another lane's running code. Field changes go through the 
 
 ## 4. Public profile (B1 produces, B2 consumes): `public-profile.fixture.json`
 - `{ accountId, displayName, public, skills [{concept, level, levelName, xp, strength 0..1, lastPracticedAt, passed, tutorials}], highlights[], refresherDue[{concept, reason}], topInDemand[{concept, reason, videoUrl}], complements[{accountId, displayName, why}] }`.
+- `GET /v2/profile/{accountId}/level/{concept}` → `{ accountId, concept, level, levelName, rank, xp, strength }`
+  (unknown concept → `beginner-1`, rank 1, xp 0, strength 0). `GET /v2/profile/{accountId}/levels` → `{ accountId, levels: { conceptId: levelId } }`.
 - Endpoints (B1): `GET /v2/accounts` (local test accounts), `GET /v2/profile/{accountId}`, `GET /v2/profile/{accountId}/level/{concept}`,
   `GET /v2/refresher/{accountId}` → one refresher question or 204, `GET /v2/skills/in-demand`, `GET /v2/matches/{accountId}`.
 
 Accounts are local test accounts (`test-ana`, `test-ben`, …); there is no sign-in and no hosting in this release.
+
+## 5. Extension local storage (A3 owns reads/writes; B2's popup/settings UI uses A3's helpers)
+- `breakpoint:learner-settings` → `{ frequency: 'few'|'normal'|'many', autoPause: boolean, disabledVideos: string[] }`
+  (default `{ frequency: 'normal', autoPause: true, disabledVideos: [] }`).
+- `breakpoint:active-account` → account id string (default `test-ana`).
