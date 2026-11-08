@@ -24,6 +24,15 @@ import { planSolved, markPlanSolved } from '../src/plan/progress';
 import type { ExercisePlan, FeedbackResult, PracticeEvent } from '../src/v2/types';
 import { ConceptQuestionPanel, LearnerSettings as LearnerSettingsView, TopicNotAvailable } from '../src/ui/v2';
 import { saveLearnerSettings } from '../src/plan/preferences';
+import { seekForPractice } from '../src/plan/timeline';
+import * as V2Views from '../src/ui/v2';
+import type { ComponentType } from 'react';
+
+type TimelineProps = { markers: ReturnType<PlaybackSession['timelineMarkers']>; onSelect(id: string): void };
+// The presentation is B2-owned and may arrive in a later main merge. Keep the
+// playback path usable while that optional export is absent; never mount a
+// nonfunctional placeholder on top of YouTube's native controls.
+const TimelineMarkers = (V2Views as typeof V2Views & { TimelineMarkers?: ComponentType<TimelineProps> }).TimelineMarkers;
 
 // Keep the presentation contract shared with B2. accountId is wired ahead of
 // its draft-isolation follow-up; feedback uses the exact submitted snapshot.
@@ -76,7 +85,7 @@ export default defineContentScript({
     function practiceEvent(type: PracticeEvent['type'], active = session.active, extra: Partial<PracticeEvent> = {}) {
       const item = active?.planPause?.exercise ?? active?.planPause?.question;
       const context = eventContext(active);
-      if (!active || !item || !context || !session.videoId) return;
+      if (!active || active.reviewOnly || !item || !context || !session.videoId) return;
       emitEvent({ type, videoId: session.videoId, exerciseId: item.id, concepts: item.concepts, level: item.level,
         attempts: context.attempts, hintsUsed: context.hintsUsed, ...extra }, context.accountId);
     }
@@ -95,6 +104,10 @@ export default defineContentScript({
     let bindDeadline = 0;
     let bindExpired = false;
     let ui: ShadowRootContentScriptUi<Root> | undefined;
+    let timelineUi: ShadowRootContentScriptUi<Root> | undefined;
+    let timelineMounting = false;
+    let timelineSignature = '';
+    let timelineSelection: AbortController | undefined;
     let mounting = false;
     let uiFailed = false;
     let anchor: Element | null = null;
@@ -176,6 +189,7 @@ export default defineContentScript({
     };
 
     function render() {
+      void renderTimeline();
       if (!ui?.mounted || !isCurrent() || uiFailed) return;
       const active = session.active;
       if (active) eventContext(active);
@@ -258,6 +272,79 @@ export default defineContentScript({
           </div>}
         </div></TestMeContext.Provider></HintsContext.Provider>));
       } catch { failMount(); }
+    }
+
+    function cancelTimelineSelection() {
+      timelineSelection?.abort(); timelineSelection = undefined;
+    }
+
+    async function selectTimeline(id: string) {
+      const video = testMePlayer();
+      const marker = video && session.timelineMarkers(video.duration).find(m => m.id === id);
+      if (!video || !marker || session.active || session.testMe || !accountReady) return;
+      cancelTimelineSelection();
+      const controller = new AbortController(); timelineSelection = controller;
+      const generation = session.generation, account = accountId, source = video.currentSrc;
+      const ownsPause = !video.paused;
+      watch.reset(); session.reset();
+      const sought = await seekForPractice(video, marker.timeS, controller.signal);
+      if (timelineSelection !== controller) return;
+      timelineSelection = undefined;
+      const current = session.timelineMarkers(video.duration).find(m => m.id === id);
+      // Re-read every identity after the asynchronous seek. Polling may change
+      // readiness/timing, and navigation, account changes or native play must
+      // never reopen a stale challenge or credit the skipped watch interval.
+      if (!sought || !isCurrent() || generation !== session.generation || account !== accountId ||
+          source !== video.currentSrc || video !== currentPlayer() || !current || current.timeS !== marker.timeS ||
+          video.seeking || !video.paused || isAd() || isFullscreen() || !mountable() ||
+          document.visibilityState !== 'visible') return;
+      if (session.openFromTimeline(id, video.currentTime, ownsPause)) {
+        feedbackState = null; analysisState = null;
+        render(); focusPanel(); releaseEmptyPanel(video);
+      }
+    }
+
+    async function renderTimeline() {
+      if (!TimelineMarkers || !isCurrent()) return;
+      const video = player;
+      const movie = document.querySelector<HTMLElement>('#movie_player');
+      const bar = movie?.querySelector<HTMLElement>('.ytp-progress-bar');
+      const markers = video && playerReady && accountReady ? session.timelineMarkers(video.duration) : [];
+      if (!movie || !bar || !markers.length || isAd() || isFullscreen() || !mountable()) {
+        if (timelineUi) timelineUi.shadowHost.style.display = 'none';
+        return;
+      }
+      if (!timelineUi && !timelineMounting) {
+        const generation = session.generation;
+        timelineMounting = true;
+        try {
+          const created = await createShadowRootUi(ctx, {
+            name: 'breakpoint-timeline', position: 'inline', anchor: movie, append: 'last', isolateEvents: true,
+            css: `${themeCss}\n:host { all: initial; display: block; } .breakpoint-timeline { position: relative; width: 100%; height: 28px; pointer-events: none; } .breakpoint-timeline :is(button, summary, a, input) { pointer-events: auto; }`,
+            onMount: container => createRoot(container), onRemove: root => root?.unmount(),
+          });
+          if (generation !== session.generation || !isCurrent()) { created.remove(); return; }
+          timelineUi = created; timelineUi.mount(); timelineSignature = '';
+        } catch { return; }
+        finally { if (generation === session.generation) timelineMounting = false; }
+      }
+      if (!timelineUi?.mounted) return;
+      if (timelineUi.shadowHost.parentElement !== movie) movie.append(timelineUi.shadowHost);
+      const rect = bar.getBoundingClientRect(), parent = movie.getBoundingClientRect();
+      // A separate rail above the seekbar preserves native seeking and avoids
+      // editing YouTube's progress elements. Re-measure for theater/resizing.
+      Object.assign(timelineUi.shadowHost.style, {
+        position: 'absolute', left: `${rect.left - parent.left}px`, top: `${rect.top - parent.top - 30}px`,
+        width: `${rect.width}px`, height: '28px', zIndex: '60', pointerEvents: 'none',
+        display: rect.width > 0 && rect.height > 0 ? 'block' : 'none',
+      });
+      const signature = JSON.stringify([session.generation, accountId, markers, theme()]);
+      if (signature !== timelineSignature) {
+        timelineSignature = signature;
+        timelineUi.mounted.render(<div className="breakpoint-timeline" data-theme={theme()}>
+          <TimelineMarkers markers={markers} onSelect={id => void selectTimeline(id)} />
+        </div>);
+      }
     }
 
     function applyPlan() {
@@ -628,6 +715,7 @@ export default defineContentScript({
     }
 
     function bind(video: HTMLVideoElement) {
+      cancelTimelineSelection();
       stopPlayer();
       watch.reset();
       session.interrupt(); player = video; session.reset();
@@ -637,7 +725,8 @@ export default defineContentScript({
       const controller = new AbortController();
       const on = (name: string, listener: EventListener) => video.addEventListener(name, listener, { signal: controller.signal });
       const interrupt = () => { session.interrupt(); render(); };
-      on('loadedmetadata', () => { playerReady = video.readyState >= 1; session.reset(); if (testMeEnabled) render(); });
+      on('loadedmetadata', () => { playerReady = video.readyState >= 1; session.reset(); render(); });
+      on('durationchange', () => void renderTimeline());
       on('canplay', () => {
         // canplay without a metadata/source change may belong to the previous route.
         if (video !== oldPlayer || (!!video.currentSrc && video.currentSrc !== oldSource)) playerReady = true;
@@ -691,6 +780,8 @@ export default defineContentScript({
       const id = watchVideoId(location.href);
       lastHref = location.href;
       if (session.generation && id === session.videoId) return;
+      cancelTimelineSelection();
+      timelineUi?.remove(); timelineUi = undefined; timelineMounting = false; timelineSignature = '';
       watch.reset(); planLoader?.stop(); planLoader = undefined;
       plan = null; planSolvedIds.clear(); prepared = null; dismissedUnavailable = false; feedbackState = null; accountReady = false;
       oldPlayer = player; oldSource = player?.currentSrc ?? '';
@@ -715,6 +806,7 @@ export default defineContentScript({
     const onStorage = (changes: Record<string, { newValue?: unknown }>, area: string) => {
       if (area !== 'local') return;
       if (ACCOUNT_KEY in changes) {
+        cancelTimelineSelection();
         watch.reset();
         // Switching learners invalidates in-flight grading and hides the old
         // learner's draft/feedback. Release only a pause this attempt owns.
@@ -749,8 +841,10 @@ export default defineContentScript({
       // Theater changes the anchor without necessarily resizing the window or
       // replacing the player, including after the initial observer expires.
       void ensureUi();
+      void renderTimeline();
     }, 250);
     ctx.onInvalidated(() => { watch.reset(); planLoader?.stop(); browser.storage.onChanged.removeListener(onStorage);
+      cancelTimelineSelection(); timelineUi?.remove();
       stopPlayer(); observer?.disconnect(); ui?.remove(); session.navigate(null); });
     routeChanged();
   },
