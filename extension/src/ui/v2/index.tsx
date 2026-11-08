@@ -70,7 +70,8 @@ export function FeedbackCard({ feedback, code }: FeedbackCardProps) {
       <p>Target: {optimization.best.time} time · {optimization.best.space} space</p>
       {optimization.tip && <p>{optimization.tip}</p>}{optimization.betterSolution && <pre>{optimization.betterSolution}</pre>}
     </details>}
-    {feedback.diagnosis && <><h4>{feedback.diagnosis.misconception.name}</h4><p>{feedback.diagnosis.misconception.explanation}</p>
+    {feedback.diagnosis && <><h4>{feedback.diagnosis.misconception.name}</h4>
+      {feedback.diagnosis.misconception.explanation.trim() !== feedback.summary.trim() && <p>{feedback.diagnosis.misconception.explanation}</p>}
       {code && <FeedbackEditor code={code} lines={feedback.diagnosis.lines} />}
       <ul>{feedback.diagnosis.lines.map((item, index) => <li key={`${item.line}/${index}`}>Line {item.line}: {item.note}</li>)}</ul>
       {feedback.diagnosis.failingCase && <details><summary>Failing example</summary><pre>{JSON.stringify(feedback.diagnosis.failingCase, null, 2)}</pre></details>}</>}
