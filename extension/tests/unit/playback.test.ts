@@ -107,22 +107,22 @@ describe('automatic pause', () => {
 });
 
 describe('grading and resume ownership', () => {
-  it('keeps the video paused after Run passes, then resumes after Submit passes', () => {
+  it('keeps a passing Run in editing and allows resume after a passing Submit', () => {
     const session = paused();
     expect(session.finishGrade(session.beginGrade()!, 'run', { ok: true, data: passed })).toBe('stay');
     expect(session.active?.state).toBe('editing');
     const ticket = session.beginGrade()!;
     expect(session.beginGrade()).toBeNull();
-    expect(session.finishGrade(ticket, 'submit', { ok: true, data: passed })).toBe('resume');
+    expect(session.finishGrade(ticket, 'submit', { ok: true, data: passed })).toBe('passed');
     expect(session.canResume(ticket, 72, true)).toBe(true);
     expect(session.canResume(ticket, 73, true)).toBe(false);
   });
 
-  it('leaves a video paused by the learner under native control', () => {
+  it('unlocks review after Submit while leaving a learner-paused video under native control', () => {
     const session = ready();
     session.open(breakpoint, 72, false);
     const ticket = session.beginGrade()!;
-    expect(session.finishGrade(ticket, 'submit', { ok: true, data: passed })).toBe('stay');
+    expect(session.finishGrade(ticket, 'submit', { ok: true, data: passed })).toBe('passed');
     expect(session.canResume(ticket, 72, true)).toBe(false);
   });
 
@@ -212,7 +212,7 @@ describe('Test Me playback', () => {
     expect(session.active).toMatchObject({ generated: true, revision: generated.setId,
       breakpoint: { pauseAtS: 180.5, exercise: generated.exercise } });
     const grade = session.beginGrade()!;
-    expect(session.finishGrade(grade, 'submit', { ok: true, data: passed })).toBe('resume');
+    expect(session.finishGrade(grade, 'submit', { ok: true, data: passed })).toBe('passed');
     expect(session.canResume(grade, 180.5, true)).toBe(true);
     expect(session.solvedIds.size).toBe(0);
     expect(session.consumed.size).toBe(0);
@@ -228,6 +228,32 @@ describe('Test Me playback', () => {
     expect(session.finishTestMe(ticket, success)).toBe(false);
     expect(session.finishTestMe(retry, success)).toBe(true);
     expect(session.canResume(retry, 72, true)).toBe(false);
+  });
+
+  it('unlocks generated-solution review without taking ownership of a native pause', () => {
+    const session = ready();
+    session.finishTestMe(session.startTestMe(190, false)!, success);
+    const ticket = session.beginGrade()!;
+    expect(session.finishGrade(ticket, 'submit', { ok: true, data: passed })).toBe('passed');
+    expect(session.active?.state).toBe('passed');
+    expect(session.canResume(ticket, 190, true)).toBe(false);
+    expect(session.solvedIds.size).toBe(0);
+  });
+
+  it('invalidates review tickets when the same cached generated exercise is reopened', () => {
+    const session = ready();
+    session.finishTestMe(session.startTestMe(190, true)!, success);
+    const previousReview = session.beginGrade()!;
+    session.finishGrade(previousReview, 'submit', { ok: true, data: passed });
+    expect(session.isCurrent(previousReview)).toBe(true);
+    session.interrupt();
+    session.finishTestMe(session.startTestMe(190, true)!, success);
+    expect(session.active?.breakpoint.exercise.id).toBe(generated.exercise.id);
+    expect(session.isCurrent(previousReview)).toBe(false);
+    const currentReview = session.beginGrade()!;
+    session.finishGrade(currentReview, 'submit', { ok: true, data: passed });
+    expect(session.isCurrent(currentReview)).toBe(true);
+    expect(session.canResume(previousReview, 190, true)).toBe(false);
   });
 
   it('ignores a reply after a native playback interruption or navigation', () => {

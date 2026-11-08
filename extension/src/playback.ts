@@ -143,7 +143,7 @@ export class PlaybackSession {
     return this.ticket();
   }
 
-  finishGrade(ticket: Ticket, mode: 'run' | 'submit', reply: WorkerReply<SubmissionResponse>): 'ignored' | 'stay' | 'resume' {
+  finishGrade(ticket: Ticket, mode: 'run' | 'submit', reply: WorkerReply<SubmissionResponse>): 'ignored' | 'stay' | 'passed' {
     if (!this.isCurrent(ticket) || this.active!.state !== 'checking') return 'ignored';
     const active = this.active!;
     if (!reply.ok) {
@@ -154,7 +154,10 @@ export class PlaybackSession {
     if (reply.data.outcome === 'passed' && mode === 'submit') {
       if (!active.generated) this.solvedIds.add(active.breakpoint.exercise.id);
       active.state = 'passed';
-      return active.ownsPause ? 'resume' : 'stay';
+      // A passing Submit always unlocks the efficiency review. Pause ownership
+      // controls playback separately: opening practice on an already-paused
+      // video must not suppress feedback or grant permission to start it.
+      return 'passed';
     }
     active.state = reply.data.outcome === 'passed' ? 'editing' : 'failed';
     return 'stay';

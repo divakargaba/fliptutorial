@@ -50,8 +50,7 @@ export default defineContentScript({
     // A passed attempt lingers on its solved moment briefly before playback resumes.
     let holdTimer: ReturnType<typeof setTimeout> | undefined;
     // Efficiency review of the latest passing submission, keyed to its attempt.
-    let analysisState: { key: string; state: AnalysisState } | null = null;
-    const attemptKey = () => session.active ? `${session.generation}/${session.active.breakpoint.exercise.id}` : '';
+    let analysisState: { ticket: Ticket; state: AnalysisState } | null = null;
     const hints = {
       requestHint(input: { code: string; level: number; lastResult?: unknown; previousHints?: string[] }) {
         const a = session.active;
@@ -127,7 +126,9 @@ export default defineContentScript({
             index: Math.max(0, breakpoints.findIndex(b => b.id === active.breakpoint.id)), total: breakpoints.length,
           }),
           holdMs: SOLVED_HOLD_MS,
-          analysis: analysisState?.key === attemptKey() ? analysisState.state : null,
+          // Cached Test me sets may reuse the same exercise ID. Only the exact
+          // submission ticket may supply feedback to this panel instance.
+          analysis: analysisState && session.isCurrent(analysisState.ticket) ? analysisState.state : null,
           onRun: code => void grade('run', code), onSubmit: code => void grade('submit', code),
           onSkip: skip, onClose: skip, onResume: resumeNow,
         };
@@ -269,22 +270,25 @@ export default defineContentScript({
         if (!active.generated && mode === 'submit' && active.state === 'passed') {
           await markSolved(videoId, active.breakpoint.exercise.id, active.revision).catch(() => {});
         }
-        if (action === 'resume') {
+        // Persisting a prepared solve yields to storage. Navigation, Skip or a
+        // new attempt during that wait must not start an obsolete review.
+        if (!isCurrent() || !session.isCurrent(ticket)) return;
+        if (action === 'passed') {
           clearTimeout(holdTimer);
-          // Review efficiency before resuming: an inefficient pass stays on screen until the learner resumes.
-          const key = attemptKey();
-          analysisState = { key, state: { status: 'loading' } };
+          // Review every passing Submit, including learner-paused videos. An
+          // inefficient pass stays visible until the learner leaves the panel.
+          analysisState = { ticket, state: { status: 'loading' } };
           render();
           const review = await Promise.race([
             sendRequest({ type: 'analyze', exerciseId: active.breakpoint.exercise.id, revision: active.revision, code },
               AnalysisResponseSchema, send),
             new Promise<null>(done => setTimeout(() => done(null), 9000)),
           ]);
-          if (!isCurrent() || !session.isCurrent(ticket) || analysisState?.key !== key) return;
+          if (!isCurrent() || !session.isCurrent(ticket)) return;
           const data = review && review.ok ? review.data : null;
-          analysisState = { key, state: data ? { status: 'done', data } : { status: 'error' } };
+          analysisState = { ticket, state: data ? { status: 'done', data } : { status: 'error' } };
           render();
-          if (!data || data.optimal) {
+          if (active.ownsPause && (!data || data.optimal)) {
             holdTimer = setTimeout(() => { holdTimer = undefined; void resume(ticket); }, SOLVED_HOLD_MS);
           }
         }
