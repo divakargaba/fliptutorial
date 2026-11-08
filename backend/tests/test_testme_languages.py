@@ -142,4 +142,5 @@ def test_theory_and_language_neutral_sections_apply_the_idea_in_code(fmt, langua
 
 
 def test_ungradable_code_language_stays_concept():
-    assert planned_kind(_section("code", "rust"), _slot("concept_complete")) == "concept"
+    # Rust/Go/C/C#/TypeScript are graded by the stdio runner now; SQL code has no coding runner.
+    assert planned_kind(_section("code", "sql"), _slot("concept_complete")) == "concept"
