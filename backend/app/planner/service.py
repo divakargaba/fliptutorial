@@ -1,12 +1,14 @@
 """Background planning, plan cache and public plan (contracts/v2/README.md §1).
 
-``Planner.request(video_id, level)`` returns the current public plan at once and starts
-work in the background if needed ("pause only when ready"):
+``Planner.request(video_id, level, levels)`` returns the current public plan at once and
+starts work in the background if needed ("pause only when ready"):
 
 1. classification job per video: fetch captions, classify ~40-minute windows in order
    (earliest first), number/rank pauses window by window so ids stay stable;
 2. generation job per (video, level tier): generate pause items in time order, two at a
-   time, as soon as their window is classified.
+   time, as soon as their window is classified. Each pause is planned at the learner's
+   level for the pause's concept (``levels[concept]``, else the default ``level``), so a
+   tier only generates the pauses whose concept some request wants at that tier.
 
 Plans are cached on disk per video (``content/plans/<videoId>.json``, gitignored: it
 holds private answers) so the next viewer gets the plan instantly and a restarted server
@@ -37,7 +39,7 @@ from .generate import (
     GenerationFailed, ModelCall, PrivateExercise, PrivateQuestion, Verify, generate_coding, generate_question,
     public_exercise,
 )
-from .vocab import CODING_LANGUAGES, tier_of
+from .vocab import CODING_LANGUAGES, DEFAULT_LEVEL, concept_ids, tier_of
 
 logger = logging.getLogger("breakpoint.planner")
 
@@ -71,7 +73,23 @@ class Item:
 @dataclass
 class TierState:
     items: dict[str, Item] = field(default_factory=dict)
-    done: bool = False
+    want: set[str] = field(default_factory=set)  # concept ids some request wants at this tier (in memory)
+
+
+Levels = dict[str, str]  # conceptId -> levelId (learnerLevels)
+
+
+def slot_level(slot: PauseSlot, level: str, levels: Levels | None) -> str:
+    return (levels or {}).get(slot.concept) or level
+
+
+def wanted_concepts(level: str, levels: Levels | None) -> dict[str, set[str]]:
+    """tier -> concept ids that a request with this default level and per-concept map needs."""
+    levels = levels or {}
+    out: dict[str, set[str]] = {}
+    for c in set(concept_ids()) | set(levels):
+        out.setdefault(tier_of(levels.get(c) or level), set()).add(c)
+    return out
 
 
 @dataclass
@@ -124,7 +142,7 @@ def _dump_state(st: VideoState) -> dict:
         "cacheVersion": CACHE_VERSION, "videoId": st.video_id, "status": st.status, "reason": st.reason,
         "verdictEvidence": [e.dump() for e in st.verdict_evidence], "generatedAt": st.generated_at,
         "sections": [sec(s) for s in st.sections],
-        "tiers": {t: {"done": ts.done, "items": {k: item(v) for k, v in ts.items.items()}} for t, ts in st.tiers.items()},
+        "tiers": {t: {"items": {k: item(v) for k, v in ts.items.items()}} for t, ts in st.tiers.items()},
     }
 
 
@@ -137,7 +155,7 @@ def _load_state(d: dict) -> VideoState:
         sec.pauses = [PauseSlot(**p) for p in s.get("pauses", [])]
         st.sections.append(sec)
     for t, ts in d.get("tiers", {}).items():
-        tier = TierState(done=ts.get("done", False))
+        tier = TierState()
         for k, v in ts.get("items", {}).items():
             it = Item(v["kind"], v.get("status", "pending"))
             if "exercise" in v:
@@ -146,8 +164,6 @@ def _load_state(d: dict) -> VideoState:
                                               e["concepts"], e["level"], e["language"])
             if "question" in v:
                 it.question = PrivateQuestion.load(v["question"])
-            if it.status == "pending":
-                tier.done = False
             tier.items[k] = it
         st.tiers[t] = tier
     if st.status == "planning":  # interrupted classification: redo it
@@ -205,6 +221,7 @@ class Planner:
     _tasks: dict[str, asyncio.Task] = field(default_factory=dict)
     _starts: list[float] = field(default_factory=list)
     _transcripts: dict[str, Transcript] = field(default_factory=dict)
+    _specs: dict[str, tuple[str, Levels]] = field(default_factory=dict)  # latest POST levels per video
 
     # -- public API -----------------------------------------------------------
 
@@ -219,26 +236,34 @@ class Planner:
                 self._states[video_id] = st
         return st
 
-    def peek(self, video_id: str, level: str) -> dict | None:
+    def peek(self, video_id: str, level: str | None = None) -> dict | None:
+        """Latest plan with the levels of the latest request for this video (``level`` overrides its default)."""
         st = self.state(video_id)
-        return public_plan(st, level) if st else None
+        if not st:
+            return None
+        last_level, levels = self._specs.get(video_id, (DEFAULT_LEVEL, {}))
+        return public_plan(st, level or last_level, levels)
 
-    def request(self, video_id: str, level: str) -> dict:
+    def request(self, video_id: str, level: str, levels: Levels | None = None) -> dict:
+        levels = dict(levels or {})
+        self._specs[video_id] = (level, levels)
         st = self.state(video_id)
         if st is None:
             if not self._take_slot():
                 st = VideoState(video_id, "error", "Planner is at its hourly limit; try again later.",
                                 expires_at=self.clock() + ERROR_TTL_S)
-                return public_plan(st, level)
+                return public_plan(st, level, levels)
             st = VideoState(video_id)
             self._states[video_id] = st
         if not st.classified:
             self._spawn(f"c:{video_id}", self._classify(st))
-        tier = tier_of(level)
-        if st.status in ("planning", "classified") and not (tier in st.tiers and st.tiers[tier].done):
-            st.tiers.setdefault(tier, TierState())
-            self._spawn(f"g:{video_id}:{tier}", self._generate(st, tier))
-        return public_plan(st, level)
+        if st.status in ("planning", "classified"):
+            for tier, concepts in wanted_concepts(level, levels).items():
+                ts = st.tiers.setdefault(tier, TierState())
+                ts.want |= concepts
+                if not st.classified or _unstarted(st, ts):
+                    self._spawn(f"g:{video_id}:{tier}", self._generate(st, tier))
+        return public_plan(st, level, levels)
 
     async def wait_idle(self) -> None:
         """Test helper: wait until all background work has finished."""
@@ -281,7 +306,7 @@ class Planner:
         return True
 
     def _spawn(self, key: str, coro) -> None:
-        if key in self._tasks:
+        if key in self._tasks and not self._tasks[key].done():
             coro.close()
             return
         task = asyncio.get_running_loop().create_task(coro)
@@ -367,7 +392,7 @@ class Planner:
 
     async def _generate(self, st: VideoState, tier: str) -> None:
         """Generate items in pause order (semaphore is FIFO, so earliest pauses first),
-        picking up newly classified windows as they arrive."""
+        picking up newly classified windows and newly wanted concepts as they arrive."""
         ts = st.tiers.setdefault(tier, TierState())
         sem = asyncio.Semaphore(self.gen_concurrency)
         started: set[str] = set()
@@ -376,7 +401,7 @@ class Planner:
             while True:
                 progress = st.progress  # capture before scanning so no update is missed
                 for slot in st.slots:
-                    if slot.id in started:
+                    if slot.id in started or slot.concept not in ts.want:
                         continue
                     started.add(slot.id)
                     it = ts.items.get(slot.id)
@@ -384,11 +409,12 @@ class Planner:
                         continue
                     tasks.append(asyncio.get_running_loop().create_task(self._guarded(sem, st, ts, tier, slot)))
                 if st.classified:
-                    break
-                await progress.wait()
-            await asyncio.gather(*tasks)
+                    await asyncio.gather(*tasks)
+                    if not any(s.id not in started and s.concept in ts.want for s in st.slots):
+                        break  # else a request widened ``want`` while we waited: start those too
+                else:
+                    await progress.wait()
             if st.status == "classified":
-                ts.done = True
                 self.store.save(st)
         except Exception:
             logger.exception("planner generate failed video=%s tier=%s", st.video_id, tier)
@@ -430,21 +456,32 @@ class Planner:
 # ---------------------------------------------------------------------------
 
 
-def public_plan(st: VideoState, level: str) -> dict:
-    tier = tier_of(level)
+def _unstarted(st: VideoState, ts: TierState) -> bool:
+    return any(s.concept in ts.want and (s.id not in ts.items or ts.items[s.id].status == "pending")
+               for s in st.slots)
+
+
+def _slot_item(st: VideoState, slot: PauseSlot, level: str, levels: Levels | None) -> tuple[str, Item | None]:
+    tier = tier_of(slot_level(slot, level, levels))
     ts = st.tiers.get(tier)
+    return tier, (ts.items.get(slot.id) if ts else None)
+
+
+def public_plan(st: VideoState, level: str, levels: Levels | None = None) -> dict:
+    """Public plan for one learner: each pause uses the level for its concept, else ``level``."""
+    slots = st.slots
+    picked = [_slot_item(st, slot, level, levels) for slot in slots]
     if st.status in ("not_coding", "no_captions", "error"):
         status = st.status
-    elif st.status == "classified" and ts is not None and ts.done:
+    elif st.status == "classified" and all(it is not None and it.status != "pending" for _, it in picked):
         status = "ready"
     else:
         status = "planning"
 
     pauses: list[dict] = []
     if status in ("planning", "ready"):
-        for slot in st.slots:
+        for slot, (_, it) in zip(slots, picked):
             section = st.sections[slot.section_index]
-            it = ts.items.get(slot.id) if ts else None
             if it is not None and it.status == "failed":
                 continue
             ready = it is not None and it.status == "ready"
@@ -460,7 +497,7 @@ def public_plan(st: VideoState, level: str) -> dict:
             pauses.append(p)
 
     sections = [s.dump() for s in st.sections] if status in ("planning", "ready", "not_coding") else []
-    digest = hashlib.sha256(json.dumps([sections, [(p["id"], p["ready"]) for p in pauses], tier]).encode()).hexdigest()[:8]
+    digest = hashlib.sha256(json.dumps([sections, [(p["id"], p["ready"]) for p in pauses], [t for t, _ in picked]]).encode()).hexdigest()[:8]
     qualifies = status in ("planning", "ready") and any(s.qualifies for s in st.sections)
     reason = st.reason or ("Planning this video…" if st.status == "planning" else "")
     return {

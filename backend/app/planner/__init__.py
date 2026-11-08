@@ -1,8 +1,10 @@
 """Lane A1 (@abdullahwarraichh): video/section classifier and exercise plans. See contracts/v2/README.md §1.
 
 Endpoints:
-  POST /v2/plan { videoId, learnerLevel? } -> ExercisePlan (may be ``planning``; poll GET)
-  GET  /v2/plan/{videoId}?learnerLevel=   -> latest ExercisePlan, 404 PLAN_NOT_FOUND if never requested
+  POST /v2/plan { videoId, learnerLevel?, learnerLevels? } -> ExercisePlan (may be ``planning``; poll GET).
+       Each pause is planned at ``learnerLevels[pause concept]``, else at ``learnerLevel`` (default beginner-1).
+  GET  /v2/plan/{videoId}?learnerLevel=   -> latest ExercisePlan with the levels of the latest POST
+       (``learnerLevel`` overrides its default level); 404 PLAN_NOT_FOUND if never requested
 
 For lane A2 (grading planned items; private data never leaves the backend):
   ``find_exercise(exercise_id)`` -> PrivateExercise | None   (.exercise is a v1 ``ApprovedExercise``
@@ -23,7 +25,7 @@ from ..catalog import VIDEO_ID_RE, ApprovedExercise
 from ..transcripts import Transcript, TranscriptFetcher
 from .generate import PrivateExercise, PrivateQuestion
 from .service import Planner, PlannerUnavailable
-from .vocab import DEFAULT_LEVEL, is_level
+from .vocab import DEFAULT_LEVEL, concept_ids, is_level
 
 router = APIRouter(prefix="/v2", tags=["planner"])
 
@@ -132,9 +134,13 @@ def _error(status: int, code: str, message: str) -> JSONResponse:
         "error": {"code": code, "message": message, "retryable": False}, "requestId": uuid.uuid4().hex[:12]})
 
 
+MAX_LEARNER_LEVELS = 500
+
+
 class PlanRequest(BaseModel):
     videoId: str
     learnerLevel: str | None = None
+    learnerLevels: dict[str, str] | None = None  # {conceptId: levelId}, applied per pause concept
 
 
 def _check(video_id: str, level: str | None) -> JSONResponse | str:
@@ -151,7 +157,12 @@ async def create_plan(body: PlanRequest) -> JSONResponse:
     level = _check(body.videoId, body.learnerLevel)
     if isinstance(level, JSONResponse):
         return level
-    return JSONResponse(content=get_planner().request(body.videoId, level))
+    levels = body.learnerLevels or {}
+    if len(levels) > MAX_LEARNER_LEVELS or not all(is_level(v) for v in levels.values()):
+        return _error(422, "INVALID_LEVEL", "learnerLevels must map concept ids to level ids from contracts/v2/levels.json")
+    known = set(concept_ids())  # concepts outside the vocabulary never match a pause: drop them
+    levels = {c: v for c, v in levels.items() if c in known}
+    return JSONResponse(content=get_planner().request(body.videoId, level, levels))
 
 
 @router.get("/plan/{video_id}")
@@ -159,7 +170,7 @@ async def get_plan(video_id: str, learnerLevel: str | None = None) -> JSONRespon
     level = _check(video_id, learnerLevel)
     if isinstance(level, JSONResponse):
         return level
-    plan = get_planner().peek(video_id, level)
+    plan = get_planner().peek(video_id, level if learnerLevel else None)
     if plan is None:
         return _error(404, "PLAN_NOT_FOUND", "no plan for this video yet; POST /v2/plan first")
     return JSONResponse(content=plan)

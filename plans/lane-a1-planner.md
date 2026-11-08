@@ -24,6 +24,10 @@ Any YouTube video id → a cached, timestamped exercise plan before the learner 
 - [x] `POST /v2/plan`, `GET /v2/plan/{videoId}?learnerLevel=` (`backend/app/planner/`): returns at once (`planning`), plans in the
   background, earliest ~40-min window first; pause ids stay stable while later windows are classified. 404 `PLAN_NOT_FOUND`,
   422 `INVALID_VIDEO_ID` / `INVALID_LEVEL`.
+- [x] `learnerLevels` (contract `5874edc`): `POST /v2/plan { videoId, learnerLevel?, learnerLevels? }` plans each pause at
+  `learnerLevels[pause concept]`, else `learnerLevel` (default `beginner-1`). Only the needed (tier, concept) items are generated;
+  a wider map later generates just the new items. `GET /v2/plan/{videoId}` uses the latest POST's levels (`?learnerLevel=` overrides
+  the default). Bad level values → 422 `INVALID_LEVEL`; concept ids outside `concepts.json` are ignored.
 - [x] Goal 1: section classifier (code / theory / mixed / off_topic, `qualifies`, confidence) over ~20 s caption blocks.
   Every block id the model cites is checked; evidence text is copied from the real captions. Low confidence or no
   evidence means the section does not qualify. No qualifying section means `not_coding` (stops after the first window if it is clearly not programming).
@@ -42,7 +46,7 @@ Any YouTube video id → a cached, timestamped exercise plan before the learner 
   no translation. Payload cap raised 8 → 48 MB (CS50P's 9 h ASR track is 19 MB and failed before).
 - [x] For A2: `app.planner.find_exercise(id)` returns the PrivateExercise (`.exercise` is a v1 ApprovedExercise with hidden tests and solutions, plus `.revision`,
   `.concepts`, `.level`), and `find_question(id)` returns the PrivateQuestion (`.answer`, `.explanation`, `.style`, `.choices`, `.revision`).
-- Checks: `backend/tests/test_planner.py` passes 19/19 offline (stubbed Claude/Judge0/captions) and the full backend suite passes. Live smoke on 2026-11-08 (port 8011,
+- Checks: `backend/tests/test_planner.py` passes 21/21 offline (stubbed Claude/Judge0/captions) and the full backend suite passes. Live smoke on 2026-11-08 (port 8011,
   real Claude + ce.judge0.com): `dQw4w9WgXcQ` gave `not_coding` ("only song lyrics…"). `nLRL_NcnK-4` (CS50P) had 18 sections / 13 pauses after the first windows, and the first
   pause was ready in about 1 min; the 2 coding exercises passed Judge0 verify. No secrets were in the public plan. `python -m app.planner.inspect_plan <videoId> <port> [--wait s]` prints a summary.
 - [ ] Goal 6: answer-on-screen check with storyboard frames (today: `question_posed` pauses before the reveal; demonstrations get a new problem).

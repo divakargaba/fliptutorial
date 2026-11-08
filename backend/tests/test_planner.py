@@ -398,6 +398,47 @@ def test_numberer_cap_keeps_best_ranked():
     assert [p.id for p in kept] == ["p1", "p2"]
 
 
+def test_learner_levels_set_level_per_pause_concept(tmp_path):
+    model = StubModel()
+    p = make_planner(tmp_path, model=model)
+    levels = {"loops": "intermediate-2"}
+
+    async def go():
+        p.request("vidPlanner1", "beginner-1", levels)
+        await p.wait_idle()
+        return p.request("vidPlanner1", "beginner-1", levels)
+
+    plan = asyncio.run(go())
+    assert plan["status"] == "ready" and plan["learnerLevel"] == "beginner-1"
+    coding = [x for x in plan["pauses"] if x["kind"] == "coding"]
+    concept = [x for x in plan["pauses"] if x["kind"] == "concept"]
+    assert coding and all(x["exercise"]["level"].startswith("intermediate") for x in coding)
+    assert concept and all(x["question"]["level"].startswith("beginner") for x in concept)
+    # Only the wanted tier per concept is generated: no beginner loops items, no intermediate complexity items.
+    assert model.count("GenOutput") == len(coding) and model.count("QuestionOut") == len(concept)
+    assert p.peek("vidPlanner1") == plan  # GET without a level uses the latest POST's levels
+
+
+def test_widening_learner_levels_generates_only_new_items(tmp_path):
+    p = make_planner(tmp_path)
+    asyncio.run(run_to_ready(p))
+    model = StubModel()
+    p.model_call = model
+
+    async def go():
+        first = p.request("vidPlanner1", "beginner-1", {"complexity": "advanced-1"})
+        await p.wait_idle()
+        return first, p.request("vidPlanner1", "beginner-1", {"complexity": "advanced-1"})
+
+    first, plan = asyncio.run(go())
+    assert first["status"] == "planning"
+    assert plan["status"] == "ready"
+    q = next(x for x in plan["pauses"] if x["kind"] == "concept")
+    assert q["question"]["level"].startswith("advanced")
+    assert model.count("QuestionOut") == 1 and model.count("GenOutput") == 0 and model.count("WindowOut") == 0
+    assert p.request("vidPlanner1", "beginner-1")["status"] == "ready"  # beginner items still cached
+
+
 def test_make_blocks_groups_cues():
     blocks = make_blocks(make_transcript(100))
     assert [b.id for b in blocks] == ["b0", "b1", "b2", "b3", "b4"]
@@ -433,3 +474,10 @@ def test_api_validation_and_get(client):
     assert body["status"] in ("planning", "ready")
     g = client.get("/v2/plan/vidPlanner1")
     assert g.status_code == 200 and g.json()["videoId"] == "vidPlanner1"
+
+    r = client.post("/v2/plan", json={"videoId": "vidPlanner1", "learnerLevels": {"loops": "wizard-9"}})
+    assert r.status_code == 422 and r.json()["error"]["code"] == "INVALID_LEVEL"
+    r = client.post("/v2/plan", json={"videoId": "vidPlanner1", "learnerLevel": "beginner-2",
+                                      "learnerLevels": {"loops": "advanced-1", "not-a-concept": "expert-1"}})
+    assert r.status_code == 200 and r.json()["learnerLevel"] == "beginner-2"
+    assert client.get("/v2/plan/vidPlanner1").json()["learnerLevel"] == "beginner-2"
