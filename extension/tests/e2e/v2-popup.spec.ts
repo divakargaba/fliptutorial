@@ -12,6 +12,8 @@ test('v2 built popup loads local profile and persists account and settings', asy
   await popup.getByLabel('Viewing as').selectOption('test-ben');
   await expect(popup.getByRole('heading', { name: 'Ben', exact: true, level: 1 })).toBeVisible();
   await popup.getByRole('button', { name: 'Settings' }).click();
+  await popup.getByRole('button', { name: 'Side panel', exact: true }).click();
+  await expect(popup.getByRole('button', { name: 'Side panel', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await popup.getByRole('radio', { name: 'Fewer' }).click();
   await popup.getByRole('switch', { name: /Pause for practice/ }).uncheck();
   await expect.poll(() => popup.evaluate(async () => {
@@ -21,6 +23,7 @@ test('v2 built popup loads local profile and persists account and settings', asy
   await popup.reload();
   await expect(popup.getByRole('heading', { name: 'Ben', exact: true, level: 1 })).toBeVisible();
   await popup.getByRole('button', { name: 'Settings' }).click();
+  await expect(popup.getByRole('button', { name: 'Side panel', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(popup.getByRole('radio', { name: 'Fewer' })).toHaveAttribute('aria-checked', 'true');
   await expect(popup.getByRole('switch', { name: /Pause for practice/ })).not.toBeChecked();
   await popup.screenshot({ path: info.outputPath('profile-popup.png'), fullPage: true });

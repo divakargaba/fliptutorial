@@ -12,10 +12,13 @@ import plan from '../../../contracts/v2/exercise-plan.fixture.json';
 import failed from '../../../contracts/v2/feedback-result.failed.fixture.json';
 import passed from '../../../contracts/v2/feedback-result.passed.fixture.json';
 import profile from '../../../contracts/v2/public-profile.fixture.json';
+import { PRACTICE_LAYOUT_KEY, readPracticeLayout, type PracticeLayout } from '../../src/ui/workspace-preference';
 import { ACCOUNT_KEY, SETTINGS_KEY, readAccount, readSettings } from '../../src/plan/settings';
 
 // The preview has no extension context; production uses A3's browser helpers.
 const previewPreferences = {
+  async loadPracticeLayout() { return readPracticeLayout(localStorage.getItem(PRACTICE_LAYOUT_KEY)); },
+  async savePracticeLayout(value: PracticeLayout) { localStorage.setItem(PRACTICE_LAYOUT_KEY, value); },
   async loadActiveAccount() { return readAccount(JSON.parse(localStorage.getItem(ACCOUNT_KEY) ?? 'null')); },
   async loadLearnerSettings() { return readSettings(JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? 'null') ?? undefined); },
   async setActiveAccount(value: string) { localStorage.setItem(ACCOUNT_KEY, JSON.stringify(value)); },
@@ -24,6 +27,19 @@ const previewPreferences = {
 
 const params = new URLSearchParams(location.search);
 const state = params.get('state') ?? 'question';
+if (state === 'profile-demo') {
+  const demoFields = ['Energy data analytics', 'Cybersecurity', 'Data science & AI'].map((name, index) => ({
+    id: `field-${index}`, name, summary: 'Build practical skills through short coding exercises.', rising: true,
+    postings: { calgary: [40, 17, 28][index], alberta: 60, canada: [80, 204, 120][index], count: 60, where: 'Calgary', scope: 'city', searchUrl: 'https://www.adzuna.ca/search', titleContains: name },
+    skills: (index === 0 ? ['Excel', 'SQL', 'Power BI', 'Python'] : index === 1 ? ['Networking', 'Azure', 'Python'] : ['Python', 'SQL', 'Machine learning']).map(name => ({ name, tracked: name === 'Python', level: null })),
+    alsoAskedFor: [], tutorials: [],
+  }));
+  globalThis.fetch = async input => {
+    const path = new URL(typeof input === 'string' ? input : input instanceof URL ? input.href : input.url, location.href).pathname;
+    const data = path.endsWith('/accounts') ? [{ accountId: 'test-ana', displayName: 'Ana (test)' }] : path.includes('/skills/fields') ? { pulledAt: '2026-11-08', sources: [], fields: demoFields } : profile;
+    return new Response(JSON.stringify(data), { headers: { 'Content-Type': 'application/json' } });
+  };
+}
 const theme = params.get('theme') === 'light' ? 'light' : 'dark';
 Object.assign(globalThis, { chrome: { storage: { local: {
   async get(keys: string | string[]) { return Object.fromEntries((Array.isArray(keys) ? keys : [keys]).map(key => [key, JSON.parse(localStorage.getItem(key) ?? 'null')])); },
@@ -35,7 +51,7 @@ const host = document.querySelector('#root')!;
 const shadow = host.attachShadow({ mode: 'open' });
 const style = document.createElement('style'); style.textContent = css; shadow.append(style);
 const mount = document.createElement('div'); mount.className = 'breakpoint-shell'; mount.dataset.theme = theme;
-mount.style.cssText = `width:min(${state.startsWith('profile') ? '600' : '460'}px,calc(100% - 32px));margin:24px auto`;
+mount.style.cssText = `width:min(${state.startsWith('profile') ? (state === 'profile-demo' ? '400' : '600') : '460'}px,calc(100% - 32px));margin:24px auto`;
 shadow.append(mount);
 const code = 'def raise_to_power(base_num, pow_num):\n    result = 1\n    while pow_num > 0:\n        result *= base_num\n    return result';
 function Showcase() {
@@ -55,7 +71,7 @@ function Showcase() {
       { ...pauses[0]!, id: 'missing-exercise', exercise: null, pauseAtS: 7000 },
     ]} passedIds={new Set(['later'])} onOpen={setAction} /><output aria-label="Opened challenge">{action}</output></>;
   }
-  if (state === 'profile-live') return <ProfilePage preferences={previewPreferences} />;
+  if (state === 'profile-live' || state === 'profile-demo') return <ProfilePage preferences={previewPreferences} />;
   if (state === 'profile') return <ProfileView profile={profile as PublicProfile} />;
   if (state === 'coding-language' || state === 'coding-accounts') {
     const language = (params.get('language') ?? 'javascript') as Language;
