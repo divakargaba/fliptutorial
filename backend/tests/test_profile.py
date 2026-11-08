@@ -33,6 +33,14 @@ def _client(store: ProfileStore) -> TestClient:
     return TestClient(app)
 
 
+@pytest.fixture(autouse=True)
+def no_generator():
+    """Offline: lane A2's refresher generator is off unless a test installs a stub."""
+    skills.set_generator(None)
+    yield
+    skills.set_generator(skills._UNSET)
+
+
 @pytest.fixture()
 def empty(tmp_path):
     client = _client(ProfileStore(tmp_path / "p.db", seed=False))
@@ -232,6 +240,111 @@ def test_refresher_bank_covers_every_concept_with_valid_answers():
     assert skills.lookup_refresher("nope") is None
 
 
+def _due_sorting(client) -> dict:
+    client.post("/v2/events", json={"events": [_pass(1, "sorting", NOW)]})
+    return {"now": engine.iso(NOW + timedelta(days=3))}
+
+
+GOOD = {"title": "Stable sort", "prompt": "Which property keeps equal keys in their original order?",
+        "choices": ["Stability", "In-place", "Adaptivity"], "answer": "Stability",
+        "explanation": "A stable sort never reorders equal keys."}
+
+
+def test_generated_refresher_is_cached_graded_and_replaced_after_answer(empty, tmp_path):
+    calls = []
+
+    async def gen(concept, name, level, avoid):
+        calls.append((concept, name, level, list(avoid)))
+        n = len(calls)
+        return {**GOOD, "prompt": f"{GOOD['prompt']} (v{n})"}
+
+    skills.set_generator(gen)
+    later = _due_sorting(empty)
+    first = empty.get("/v2/refresher/test-x", params=later).json()
+    q = first["question"]
+    assert q["id"].startswith("rf-gen-sorting-") and q["aiGenerated"] is True and q["style"] == "multiple_choice"
+    assert q["level"] == "beginner-1" and [c["id"] for c in q["choices"]] == ["a", "b", "c"]
+    assert "answer" not in json.dumps(first) and "explanation" not in q
+    assert calls == [("sorting", engine.CONCEPTS["sorting"]["name"], "beginner-1", [])]
+    # Same question again until answered (no second model call).
+    assert empty.get("/v2/refresher/test-x", params=later).json()["question"] == q and len(calls) == 1
+    # Lane A2 grades it by id.
+    found = skills.lookup_refresher(q["id"])
+    assert found["answer"] == "a" and found["question"] == q and found["explanation"]
+    # Persisted: a fresh store on the same file still finds it.
+    assert ProfileStore(profile.get_store().path, seed=False).get_generated(q["id"])["answer"] == "a"
+    answered = {"id": "r1", "accountId": "test-x", "at": later["now"], "type": "refresher_answered",
+                "exerciseId": q["id"], "concepts": ["sorting"], "correct": False}
+    empty.post("/v2/events", json={"events": [answered]})
+    days_on = {"now": engine.iso(NOW + timedelta(days=6))}  # answering resets decay; due again later
+    second = empty.get("/v2/refresher/test-x", params=days_on).json()["question"]
+    assert second["id"] != q["id"] and second["aiGenerated"] and calls[1][3] == [q["prompt"]]
+
+
+def test_generation_is_bounded_per_concept_level(empty, monkeypatch):
+    monkeypatch.setattr(skills, "MAX_GENERATED_PER_LEVEL", 2)  # small enough that the level stays beginner-1
+    n = 0
+
+    def gen(concept, name, level, avoid):  # sync generators work too
+        nonlocal n
+        n += 1
+        return {**GOOD, "prompt": f"{GOOD['prompt']} #{n}"}
+
+    skills.set_generator(gen)
+    empty.post("/v2/events", json={"events": [_pass(1, "sorting", NOW, hintsUsed=3)]})  # low XP: stays beginner-1
+    seen = []
+    for i in range(skills.MAX_GENERATED_PER_LEVEL + 1):
+        later = {"now": engine.iso(NOW + timedelta(days=3 * (i + 1)))}  # each answer resets decay
+        q = empty.get("/v2/refresher/test-x", params=later).json()["question"]
+        seen.append(q["id"])
+        empty.post("/v2/events", json={"events": [{
+            "id": f"r{i}", "accountId": "test-x", "at": later["now"], "type": "refresher_answered",
+            "exerciseId": q["id"], "concepts": ["sorting"], "correct": False}]})
+    assert n == 2 and seen[:2] == sorted(set(seen[:2]), key=seen.index) and seen[0].startswith("rf-gen-")
+    assert seen[1].startswith("rf-gen-") and seen[2] == "rf-sorting-1"  # cap reached: the stored bank
+    level = empty.get("/v2/profile/test-x/level/sorting", params={"now": engine.iso(NOW)}).json()["level"]
+    assert level == "beginner-1" and len(profile.get_store().generated_for("sorting", "beginner-1")) == 2
+
+
+@pytest.mark.parametrize("bad", [
+    None, "text", {**GOOD, "answer": "Nope"}, {**GOOD, "choices": ["only one"]}, {**GOOD, "prompt": "short"},
+    {**GOOD, "choices": ["Stability", "stability", "x"]}, {k: v for k, v in GOOD.items() if k != "explanation"},
+])
+def test_invalid_generated_output_falls_back_to_stored_bank(empty, bad):
+    skills.set_generator(lambda *a: bad)
+    later = _due_sorting(empty)
+    assert empty.get("/v2/refresher/test-x", params=later).json()["question"]["id"] == "rf-sorting-1"
+
+
+def test_failing_or_slow_generator_falls_back_and_backs_off(empty, monkeypatch):
+    calls = 0
+
+    async def slow(*a):
+        nonlocal calls
+        calls += 1
+        await __import__("asyncio").sleep(5)
+
+    monkeypatch.setattr(skills, "GENERATE_TIMEOUT_S", 0.05)
+    skills.set_generator(slow)
+    later = _due_sorting(empty)
+    for _ in range(2):
+        q = empty.get("/v2/refresher/test-x", params=later).json()["question"]
+        assert q["id"] == "rf-sorting-1" and q["aiGenerated"] is False
+    assert calls == 1  # no retry within the back-off window
+
+    def boom(*a):
+        raise RuntimeError("no key")
+
+    skills.set_generator(boom)
+    assert empty.get("/v2/refresher/test-x", params=later).json()["question"]["id"] == "rf-sorting-1"
+
+
+def test_generator_can_be_disabled_by_env(monkeypatch):
+    skills.set_generator(skills._UNSET)
+    monkeypatch.setenv("BREAKPOINT_REFRESHER_GENERATE", "0")
+    assert skills.get_generator() is None
+
+
 def test_seeded_refreshers(seeded):
     ana = seeded.get("/v2/refresher/test-ana", params=NOW_Q).json()
     assert ana["concept"] == "lists" and ana["question"]["style"] == "multiple_choice"
@@ -257,6 +370,26 @@ def test_profile_matches_public_contract_shape(seeded):
     assert "watched" not in json.dumps(body).lower()  # watch history never exposed
     assert [s["concept"] for s in body["skills"]][0] == "loops"
     assert body["highlights"][0].startswith("Loops · 6 challenges passed across 2 tutorials")
+
+
+def test_public_toggle_controls_profile_and_matching(seeded):
+    assert seeded.get("/v2/matches/test-cam", params=NOW_Q).json()["matches"][0]["accountId"] == "test-ben"
+    r = seeded.post("/v2/profile/test-ben/public", json={"public": False})
+    assert r.status_code == 200 and r.json() == {"accountId": "test-ben", "displayName": "Ben (test)", "public": False}
+    assert seeded.get("/v2/profile/test-ben", params=NOW_Q).json()["public"] is False
+    for acct in ("test-ana", "test-cam", "test-dee"):
+        assert all(m["accountId"] != "test-ben" for m in seeded.get(f"/v2/matches/{acct}", params=NOW_Q).json()["matches"])
+        assert all(c["accountId"] != "test-ben"
+                   for c in seeded.get(f"/v2/profile/{acct}", params=NOW_Q).json()["complements"])
+    accts = {a["accountId"]: a["public"] for a in seeded.get("/v2/accounts").json()["accounts"]}
+    assert accts["test-ben"] is False and accts["test-ana"] is True
+    assert seeded.post("/v2/profile/test-eli/public", json={"public": True}).json()["public"] is True
+    assert seeded.post("/v2/profile/test-ben/public", json={"public": True}).json()["public"] is True
+    assert seeded.get("/v2/matches/test-cam", params=NOW_Q).json()["matches"][0]["accountId"] == "test-ben"
+    assert seeded.post("/v2/profile/nobody/public", json={"public": True}).status_code == 404
+    for bad in ({"public": "yes"}, {}, [True]):
+        assert seeded.post("/v2/profile/test-ben/public", json=bad).status_code == 400
+    assert seeded.post("/v2/profile/test-ben/public", content=b"{").status_code == 400
 
 
 def test_unknown_account_concept_and_bad_now(seeded):

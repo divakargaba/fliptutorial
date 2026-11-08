@@ -1,0 +1,97 @@
+{
+  "language": "java",
+  "exercise": {
+    "id": "test-java-factorial",
+    "revision": "r1",
+    "title": "Factorial",
+    "language": "java",
+    "statement": "Write a static method factorial(n) in class Solution that returns the factorial of n.",
+    "functionName": "factorial",
+    "starterCode": "class Solution {\n    public static int factorial(int n) {\n        // your code here\n        return 0;\n    }\n}\n",
+    "concepts": ["loops", "recursion", "functions"],
+    "level": "beginner-3",
+    "examples": [
+      {"args": [5], "expected": 120},
+      {"args": [0], "expected": 1},
+      {"args": [1], "expected": 1}
+    ],
+    "hiddenTests": [
+      {"args": [3], "expected": 6},
+      {"args": [7], "expected": 5040},
+      {"args": [10], "expected": 3628800}
+    ],
+    "referenceSolution": "class Solution {\n    public static int factorial(int n) {\n        int result = 1;\n        for (int i = 2; i <= n; i++) {\n            result *= i;\n        }\n        return result;\n    }\n}\n"
+  },
+  "submissions": [
+    {
+      "id": "java-pass-1",
+      "code": "class Solution {\n    public static int factorial(int n) {\n        int result = 1;\n        for (int i = 1; i <= n; i++) {\n            result *= i;\n        }\n        return result;\n    }\n}\n",
+      "expectedOutcome": "passed",
+      "expectedMisconception": null,
+      "description": "Correct iterative solution"
+    },
+    {
+      "id": "java-pass-2",
+      "code": "class Solution {\n    public static int factorial(int n) {\n        if (n <= 1) return 1;\n        return n * factorial(n - 1);\n    }\n}\n",
+      "expectedOutcome": "passed",
+      "expectedMisconception": null,
+      "description": "Correct recursive solution"
+    },
+    {
+      "id": "java-fail-off-by-one",
+      "code": "class Solution {\n    public static int factorial(int n) {\n        int result = 1;\n        for (int i = 1; i < n; i++) {\n            result *= i;\n        }\n        return result;\n    }\n}\n",
+      "expectedOutcome": "wrong_answer",
+      "expectedMisconception": "off-by-one",
+      "description": "Uses < instead of <=, misses last multiplication"
+    },
+    {
+      "id": "java-fail-wrong-init",
+      "code": "class Solution {\n    public static int factorial(int n) {\n        int result = 0;\n        for (int i = 1; i <= n; i++) {\n            result *= i;\n        }\n        return result;\n    }\n}\n",
+      "expectedOutcome": "wrong_answer",
+      "expectedMisconception": "wrong-init",
+      "description": "Initializes result to 0; 0 * anything = 0"
+    },
+    {
+      "id": "java-fail-no-base-case",
+      "code": "class Solution {\n    public static int factorial(int n) {\n        return n * factorial(n - 1);\n    }\n}\n",
+      "expectedOutcome": "runtime_error",
+      "expectedMisconception": "missing-base-case",
+      "description": "Recursive without base case; stack overflow"
+    },
+    {
+      "id": "java-fail-syntax",
+      "code": "class Solution {\n    public static int factorial(int n) {\n        int result = 1;\n        for (int i = 1; i <= n; i++)\n            result *= i\n        return result;\n    }\n}\n",
+      "expectedOutcome": "syntax_error",
+      "expectedMisconception": "syntax-error",
+      "description": "Missing semicolon after result *= i"
+    },
+    {
+      "id": "java-fail-wrong-return",
+      "code": "class Solution {\n    public static int factorial(int n) {\n        int result = 1;\n        for (int i = 2; i <= n; i++) {\n            result += i;\n        }\n        return result;\n    }\n}\n",
+      "expectedOutcome": "wrong_answer",
+      "expectedMisconception": "wrong-operator",
+      "description": "Adds instead of multiplying; computes sum, not factorial"
+    },
+    {
+      "id": "java-pass-3",
+      "code": "class Solution {\n    public static int factorial(int n) {\n        int result = 1;\n        int i = 2;\n        while (i <= n) {\n            result *= i;\n            i++;\n        }\n        return result;\n    }\n}\n",
+      "expectedOutcome": "passed",
+      "expectedMisconception": null,
+      "description": "Correct while-loop solution"
+    },
+    {
+      "id": "java-fail-wrong-range",
+      "code": "class Solution {\n    public static int factorial(int n) {\n        int result = 1;\n        for (int i = 0; i <= n; i++) {\n            result *= i;\n        }\n        return result;\n    }\n}\n",
+      "expectedOutcome": "wrong_answer",
+      "expectedMisconception": "wrong-range",
+      "description": "Starts from 0; 0 * anything = 0"
+    },
+    {
+      "id": "java-fail-infinite",
+      "code": "class Solution {\n    public static int factorial(int n) {\n        int result = 1;\n        int i = 1;\n        while (i <= n) {\n            result *= i;\n        }\n        return result;\n    }\n}\n",
+      "expectedOutcome": "time_limit",
+      "expectedMisconception": "loop-no-progress",
+      "description": "Never increments i; infinite loop"
+    }
+  ]
+}

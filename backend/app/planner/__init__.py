@@ -24,6 +24,7 @@ from pydantic import BaseModel
 from ..catalog import VIDEO_ID_RE, ApprovedExercise
 from ..transcripts import Transcript, TranscriptFetcher
 from .generate import PrivateExercise, PrivateQuestion
+from .screen import ScreenCheck, StoryboardFetcher, image_block
 from .service import Planner, PlannerUnavailable
 from .vocab import DEFAULT_LEVEL, concept_ids, is_level
 
@@ -51,7 +52,7 @@ def anthropic_model_call():
     client = None
     schemas: dict[type, dict] = {}
 
-    async def call(prompt: str, model: type[BaseModel]) -> str:
+    async def call(prompt: str, model: type[BaseModel], jpeg: bytes | None = None) -> str:
         nonlocal client
         api_key = os.environ.get("ANTHROPIC_API_KEY")
         if not api_key:
@@ -61,11 +62,12 @@ def anthropic_model_call():
         if client is None:
             client = anthropic.AsyncAnthropic(api_key=api_key, max_retries=2, timeout=CALL_TIMEOUT_S)
         schema = schemas.setdefault(model, strict_schema(model))
+        content: str | list = prompt if jpeg is None else [image_block(jpeg),{"type": "text", "text": prompt}]
         try:
             resp = await client.messages.create(
                 model=resolve_model(),
                 max_tokens=MAX_OUTPUT_TOKENS,
-                messages=[{"role": "user", "content": prompt}],
+                messages=[{"role": "user", "content": content}],
                 output_config={"format": {"type": "json_schema", "schema": schema}},
             )
         except Exception as exc:
@@ -73,6 +75,17 @@ def anthropic_model_call():
         return "".join(getattr(b, "text", "") for b in resp.content if getattr(b, "type", "") == "text")
 
     return call
+
+
+def screen_check(model_call) -> ScreenCheck | None:
+    """Answer-on-screen check (Goal 6); ``PLANNER_SCREEN_CHECK=0`` turns it off."""
+    if os.environ.get("PLANNER_SCREEN_CHECK", "1") == "0":
+        return None
+
+    async def vision(prompt: str, jpeg: bytes, model: type[BaseModel]) -> str:
+        return await model_call(prompt, model, jpeg)
+
+    return ScreenCheck(StoryboardFetcher(), vision)
 
 
 async def runner_verify(ex: ApprovedExercise) -> bool:
@@ -146,7 +159,9 @@ _planner: Planner | None = None
 def get_planner() -> Planner:
     global _planner
     if _planner is None:
-        _planner = Planner(fetch_transcript=fetch_transcript, model_call=anthropic_model_call(), verify=judge0_verify)
+        call = anthropic_model_call()
+        _planner = Planner(fetch_transcript=fetch_transcript, model_call=call, verify=judge0_verify,
+                           screen_check=screen_check(call))
     return _planner
 
 
