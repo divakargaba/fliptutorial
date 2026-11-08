@@ -41,4 +41,7 @@ pytest driven by `practice-events.fixture.json` + generated event streams: level
 - Extras beyond the contract (opt-in): read endpoints accept `?now=<ISO>` to simulate decay for the demo;
   `/level/{concept}?detail=true` adds `tier`, `nextLevel`, `refresherDue` and private `stats` (watchedS, practiced,
   passed, failed, skipped, hintsUsed). Events for an unknown local id create a private account.
+- `POST /v2/events` ack `{accepted, duplicates, rejected[{id, reason}]}` always accounts for every sent event once
+  (A3 deletes only acknowledged ids); id and accountId limits match A3's queue schema (≤200 chars). `GET /v2/accounts`
+  → `{accounts: [{accountId, displayName, public}]}`.
 - Not done: toggling `public` (seed data only; no endpoint in the contract); generated refreshers from lane A2.

@@ -101,6 +101,23 @@ def test_bad_events_rejected_individually_and_bad_bodies(empty):
     assert empty.post("/v2/events", json={"events": [good] * 501}).status_code == 413
 
 
+def test_ack_satisfies_extension_queue_check(empty):
+    """A3 removes queued events only when the ack accounts for every sent id exactly once."""
+    long_id = "e" * 200
+    a3_shaped = [
+        {**_pass(1, "loops", NOW), "id": long_id, "accountId": "a" * 200, "at": "2026-11-10T11:59:58.123Z"},
+        {"id": "w1", "accountId": "test-x", "at": "2026-11-10T11:59:59.999Z", "type": "watched",
+         "videoId": "rfscVS0vtbw", "watchedS": [12.5, 40.25]},
+        {"id": "bad", "accountId": "test-x", "at": "2026-11-10T12:00:00.000Z", "type": "refresher_answered"},
+    ]
+    sent = [*a3_shaped, a3_shaped[0]]  # a resend inside one batch counts as a duplicate
+    ack = empty.post("/v2/events", json={"events": sent}).json()
+    rejected_ids = [r["id"] for r in ack["rejected"]]
+    assert ack["accepted"] + ack["duplicates"] + len(rejected_ids) == len(sent)
+    assert rejected_ids == ["bad"] and all(isinstance(r["reason"], str) for r in ack["rejected"])
+    assert (ack["accepted"], ack["duplicates"]) == (2, 1)
+
+
 def test_unknown_concepts_are_dropped_not_fatal(empty):
     e = _pass(1, "loops", NOW)
     e["concepts"] = ["quantum-vibes", "loops"]
