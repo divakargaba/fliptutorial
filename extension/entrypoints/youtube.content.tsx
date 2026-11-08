@@ -15,7 +15,7 @@ import { Badge } from '../src/ui/Badge';
 import { TestMeControls } from '../src/ui/TestMeControls';
 import { PracticePanel, SOLVED_HOLD_MS, type PracticePanelProps } from '../src/ui/PracticePanel';
 import { HintsContext, type AnalysisState } from '../src/hints';
-import { sendPlanRequest, LevelResultSchema, LevelsResultSchema } from '../src/plan/api';
+import { sendPlanRequest, AwardResultSchema, LevelResultSchema, LevelsResultSchema } from '../src/plan/api';
 import { AnswerResultSchema, ExercisePlanSchema, RefresherSchema, SubmitResultSchema, type PlanMessage, type Refresher } from '../src/plan/schemas';
 import { ACCOUNT_KEY, SETTINGS_KEY, readAccount, readSettings, type LearnerSettings } from '../src/plan/settings';
 import { EventQueue } from '../src/plan/events';
@@ -23,7 +23,7 @@ import { WatchSegments } from '../src/plan/watch';
 import { PlanLoader } from '../src/plan/loader';
 import { planSolved, markPlanSolved } from '../src/plan/progress';
 import type { ExercisePlan, FeedbackResult, PracticeEvent } from '../src/v2/types';
-import { ConceptQuestionPanel, LearnerSettings as LearnerSettingsView, TopicNotAvailable, TimelineMarkers, RefresherPrompt } from '../src/ui/v2';
+import { ConceptQuestionPanel, LearnerSettings as LearnerSettingsView, TopicNotAvailable, TimelineMarkers, RefresherPrompt, type Award } from '../src/ui/v2';
 import { saveLearnerSettings } from '../src/plan/preferences';
 import { seekForPractice } from '../src/plan/timeline';
 
@@ -58,16 +58,18 @@ export default defineContentScript({
     let dismissedUnavailable = false;
     let settingsError: string | null = null;
     let feedbackState: { ticket: Ticket; feedback: FeedbackResult; code: string } | null = null;
-    let levelUpState: { ticket: Ticket; concept: string; level: string } | null = null;
+    // What the latest pass / correct answer earned (B1 award endpoint), shown as a progress card.
+    let progressState: { ticket: Ticket; award: Award } | null = null;
     let refresher: Refresher | null = null;
     let refresherSequence = 0;
     const attemptEvents = new WeakMap<object, { accountId: string; attempts: number; hintsUsed: number }>();
     // Content persists events directly, so navigation or worker cold-start cannot
     // lose them before delivery. The worker is the sole network queue drainer.
     const eventStore = new EventQueue(browser.storage.local, async () => false);
-    function emitEvent(fields: Omit<PracticeEvent, 'id' | 'at' | 'accountId'>, account = accountId) {
+    function emitEvent(fields: Omit<PracticeEvent, 'id' | 'at' | 'accountId'>, account = accountId): string {
       const event = { ...fields, accountId: account, id: crypto.randomUUID(), at: new Date().toISOString() };
       void eventStore.enqueue([event]).then(() => browser.runtime.sendMessage({ type: 'flushEventsV2' })).catch(() => {});
+      return event.id;
     }
     const watch = new WatchSegments(watchedS => {
       if (session.videoId) emitEvent({ type: 'watched', videoId: session.videoId, watchedS });
@@ -78,11 +80,11 @@ export default defineContentScript({
       if (!context) { context = { accountId, attempts: 0, hintsUsed: 0 }; attemptEvents.set(active, context); }
       return context;
     }
-    function practiceEvent(type: PracticeEvent['type'], active = session.active, extra: Partial<PracticeEvent> = {}) {
+    function practiceEvent(type: PracticeEvent['type'], active = session.active, extra: Partial<PracticeEvent> = {}): string | undefined {
       const item = active?.planPause?.exercise ?? active?.planPause?.question;
       const context = eventContext(active);
       if (!active || active.reviewOnly || active.refresher || !item || !context || !session.videoId) return;
-      emitEvent({ type, videoId: session.videoId, exerciseId: item.id, concepts: item.concepts, level: item.level,
+      return emitEvent({ type, videoId: session.videoId, exerciseId: item.id, concepts: item.concepts, level: item.level,
         attempts: context.attempts, hintsUsed: context.hintsUsed, ...extra }, context.accountId);
     }
     const sendV2 = (message: PlanMessage) => browser.runtime.sendMessage(message);
@@ -91,10 +93,20 @@ export default defineContentScript({
       const reply = await sendPlanRequest({ type: 'levelV2', accountId: account, concept }, LevelResultSchema, sendV2);
       return reply.ok ? reply.data.level : 'beginner-1';
     }
-    async function learnerRank(concept: string | undefined, account: string): Promise<number> {
-      if (!concept) return 1;
-      const reply = await sendPlanRequest({ type: 'levelV2', accountId: account, concept }, LevelResultSchema, sendV2);
-      return reply.ok ? reply.data.rank : 1;
+    /** Show what a delivered event earned. The event queue flushes asynchronously, so the award
+     * endpoint answers EVENT_NOT_FOUND until the event is stored: retry briefly, then give up quietly. */
+    async function showProgress(ticket: Ticket, account: string, eventId: string) {
+      for (let attempt = 0; attempt < 15; attempt++) {
+        const reply = await sendPlanRequest({ type: 'awardV2', accountId: account, eventId }, AwardResultSchema, sendV2);
+        if (!isCurrent() || !session.isCurrent(ticket)) return;
+        if (reply.ok) {
+          if (reply.data.awards.length) { progressState = { ticket, award: reply.data }; render(); }
+          return;
+        }
+        if (!['EVENT_NOT_FOUND', 'NETWORK', 'TIMEOUT'].includes(reply.error.error.code)) return;
+        await new Promise(resolve => setTimeout(resolve, 400));
+        if (!isCurrent() || !session.isCurrent(ticket)) return;
+      }
     }
     let player: HTMLVideoElement | null = null;
     let oldPlayer: HTMLVideoElement | null = null;
@@ -220,8 +232,7 @@ export default defineContentScript({
             })),
             feedback: feedbackState && session.isCurrent(feedbackState.ticket)
               ? { result: feedbackState.feedback, submittedCode: feedbackState.code } : null,
-            levelUp: levelUpState && session.isCurrent(levelUpState.ticket)
-              ? { concept: levelUpState.concept, level: levelUpState.level } : null,
+            progress: progressState && session.isCurrent(progressState.ticket) ? progressState.award : null,
           } : {}),
           aiGenerated: active.generated, ownsPause: active.ownsPause,
           ...(active.generated ? {} : {
@@ -279,6 +290,7 @@ export default defineContentScript({
                   question={active.planPause.question} checking={active.state === 'checking'}
                   {...{ error: active.error, canResume: active.canResume }}
                   feedback={feedbackState && session.isCurrent(feedbackState.ticket) ? feedbackState.feedback : null}
+                  progress={progressState && session.isCurrent(progressState.ticket) ? progressState.award : null}
                   onAnswer={answer => void answerQuestion(answer)} onSkip={skip} onClose={skip} onResume={visiblePanel.onResume} />
               : <PracticePanel key={`${session.generation}/${visiblePanel.breakpoint.exercise.id}`} {...visiblePanel} />}
           </div>}
@@ -311,7 +323,7 @@ export default defineContentScript({
           video.seeking || !video.paused || isAd() || isFullscreen() || !mountable() ||
           document.visibilityState !== 'visible') return;
       if (session.openFromTimeline(id, video.currentTime, ownsPause)) {
-        feedbackState = null; analysisState = null; levelUpState = null;
+        feedbackState = null; analysisState = null; progressState = null;
         render(); focusPanel(); releaseEmptyPanel(video);
       }
     }
@@ -418,7 +430,7 @@ export default defineContentScript({
           document.visibilityState !== 'visible' || !mountable()) return;
       const ticket = session.startRefresher(offer.question, video.currentTime, !video.paused);
       if (!ticket) return;
-      refresher = null; feedbackState = null; levelUpState = null;
+      refresher = null; feedbackState = null; progressState = null;
       eventContext(); // Capture the learner before any async answer work starts.
       video.pause(); render(); focusPanel(); releaseEmptyPanel(video);
     }
@@ -539,12 +551,11 @@ export default defineContentScript({
       if (active.planPause?.exercise) {
         const item = active.planPause.exercise;
         const context = eventContext(active)!;
-        feedbackState = null; levelUpState = null;
+        feedbackState = null; progressState = null;
         if (mode === 'submit') context.attempts++;
         render();
         const concept = item.concepts[0];
-        const [level, rankBefore] = await Promise.all([learnerLevel(concept, context.accountId),
-          mode === 'submit' ? learnerRank(concept, context.accountId) : Promise.resolve(0)]);
+        const level = await learnerLevel(concept, context.accountId);
         if (!isCurrent() || !session.isCurrent(ticket)) return;
         const reply = await sendPlanRequest({ type: 'submitV2', exerciseId: item.id, revision: item.revision,
           language: item.language, code, mode, learnerLevel: level }, SubmitResultSchema, sendV2);
@@ -554,19 +565,13 @@ export default defineContentScript({
         if (reply.ok) {
           feedbackState = { ticket, feedback: reply.data.feedback, code };
           if (mode === 'submit') {
-            practiceEvent(reply.data.feedback.outcome, active, {
+            const eventId = practiceEvent(reply.data.feedback.outcome, active, {
               ...(reply.data.feedback.diagnosis ? { misconception: reply.data.feedback.diagnosis.misconception.id } : {}),
             });
             if (action === 'passed') {
               void markPlanSolved(context.accountId, videoId, item.id, item.revision).catch(() => {});
-              // Check for level-up after the events have been flushed.
-              if (concept) {
-                const afterReply = await sendPlanRequest({ type: 'levelV2', accountId: context.accountId, concept }, LevelResultSchema, sendV2);
-                if (isCurrent() && session.isCurrent(ticket) && afterReply.ok && afterReply.data.rank > rankBefore) {
-                  levelUpState = { ticket, concept, level: afterReply.data.level };
-                  render();
-                }
-              }
+              // XP gained, level and progress to the next level (replaces the racy rank-diff check).
+              if (eventId) void showProgress(ticket, context.accountId, eventId);
             }
           }
         }
@@ -619,9 +624,8 @@ export default defineContentScript({
       if (!ticket) return;
       const context = eventContext(active)!;
       const concept = item.concepts[0];
-      context.attempts++; feedbackState = null; levelUpState = null; render();
-      const [level, rankBefore] = await Promise.all([learnerLevel(concept, context.accountId),
-        learnerRank(concept, context.accountId)]);
+      context.attempts++; feedbackState = null; progressState = null; render();
+      const level = await learnerLevel(concept, context.accountId);
       if (!isCurrent() || !session.isCurrent(ticket)) return;
       const reply = await sendPlanRequest({ type: 'answerV2', questionId: item.id, revision: item.revision,
         answer, learnerLevel: level }, AnswerResultSchema, sendV2);
@@ -634,23 +638,19 @@ export default defineContentScript({
           void markPlanSolved(context.accountId, session.videoId!, item.id, item.revision).catch(() => {});
         }
         feedbackState = { ticket, feedback: reply.data.feedback, code: '' };
+        let eventId: string | undefined;
         if (active.refresher && !active.refresherAnswered) {
           // B1 scores a refresher question once. Retrying a wrong answer may
           // teach the concept, but cannot stack ordinary pass or refresher XP.
           active.refresherAnswered = true;
-          emitEvent({ type: 'refresher_answered', exerciseId: item.id, concepts: item.concepts,
+          eventId = emitEvent({ type: 'refresher_answered', exerciseId: item.id, concepts: item.concepts,
             level, attempts: context.attempts, correct: reply.data.correct }, context.accountId);
         } else if (!active.refresher) {
-          practiceEvent(reply.data.correct ? 'passed' : 'failed', active,
+          eventId = practiceEvent(reply.data.correct ? 'passed' : 'failed', active,
             reply.data.feedback.diagnosis ? { misconception: reply.data.feedback.diagnosis.misconception.id } : {});
         }
-        // Check for level-up after a correct answer (concept or refresher).
-        if (reply.data.correct && concept) {
-          const afterReply = await sendPlanRequest({ type: 'levelV2', accountId: context.accountId, concept }, LevelResultSchema, sendV2);
-          if (isCurrent() && session.isCurrent(ticket) && afterReply.ok && afterReply.data.rank > rankBefore) {
-            levelUpState = { ticket, concept, level: afterReply.data.level };
-          }
-        }
+        // XP gained, level and progress after a correct answer (concept or refresher).
+        if (reply.data.correct && eventId) void showProgress(ticket, context.accountId, eventId);
       }
       render();
     }
@@ -862,7 +862,7 @@ export default defineContentScript({
       timelineUi?.remove(); timelineUi = undefined; timelineMounting = false; timelineSignature = '';
       watch.reset(); planLoader?.stop(); planLoader = undefined;
       refresher = null; refresherSequence++;
-      plan = null; planSolvedIds.clear(); prepared = null; dismissedUnavailable = false; feedbackState = null; levelUpState = null; accountReady = false;
+      plan = null; planSolvedIds.clear(); prepared = null; dismissedUnavailable = false; feedbackState = null; progressState = null; accountReady = false;
       oldPlayer = player; oldSource = player?.currentSrc ?? '';
       stopPlayer(); observer?.disconnect(); observer = undefined;
       player = null; playerReady = false;
@@ -892,7 +892,7 @@ export default defineContentScript({
         const video = player;
         const ownsPause = video && isCurrent() && video === currentPlayer() && !video.seeking && !isAd() && !isFullscreen() &&
           session.canResume(session.ticket(), video.currentTime, video.paused);
-        session.interrupt(); feedbackState = null; levelUpState = null;
+        session.interrupt(); feedbackState = null; progressState = null;
         accountId = readAccount(changes[ACCOUNT_KEY]?.newValue);
         void loadRefresher(session.generation, accountId);
         if (prepared === false) {

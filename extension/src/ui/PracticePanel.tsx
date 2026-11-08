@@ -7,7 +7,7 @@ import { flushDraft, loadDraft, practiceDraftKey, saveDraft } from '../drafts';
 import { PythonEditor } from './PythonEditor';
 import { TestMeContext } from '../test-me';
 import type { FeedbackResult, Language, LevelId } from '../v2/types';
-import { FeedbackCard, LevelChip, LevelUp } from './v2';
+import { FeedbackCard, LevelChip, LevelUp, ProgressCard, type Award } from './v2';
 import { formatCall, formatTimestamp, formatValue, functionName, richText } from './format';
 
 /** How long the solved moment stays on screen before the video resumes on its own. */
@@ -38,6 +38,8 @@ export type PracticePanelProps = {
   /** Optional v2 presentation; caller keeps feedback paired with its submitted code. */
   conceptLevels?: { concept: string; level: LevelId }[];
   levelUp?: { concept: string; level: LevelId } | null;
+  /** What the pass earned (XP, level progress); shown under Solved. */
+  progress?: Award | null;
   feedback?: { result: FeedbackResult; submittedCode: string } | null;
   /** v2 keeps success feedback visible until the learner explicitly resumes. */
   manualResume?: boolean;
@@ -129,8 +131,9 @@ function Panel(props: PracticePanelProps & { draftKey: string }) {
     {!!props.conceptLevels?.length && <div className="bp-v2 bp-v2-panel-levels">{props.conceptLevels.map(item => <LevelChip key={item.concept} {...item} />)}</div>}
     {props.levelUp && <div className="bp-v2-panel-levels"><LevelUp {...props.levelUp} /></div>}
 
-    {solved ? <Solved heading={heading} result={result} canResume={props.canResume} ownsPause={props.ownsPause} manualResume={props.manualResume ?? false} analysis={props.analysis ?? null}
-      resumeAtS={props.breakpoint.pauseAtS} holdMs={props.holdMs ?? SOLVED_HOLD_MS} onResume={props.onResume} /> : <>
+    {solved ? <><Solved heading={heading} result={result} canResume={props.canResume} ownsPause={props.ownsPause} manualResume={props.manualResume ?? false} analysis={props.analysis ?? null}
+      resumeAtS={props.breakpoint.pauseAtS} holdMs={props.holdMs ?? SOLVED_HOLD_MS} onResume={props.onResume} />
+      {props.progress && <div className="bp-v2-panel-levels"><ProgressCard award={props.progress} /></div>}</> : <>
       <div className="bp-body">
         <div className="bp-intro bp-stagger">
           <h2 id="bp-heading" ref={heading} tabIndex={-1}>{exercise.title}</h2>

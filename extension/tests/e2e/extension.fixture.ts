@@ -26,6 +26,7 @@ type App = {
   planRequests: Array<{ videoId: string; learnerLevels: Record<string, string> }>;
   answers: Array<{ questionId: string; answer: string }>;
   events: PracticeEvent[];
+  awardRequests: string[];
   requests: Submission[];
   hold: boolean;
   unavailable: boolean;
@@ -44,19 +45,21 @@ type App = {
   rejectResume(reject: boolean): Promise<void>;
 };
 
-export const test = base.extend<{ app: App; breakpointCount: 1 | 2; preparedVideo: boolean; plan: ExercisePlan | null; refresher: Refresher | null; planningPolls: number; planErrors: number; delayedPlayer: boolean }>({
+export const test = base.extend<{ app: App; breakpointCount: 1 | 2; preparedVideo: boolean; plan: ExercisePlan | null; refresher: Refresher | null; planningPolls: number; planErrors: number; delayedPlayer: boolean; award: 'progress' | 'levelUp' | null }>({
   breakpointCount: [1, { option: true }],
   preparedVideo: [true, { option: true }],
   plan: [null, { option: true }],
+  // Opt-in B1 award response; without it every award request is 404 EVENT_NOT_FOUND.
+  award: [null, { option: true }],
   refresher: [null, { option: true }],
   planningPolls: [0, { option: true }],
   planErrors: [0, { option: true }],
   delayedPlayer: [false, { option: true }],
-  app: async ({ viewport, breakpointCount, preparedVideo, plan, refresher, planningPolls, planErrors, delayedPlayer }, use) => {
+  app: async ({ viewport, breakpointCount, preparedVideo, plan, refresher, planningPolls, planErrors, delayedPlayer, award }, use) => {
     const requests: Submission[] = [];
     const pending: Array<() => void> = [];
     const releasePending = () => pending.splice(0).forEach(fn => fn());
-    const app = { requests, planRequests: [], answers: [], events: [], hold: false, unavailable: false, failure: null, revision: practice.revision!, lookupCount: 0,
+    const app = { requests, planRequests: [], answers: [], events: [], awardRequests: [], hold: false, unavailable: false, failure: null, revision: practice.revision!, lookupCount: 0,
       generations: [], holdGeneration: false, generationFailure: null,
       hints: [], analyses: [], holdAnalysis: false,
       analysis: { ...analysisFixture, optimal: true, best: analysisFixture.learner, betterSolution: null } } as App;
@@ -106,6 +109,26 @@ export const test = base.extend<{ app: App; breakpointCount: 1 | 2; preparedVide
         json(200, { accepted: events.length, duplicates: 0, rejected: [] });
       } else if (req.method === 'GET' && req.url === '/v2/accounts') {
         json(200, [{ accountId: 'test-ana', displayName: 'Ana (test)' }, { accountId: 'test-ben', displayName: 'Ben (test)' }]);
+      } else if (req.method === 'GET' && req.url?.startsWith('/v2/profile/') && req.url.includes('/award/')) {
+        const [, , , accountId, , eventId] = req.url.split('/').map(decodeURIComponent);
+        app.awardRequests.push(eventId!);
+        // Like B1: 404 until the extension has actually delivered the event.
+        const event = app.events.find(e => e.id === eventId && e.accountId === accountId);
+        if (!award || !event) {
+          json(404, { error: { code: 'EVENT_NOT_FOUND', message: 'event not delivered yet', retryable: false }, requestId: 'profile' });
+          return;
+        }
+        const level = (id: string, name: string, rank: number, minXp: number) => ({ level: id, levelName: name, rank, minXp });
+        const b1 = level('beginner-1', 'Beginner I', 1, 0), b2 = level('beginner-2', 'Beginner II', 2, 40), b3 = level('beginner-3', 'Beginner III', 3, 100);
+        const up = award === 'levelUp';
+        const awards = (event.concepts ?? []).map((concept, i) => i === 0
+          ? { concept, conceptName: concept, primary: true, xpGained: 37.5, xpBefore: up ? 20 : 0, xp: up ? 57.5 : 37.5,
+              levelBefore: b1, level: up ? b2 : b1, nextLevel: up ? b3 : b2, xpToNext: up ? 42.5 : 2.5,
+              progress: up ? 0.292 : 0.938, leveledUp: up }
+          : { concept, conceptName: concept, primary: false, xpGained: 18.8, xpBefore: 0, xp: 18.8,
+              levelBefore: b1, level: b1, nextLevel: b2, xpToNext: 21.2, progress: 0.47, leveledUp: false });
+        json(200, { accountId, eventId, type: event.type, totalXpGained: awards.reduce((n, a) => n + a.xpGained, 0),
+          leveledUp: up, awards });
       } else if (req.method === 'GET' && req.url?.startsWith('/v2/profile/')) {
         const accountId = req.url.split('/')[3];
         if (req.url.endsWith('/levels')) {
