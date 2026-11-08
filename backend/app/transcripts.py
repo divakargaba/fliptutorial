@@ -227,7 +227,9 @@ class TranscriptFetcher:
     def __post_init__(self) -> None:
         self._owns_client = self.client is None
         if self.client is None:
-            self.client = httpx.AsyncClient(timeout=httpx.Timeout(FETCH_TIMEOUT_S), follow_redirects=True)
+            self.client = httpx.AsyncClient(
+                timeout=httpx.Timeout(FETCH_TIMEOUT_S), follow_redirects=True, trust_env=False
+            )
 
     async def close(self) -> None:
         if self._owns_client and self.client is not None:

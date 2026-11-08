@@ -91,7 +91,9 @@ class Grader:
         self._auth_token = os.environ.get("JUDGE0_AUTH_TOKEN", "")
         self._auth_header = os.environ.get("JUDGE0_AUTH_HEADER", "X-Auth-Token")
         self._active = asyncio.Semaphore(MAX_ACTIVE_GRADES)
-        self._client = httpx.AsyncClient(timeout=httpx.Timeout(15.0))
+        self._client = httpx.AsyncClient(
+            timeout=httpx.Timeout(15.0), trust_env=False
+        )
 
     async def close(self) -> None:
         await self._client.aclose()
