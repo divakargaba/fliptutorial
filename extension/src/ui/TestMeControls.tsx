@@ -1,6 +1,7 @@
 import { useContext, useEffect, useRef } from 'react';
 import { CircleAlert, LoaderCircle, Play, Sparkles, X } from 'lucide-react';
 import { TestMeContext } from '../test-me';
+import { BrandMark } from './BrandMark';
 
 const ERRORS: Record<string, { title: string; action: string }> = {
   NO_CAPTIONS: { title: 'No English captions', action: 'Try a coding tutorial with English captions.' },
@@ -36,6 +37,7 @@ export function TestMeControls() {
     </button>
     {request && <section className="bp-panel bp-generation" aria-labelledby="bp-generation-heading">
       <header className="bp-header">
+        <BrandMark size={16} />
         <span className="bp-generated-label"><Sparkles size={12} aria-hidden="true" />AI-generated practice</span>
         <button type="button" className="bp-icon-button" aria-label="Close generated practice" onClick={onClose}>
           <X size={18} aria-hidden="true" />

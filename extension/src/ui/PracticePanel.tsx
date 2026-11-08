@@ -1,6 +1,7 @@
 import { useContext, useEffect, useRef, useState } from 'react';
 import { Check, ChevronDown, CircleAlert, ExternalLink, Gauge, Lightbulb, LoaderCircle, Pause, Play, Send, Sparkles, X } from 'lucide-react';
 import { PracticeMore } from './PracticeMore';
+import { BrandMark } from './BrandMark';
 import type { Breakpoint, HintResponse, LastResult, SubmissionResponse } from '../contracts';
 import { HintsContext, type AnalysisState } from '../hints';
 import { flushDraft, loadDraft, practiceDraftKey, saveDraft } from '../drafts';
@@ -120,6 +121,7 @@ function Panel(props: PracticePanelProps & { draftKey: string }) {
   return <section className={`bp-panel${leaving ? ' bp-leaving' : ''}`} data-attempt={attempt}
     aria-labelledby="bp-heading" inert={leaving || undefined}>
     <header className="bp-header">
+      <BrandMark size={16} />
       <span className="bp-paused"><Pause size={12} aria-hidden="true" />Paused at {formatTimestamp(props.breakpoint.pauseAtS)}</span>
       {total > 1 && <span className="bp-step">Challenge {(props.index ?? 0) + 1} of {total}</span>}
       <button type="button" className="bp-icon-button" aria-label="Close practice" onClick={() => leave(props.onClose)}>
