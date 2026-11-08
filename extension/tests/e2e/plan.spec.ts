@@ -10,6 +10,44 @@ const plan: ExercisePlan = {
   pauses: source.pauses.map((pause, index) => ({ ...pause, pauseAtS: [2, 8, 14][index]!, revealAtS: pause.revealAtS === null ? null : [4, 10, 16][index]! })),
 };
 
+test.describe('v2 plan retry recovery', () => {
+  test.use({ plan, planErrors: 1 });
+
+  test('terminal plan error retries the personalized plan and opens coding practice', async ({ app }) => {
+    const page = app.page;
+    await expect(page.locator('.bp-badge')).toHaveAttribute('data-state', 'unavailable');
+    expect(app.planRequests).toHaveLength(1);
+    const lookups = app.lookupCount;
+    await page.locator('.bp-badge').click();
+    await expect(page.locator('.bp-badge')).toHaveAttribute('data-state', 'ready');
+    expect(app.planRequests).toHaveLength(2);
+    expect(app.planRequests[1]).toEqual(app.planRequests[0]);
+    expect(app.planRequests[1]!.learnerLevels.loops).toBe('beginner-1');
+    expect(app.lookupCount).toBe(lookups);
+    await page.locator('#start').click();
+    await expect(page.getByRole('heading', { name: 'Raise a number to a power' })).toBeVisible();
+    expect(await page.locator('video').evaluate(video => video.paused)).toBe(true);
+  });
+});
+
+test.describe('v2 late player recovery', () => {
+  test.use({ plan, delayedPlayer: true });
+
+  test('real media becoming ready after the bind deadline clears the stale badge automatically', async ({ app }) => {
+    const page = app.page;
+    await expect(page.locator('.bp-badge')).toHaveAttribute('data-state', 'unavailable', { timeout: 10000 });
+    expect(await page.locator('video').evaluate(video => video.readyState)).toBe(0);
+    await page.evaluate(() => (window as unknown as { readyFixtureMedia(): void }).readyFixtureMedia());
+    await expect.poll(() => page.locator('video').evaluate(video => video.readyState)).toBeGreaterThanOrEqual(2);
+    await expect(page.locator('.bp-badge')).toHaveAttribute('data-state', 'ready');
+    expect(app.planRequests).toHaveLength(1);
+    await page.locator('#start').click();
+    await expect(page.getByRole('heading', { name: 'Raise a number to a power' })).toBeVisible();
+    await expect(page.locator('.bp-badge')).toHaveAttribute('data-state', 'active');
+    expect(await page.locator('video').evaluate(video => video.paused)).toBe(true);
+  });
+});
+
 test.describe('v2 plan runtime', () => {
   test.use({ plan, planningPolls: 1 });
 

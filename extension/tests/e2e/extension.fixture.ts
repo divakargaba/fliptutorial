@@ -42,12 +42,14 @@ type App = {
   rejectResume(reject: boolean): Promise<void>;
 };
 
-export const test = base.extend<{ app: App; breakpointCount: 1 | 2; preparedVideo: boolean; plan: ExercisePlan | null; planningPolls: number }>({
+export const test = base.extend<{ app: App; breakpointCount: 1 | 2; preparedVideo: boolean; plan: ExercisePlan | null; planningPolls: number; planErrors: number; delayedPlayer: boolean }>({
   breakpointCount: [1, { option: true }],
   preparedVideo: [true, { option: true }],
   plan: [null, { option: true }],
   planningPolls: [0, { option: true }],
-  app: async ({ viewport, breakpointCount, preparedVideo, plan, planningPolls }, use) => {
+  planErrors: [0, { option: true }],
+  delayedPlayer: [false, { option: true }],
+  app: async ({ viewport, breakpointCount, preparedVideo, plan, planningPolls, planErrors, delayedPlayer }, use) => {
     const requests: Submission[] = [];
     const pending: Array<() => void> = [];
     const releasePending = () => pending.splice(0).forEach(fn => fn());
@@ -71,7 +73,9 @@ export const test = base.extend<{ app: App; breakpointCount: 1 | 2; preparedVide
         let body = '';
         for await (const chunk of req) body += chunk;
         app.planRequests.push(JSON.parse(body));
-        json(200, app.planRequests.length <= planningPolls ? { ...plan, status: 'planning', pauses: [] } : plan);
+        json(200, app.planRequests.length <= planErrors
+          ? { ...plan, status: 'error', verdict: { qualifies: false, reason: 'Fixture planner unavailable.', evidence: [] }, pauses: [] }
+          : app.planRequests.length <= planningPolls ? { ...plan, status: 'planning', pauses: [] } : plan);
       } else if (req.method === 'POST' && (req.url === '/v2/submit' || req.url === '/v2/answer')) {
         let body = '';
         for await (const chunk of req) body += chunk;
@@ -190,6 +194,11 @@ export const test = base.extend<{ app: App; breakpointCount: 1 | 2; preparedVide
         expect(result.exceptionDetails).toBeUndefined();
       };
       let html = await readFile(new URL('./watch.html', import.meta.url), 'utf8');
+      if (delayedPlayer) {
+        // Hold the actual MediaStream until the test observes the bind deadline.
+        html = html.replace('video.srcObject = canvas.captureStream(25);',
+          'window.readyFixtureMedia = () => { video.srcObject = canvas.captureStream(25); };');
+      }
       if (plan) {
         // The live canvas supplies a real playback clock; give this synthetic
         // lesson a finite timeline and a native-bar anchor for rail geometry.
