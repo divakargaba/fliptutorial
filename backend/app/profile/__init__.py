@@ -140,6 +140,22 @@ def profile(account_id: str, now: str | None = Query(default=None)) -> JSONRespo
     return JSONResponse(build_profile(store, acct, when))
 
 
+@router.get("/profile/{account_id}/public")
+def public_profile(account_id: str, now: str | None = Query(default=None)) -> JSONResponse:
+    """Public profile view: returns 404 for unknown or private accounts."""
+    store = get_store()
+    acct = _account_or_404(store, account_id)
+    if isinstance(acct, JSONResponse):
+        return acct
+    if not acct["public"]:
+        return _error(404, "PRIVATE_ACCOUNT", f"account {account_id!r} has a private profile")
+    try:
+        when = _now(now)
+    except ValueError:
+        return _bad_now()
+    return JSONResponse(build_profile(store, acct, when))
+
+
 def _replay_if_known(store: ProfileStore, account_id: str, now: datetime) -> engine.Replay:
     """Unknown accounts read as brand-new learners (everyone starts at beginner-1)."""
     if store.get_account(account_id) is None:
