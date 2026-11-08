@@ -202,8 +202,9 @@ def test_bool_and_string_values_are_allowed():
 
 @pytest.mark.parametrize("over", [{"status": "notPython"}, {"language": "javascript"}])
 def test_not_python(over):
+    # Python-only mode (BREAKPOINT_TESTME_LANGUAGES=python); by default other gradable languages are on.
     with pytest.raises(TestMeError) as e:
-        run(gen(StubModel(_good(**over))).generate(CLIP, ok_verify()))
+        run(gen(StubModel(_good(**over)), languages=("python",)).generate(CLIP, ok_verify()))
     assert e.value.code == "NOT_PYTHON" and not e.value.retryable
 
 

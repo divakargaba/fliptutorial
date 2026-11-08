@@ -4,8 +4,11 @@ import type { Language } from './v2/types';
 export const VideoIdSchema = z.string().regex(/^[A-Za-z0-9_-]{11}$/);
 const text = z.string().min(1);
 const time = z.number().finite().nonnegative();
+// Every coding language the editor supports. The backend only sends a language it can grade,
+// so a newly graded language needs no extension change.
+export const CODING_LANGUAGES = ['python', 'javascript', 'typescript', 'java', 'cpp', 'c', 'csharp', 'go', 'rust'] as const satisfies readonly Language[];
 export const ExerciseSchema = z.object({
-  id: text, title: text, statement: text, language: z.literal('python'),
+  id: text, title: text, statement: text, language: z.enum(CODING_LANGUAGES),
   starterCode: z.string(),
   examples: z.array(z.object({ args: z.array(z.json()), expected: z.json() }).strict()).min(1),
 }).strict();
@@ -97,8 +100,8 @@ export const WorkerMessageSchema = z.discriminatedUnion('type', [
   AnalyzeMessageSchema,
 ]);
 
-// The prepared v1 wire schema remains Python-only. The shared panel/runtime can
-// also receive a separately validated v2 exercise in any supported language.
+// v1 exercises (prepared and Test me) carry any coding language in CODING_LANGUAGES. The shared
+// panel/runtime can also receive a separately validated v2 exercise in any supported language.
 export type Breakpoint = Omit<z.infer<typeof BreakpointSchema>, 'exercise'> & {
   exercise: Omit<z.infer<typeof ExerciseSchema>, 'language' | 'examples'> & {
     language: Language; examples: { args: unknown[]; expected: unknown }[];
