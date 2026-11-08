@@ -49,8 +49,8 @@ else
 fi
 # Sandboxed agents (e.g. Codex) may not write .git; fall back to the ignored .autopilot/ in the work tree.
 if ! { mkdir -p "$STATE_DIR" 2>/dev/null && [[ -w "$STATE_DIR" ]]; }; then
-  top=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
-  STATE_DIR="$top/.autopilot/board-state"
+  # Relative path: Windows sandboxes can fail mkdir -p on absolute C:/... prefixes.
+  STATE_DIR="$(git rev-parse --show-cdup 2>/dev/null).autopilot/board-state"
   mkdir -p "$STATE_DIR" || die "cannot create board state directory (tried .git/board and $STATE_DIR)"
 fi
 KEY="${REPO//\//_}-$ISSUE"
