@@ -520,7 +520,10 @@ async def hint(body: V2HintRequest) -> JSONResponse:
     from ..hints import LastResult
 
     hint_lang = exercise.language if exercise.language in ("python", "javascript", "java", "cpp", "sql") else "python"
-    approved = ApprovedExercise(
+    # Use model_construct to bypass Literal["python"] validation on the frozen v1
+    # ApprovedExercise model.  The hint service never inspects the language field
+    # on the object — it receives the language separately.
+    approved = ApprovedExercise.model_construct(
         id=exercise.id,
         title=exercise.title,
         statement=exercise.statement,
