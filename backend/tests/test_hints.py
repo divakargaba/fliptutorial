@@ -83,6 +83,10 @@ def test_leaky_model_answer_falls_back_to_docs() -> None:
 
 def test_level0_is_feedback_only_and_missing_key_falls_back(monkeypatch) -> None:
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    # A developer's backend/.env must not put a real key back during the offline suite.
+    import dotenv
+
+    monkeypatch.setattr(dotenv, "load_dotenv", lambda *a, **k: False)
     svc = hints.HintService(model_call=hints.anthropic_model_call())
     last = hints.LastResult(outcome="wrong_answer", args=[3, 2], expected=9, actual=6)
     r = asyncio.run(svc.hint(exercise(), "def raise_to_power(base, exponent):\n    return base * exponent", 0, last, []))
