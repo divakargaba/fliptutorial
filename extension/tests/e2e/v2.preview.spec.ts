@@ -119,9 +119,11 @@ test('v2 profile switches accounts, preserves settings and recovers an API failu
   await expect(page.getByRole('progressbar', { name: 'Loops level progress' })).toHaveAttribute('value', '0.5625');
   await page.getByLabel('Test account').selectOption('test-ben');
   await expect(page.getByRole('heading', { name: 'Ben (test)', level: 1 })).toBeVisible();
+  await page.getByRole('button', { name: 'Settings' }).click();
   await page.getByLabel('Pause frequency').selectOption('many');
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Ben (test)', level: 1 })).toBeVisible();
+  await page.getByRole('button', { name: 'Settings' }).click();
   await expect(page.getByLabel('Pause frequency')).toHaveValue('many');
 });
 
