@@ -115,8 +115,8 @@ New error codes: `NO_CAPTIONS` 404, `NOT_PYTHON` 422, `TOO_EARLY` 422 (under
 | T5 | @abdullahwarv2 | Background `testMe` message + Zod schema in `src/contracts.ts` and `entrypoints/background.ts`. | T4 contract | Done — `321936e`; worker accepts `testMe`, Zod validates public response and errors, 20 s timeout, content script pauses player, `TestMeContext` exposed for T6 |
 | T6 | @reyanshBadhwar26 | "Test me" button in `src/ui/`, loading and error states, "AI-generated practice" label. | T5 | Done — UI `492b444`; mounted in `youtube.content.tsx` by Divakar (see commit). Visible when `WXT_TESTME_ENABLED=true`. |
 | T7 | @abdullahwarraichh | Real-YouTube walkthrough on 2 unprepared videos at 1× and 2×, times in Measured results. 3 clean runs required. | T6 | Todo |
-| T8 | @abdullahwarraichh, @divakargaba | Phase 2: quiz generation + `POST /v1/test-me/answer`. | T7 | Todo |
-| T9 | @reyanshBadhwar26 | Phase 2: quiz view and score line in `src/ui/`. | T8 | Todo |
+| T8 | @abdullahwarraichh, @divakargaba | Phase 2: quiz generation + `POST /v1/test-me/answer`. | T7 | Cancelled by the lead: no phase 2 (quiz). Do not build. |
+| T9 | @reyanshBadhwar26 | Phase 2: quiz view and score line in `src/ui/`. | T8 | Cancelled by the lead: no phase 2 (quiz). Do not build. |
 
 ### Test-me handoffs
 
