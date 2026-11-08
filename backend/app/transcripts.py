@@ -44,7 +44,8 @@ PLAYER_CLIENTS = (
     {"clientName": "WEB", "clientVersion": "2.20250101.00.00"},
 )
 FETCH_TIMEOUT_S = 8.0
-MAX_PAYLOAD_BYTES = 8 * 1024 * 1024
+# Long lectures' ASR json3 (word-level segments) is big: CS50P's 9 h track is ~19 MB.
+MAX_PAYLOAD_BYTES = 48 * 1024 * 1024
 
 HIT_TTL_S = 6 * 3600.0
 MISS_TTL_S = 600.0

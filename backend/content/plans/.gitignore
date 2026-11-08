@@ -1,0 +1,3 @@
+# Plan cache: holds private answers/reference solutions. Never commit.
+*
+!.gitignore
