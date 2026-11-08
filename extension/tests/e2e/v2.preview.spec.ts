@@ -115,13 +115,15 @@ test('v2 profile switches accounts, preserves settings and recovers an API failu
   await page.goto('/tests/showcase/v2.html?state=profile-live');
   await expect(page.getByRole('alert')).toContainText('not available yet');
   unavailable = false; await page.getByRole('button', { name: 'Retry' }).click();
-  await expect(page.getByRole('heading', { name: 'Ana (test)' })).toBeVisible();
-  await expect(page.getByRole('progressbar', { name: 'Loops level progress' })).toHaveAttribute('value', '0.5625');
-  await page.getByLabel('Test account').selectOption('test-ben');
-  await expect(page.getByRole('heading', { name: 'Ben (test)', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Ana', exact: true, level: 1 })).toBeVisible();
+  await expect(page.getByRole('progressbar', { name: 'Loops level progress' })).toHaveAttribute('aria-valuenow', '56');
+  await page.getByLabel('Viewing as').selectOption('test-ben');
+  await expect(page.getByRole('heading', { name: 'Ben', exact: true, level: 1 })).toBeVisible();
+  await page.getByRole('button', { name: 'Settings' }).click();
   await page.getByLabel('Pause frequency').selectOption('many');
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'Ben (test)', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Ben', exact: true, level: 1 })).toBeVisible();
+  await page.getByRole('button', { name: 'Settings' }).click();
   await expect(page.getByLabel('Pause frequency')).toHaveValue('many');
 });
 

@@ -20,42 +20,53 @@
   "skills": [
     {
       "concept": "react-state",
-      "reason": "React stays one of the most-used web frameworks, and TypeScript, the language most React apps now ship in, became #1 on GitHub",
+      "reason": "React is a top web framework, and TypeScript is now #1 on GitHub",
       "videoUrl": "https://www.youtube.com/watch?v=O6P86uwfdR0",
       "videoTitle": "Learn useState In 15 Minutes - React Hooks Explained (Web Dev Simplified)",
-      "sourceIds": ["so-2025", "octoverse-2025"]
+      "sourceIds": [
+        "so-2025",
+        "octoverse-2025"
+      ]
     },
     {
       "concept": "http-apis",
-      "reason": "API back ends are in demand: FastAPI's +5 point jump was one of the biggest web-framework shifts in the 2025 survey",
+      "reason": "Back-end API skills are rising; FastAPI jumped 5 points in 2025",
       "videoUrl": "https://www.youtube.com/watch?v=GZvSYJDk-us",
       "videoTitle": "APIs for Beginners - How to use an API (freeCodeCamp)",
-      "sourceIds": ["so-2025"]
+      "sourceIds": [
+        "so-2025"
+      ]
     },
     {
       "concept": "sql-joins",
-      "reason": "SQL is among the most-used languages by professional developers, and joins are where most data questions start",
+      "reason": "SQL is a top language at work, and joins answer most data questions",
       "videoUrl": "https://www.youtube.com/watch?v=HXV3zeQKqGY",
       "videoTitle": "SQL Tutorial - Full Database Course for Beginners (freeCodeCamp)",
-      "sourceIds": ["so-2025"]
+      "sourceIds": [
+        "so-2025"
+      ]
     },
     {
       "concept": "js-async",
-      "reason": "TypeScript/JavaScript lead GitHub activity; async/await and promises are core to every modern JS codebase",
+      "reason": "Async/await is core to every modern JavaScript codebase",
       "videoUrl": "https://www.youtube.com/watch?v=PoRJizFvM7s",
       "videoTitle": "Async JS Crash Course - Callbacks, Promises, Async Await (Traversy Media)",
-      "sourceIds": ["octoverse-2025"]
+      "sourceIds": [
+        "octoverse-2025"
+      ]
     },
     {
       "concept": "git",
-      "reason": "Version control is assumed in every team; GitHub reports a new developer joining every second",
+      "reason": "Every team uses version control; GitHub adds a developer every second",
       "videoUrl": "https://www.youtube.com/watch?v=RGOj5yH7evk",
       "videoTitle": "Git and GitHub for Beginners - Crash Course (freeCodeCamp)",
-      "sourceIds": ["octoverse-2025"]
+      "sourceIds": [
+        "octoverse-2025"
+      ]
     },
     {
       "concept": "dynamic-programming",
-      "reason": "Hand-picked: a staple of technical interviews for software roles",
+      "reason": "A staple of technical interviews for software roles",
       "videoUrl": "https://www.youtube.com/watch?v=oBt53YbR9Kk",
       "videoTitle": "Dynamic Programming - Learn to Solve Algorithmic Problems & Coding Challenges (freeCodeCamp)",
       "sourceIds": []

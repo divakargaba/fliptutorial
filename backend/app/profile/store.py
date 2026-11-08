@@ -50,10 +50,19 @@ class ProfileStore:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with closing(self._connect()) as conn, conn:
             conn.executescript(_SCHEMA)
-        if seed and not self.list_accounts():
-            from .seed import seed_store
+        if seed:
+            from .seed import SEED_VERSION, seed_store
 
-            seed_store(self, now or datetime.now(timezone.utc))
+            with closing(self._connect()) as conn, conn:
+                current = conn.execute("PRAGMA user_version").fetchone()[0]
+                fresh = not conn.execute("SELECT 1 FROM accounts LIMIT 1").fetchone()
+                if not fresh and current != SEED_VERSION:
+                    # Seed data changed: replace only seeded events; real learner events are kept.
+                    conn.execute("DELETE FROM events WHERE id LIKE 'seed-%'")
+            if fresh or current != SEED_VERSION:
+                seed_store(self, now or datetime.now(timezone.utc))
+                with closing(self._connect()) as conn, conn:
+                    conn.execute(f"PRAGMA user_version = {int(SEED_VERSION)}")
 
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.path, timeout=10)

@@ -185,10 +185,10 @@ def test_everyone_starts_at_beginner_one(seeded):
 def test_level_info_is_exact_contract_shape_and_levels_map(seeded):
     lv = seeded.get("/v2/profile/test-ben/level/sql-joins", params=NOW_Q).json()
     assert set(lv) == {"accountId", "concept", "level", "levelName", "rank", "xp", "strength"}
-    assert (lv["level"], lv["rank"]) == ("advanced-1", 11) and lv["strength"] > 0.9
+    assert (lv["level"], lv["rank"]) == ("advanced-2", 12) and lv["strength"] > 0.9
     levels = seeded.get("/v2/profile/test-ben/levels", params=NOW_Q).json()
     assert levels == {"accountId": "test-ben", "levels": {
-        "http-apis": "advanced-1", "react-state": "beginner-1", "sql-joins": "advanced-1", "sql-select": "intermediate-4"}}
+        "http-apis": "advanced-1", "react-state": "beginner-1", "sql-joins": "advanced-2", "sql-select": "intermediate-4"}}
 
 
 # --- decay and refreshers ---------------------------------------------------------------------------

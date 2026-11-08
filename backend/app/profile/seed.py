@@ -14,6 +14,8 @@ from .engine import iso
 if TYPE_CHECKING:
     from .store import ProfileStore
 
+SEED_VERSION = 2  # bump when the seed plans change; existing local DBs reseed their seed-* events
+
 # (concept, passes, exercise level, days since last pass, videos)
 Plan = list[tuple[str, int, str, float, list[str]]]
 
@@ -24,28 +26,28 @@ SEED_ACCOUNTS: list[tuple[str, str, bool, Plan, list[tuple[str, float]]]] = [
         ("functions", 3, "beginner-1", 2, ["rfscVS0vtbw"]),
         ("conditionals", 2, "beginner-1", 3, ["nLRL_NcnK-4"]),
     ], [("lists", 9)]),
-    # Ben: back-end. Strong SQL + HTTP APIs, beginner React.
+    # Ben: back-end. Strong HTTP APIs + SQL, beginner React. At most ~6 solved per tutorial.
     ("test-ben", "Ben (test)", True, [
-        ("sql-joins", 18, "intermediate-3", 1, ["HXV3zeQKqGY"]),
-        ("sql-select", 14, "intermediate-2", 2, ["HXV3zeQKqGY"]),
-        ("http-apis", 18, "intermediate-3", 1, ["GZvSYJDk-us"]),
+        ("http-apis", 18, "intermediate-3", 1, ["GZvSYJDk-us", "iWYsBpA6CiE", "VaVXZHWDrhw"]),
+        ("sql-joins", 19, "intermediate-3", 3, ["HXV3zeQKqGY", "9Pzj7Aj25lw", "7mz73uXD9DA", "2-1XQHAgDsM"]),
+        ("sql-select", 14, "intermediate-2", 5, ["HXV3zeQKqGY", "7mz73uXD9DA", "9Pzj7Aj25lw"]),
         ("react-state", 1, "beginner-1", 4, ["O6P86uwfdR0"]),
     ], []),
-    # Cam: front-end. Strong React + JS, beginner SQL/APIs.
+    # Cam: front-end. Strong React + JS, beginner SQL.
     ("test-cam", "Cam (test)", True, [
-        ("react-components", 18, "intermediate-3", 1, ["O6P86uwfdR0"]),
-        ("react-state", 18, "intermediate-3", 1, ["O6P86uwfdR0"]),
-        ("js-dom", 12, "intermediate-1", 2, ["PkZNo7MFNFg"]),
-        ("js-async", 10, "intermediate-1", 3, ["PoRJizFvM7s"]),
+        ("react-components", 20, "intermediate-3", 1, ["O6P86uwfdR0", "bMknfKXIFA8", "SqcY0GlETPk", "Rh3tobg7hEo"]),
+        ("react-state", 18, "intermediate-3", 3, ["O6P86uwfdR0", "TNhaISOUy6Q", "4pO-HcG2igk"]),
+        ("js-dom", 9, "intermediate-1", 4, ["PkZNo7MFNFg", "y17RuWkWdn8"]),
+        ("js-async", 7, "intermediate-1", 6, ["PoRJizFvM7s", "V_Kr9OSfDeU"]),
         ("sql-select", 1, "beginner-1", 5, ["HXV3zeQKqGY"]),
     ], []),
-    # Dee: algorithms. Strong recursion/DP/graphs/trees; recursion slightly stale.
+    # Dee: algorithms. Strong recursion/DP/trees/graphs; recursion slightly stale.
     ("test-dee", "Dee (test)", True, [
-        ("recursion", 16, "intermediate-3", 6, ["8hly31xKli0"]),
-        ("dynamic-programming", 14, "intermediate-3", 1, ["oBt53YbR9Kk"]),
-        ("graphs", 10, "intermediate-2", 2, ["8hly31xKli0"]),
-        ("trees", 12, "intermediate-2", 2, ["8hly31xKli0"]),
-        ("loops", 8, "beginner-5", 3, ["rfscVS0vtbw"]),
+        ("dynamic-programming", 15, "intermediate-3", 1, ["oBt53YbR9Kk", "Hdr64lKQ3e4", "66hDgWottdA"]),
+        ("recursion", 12, "intermediate-3", 6, ["8hly31xKli0", "ngCos392W4w"]),
+        ("trees", 11, "intermediate-2", 2, ["fAAZixBzIAI", "8hly31xKli0"]),
+        ("graphs", 8, "intermediate-2", 3, ["tWVWeAqZ0WU", "8hly31xKli0"]),
+        ("loops", 5, "beginner-5", 3, ["rfscVS0vtbw"]),
     ], []),
     # Eli: brand-new private learner; everything at Beginner I.
     ("test-eli", "Eli (test)", False, [], []),
