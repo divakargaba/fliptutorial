@@ -33,7 +33,7 @@ can also authorize a handoff. Check the actual comment author's GitHub login.
 | Prep pipeline / content / integration | @abdullahwarraichh | backend/app/prepare.py, backend/content/, backend/tests/test_prepare.py |
 | Extension shell + playback | @abdullahwarv2 | extension/ config, entrypoints/, src/playback.ts, src/contracts.ts, src/api.ts, tests/unit/ |
 | Extension UI + E2E | @reyanshBadhwar26 | extension/src/ui/, src/drafts.ts, assets/, tests/e2e/, playwright.config.ts |
-| Unassigned for now | @spectaboy | none yet |
+| Manual verification + stretch | @spectaboy | M1 checks per `extension/tests/e2e/README.md` |
 
 Exact paths are in PLAN.md and win over this summary.
 
