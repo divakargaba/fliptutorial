@@ -48,19 +48,25 @@ and checks that the default build hides Test me. T7 owns live provider validatio
 The already-paused cases start real media, pause it with the native media method,
 then open Test me and pass Submit. Both efficient and inefficient reviews must
 request analysis with the generated exercise id and setId, show the verdict, and
-keep the same paused frame beyond the solved hold. Closing the panel must also
-preserve that pause. A cache-reopen case returns the same generated exercise twice
-and requires a fresh review instead of the previous attempt's verdict.
+keep the same paused frame beyond the solved hold. They require no countdown or
+automatic-resume wording, the message "Video stayed paused where you left it",
+and a primary **Resume video** button alongside Close. Clicking Resume video must
+play the media. A cache-reopen case returns the same generated exercise twice
+and requires a fresh review instead of the previous attempt's verdict, then
+checks explicit resume too.
 
-Verified against `f6abdf1`: all six already-paused/cache-reopen cases pass at
-1440×900 and 1024×768. Native-pause efficient/inefficient screenshots are saved
-in `assets/ui-checks/hints-efficiency/{desktop,narrow}-test-me-native-pause-*.png`.
-These checks confirm review requests and playback ownership; they do not certify
-the solved screen's resume wording. The efficient native-pause screenshot still
-shows a countdown and **Resume now**, although no automatic resume is scheduled.
-The current callback closes that panel while preserving the learner's pause.
-The lead must agree a pause-ownership panel signal and explicit button behavior
-with the playback owner before that UI contract changes.
+The previous review-only checks passed against `f6abdf1` at 1440×900 and 1024×768.
+Following the lead's explicit-play decision (#6716127037), the UI now accepts
+required `ownsPause: boolean` separately from `canResume` (play rejection).
+Native-pause efficient/inefficient screenshots are refreshed in
+`assets/ui-checks/hints-efficiency/{desktop,narrow}-test-me-native-pause-*.png`.
+The six updated checks currently fail only at the final playing assertion against
+`f6347b4`: the callback closes the panel but leaves the media paused. All preceding
+review, wording, countdown and primary-button assertions pass. These screenshots
+show the new UI with the caller's prop still missing; they are not evidence of a
+completed playback integration. Abdullah2 must pass `active.ownsPause` and land
+the deliberate user-play callback before rerunning. Typecheck also requires the
+content-script caller and `tests/showcase/showcase.tsx` to supply `ownsPause`.
 
 ```powershell
 $env:WXT_TESTME_ENABLED = 'true'

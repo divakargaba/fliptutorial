@@ -19,6 +19,8 @@ test.describe('opt-in Test me through the built worker', () => {
       await expect.poll(() => app.analyses.length).toBe(1);
       expect(app.analyses[0]).toEqual({ exerciseId: generated.exercise.id, revision: generated.setId, code: correctCode });
       await expect(page.getByText('Checking how efficient your solution is…')).toBeVisible();
+      await expect(page.locator('.bp-countdown')).toHaveCount(0);
+      await expect(page.getByText('Video stayed paused where you left it', { exact: true })).toBeVisible();
       await app.release();
       if (optimal) await expect(page.locator('.bp-efficiency.is-optimal')).toBeVisible();
       else {
@@ -31,10 +33,17 @@ test.describe('opt-in Test me through the built worker', () => {
       await expect(page.getByRole('heading', { name: 'Solved', exact: true })).toBeVisible();
       expect(await page.locator('video').evaluate(video => ({ paused: video.paused, time: video.currentTime })))
         .toEqual({ paused: true, time: pausedAt });
+      await expect(page.locator('.bp-countdown')).toHaveCount(0);
+      await expect(page.getByText(/Now see how the instructor does it/)).toHaveCount(0);
+      await expect(page.getByRole('button', { name: 'Resume now', exact: true })).toHaveCount(0);
+      const resume = page.getByRole('button', { name: 'Resume video', exact: true });
+      await expect(resume).toHaveClass(/bp-primary/);
+      await expect(page.getByRole('button', { name: 'Close practice', exact: true })).toBeVisible();
+      await resume.scrollIntoViewIfNeeded();
       await page.screenshot({ path: info.outputPath(`test-me-native-pause-${optimal ? 'efficient' : 'inefficient'}.png`), animations: 'disabled' });
-      await page.getByRole('button', { name: 'Close practice', exact: true }).click();
+      await resume.click();
       await expect(page.locator('.bp-panel')).toHaveCount(0);
-      expect(await page.locator('video').evaluate(video => video.paused)).toBe(true);
+      await expectPlaying(page);
     });
   }
 
@@ -65,6 +74,11 @@ test.describe('opt-in Test me through the built worker', () => {
     expect(await page.locator('video').evaluate(video => video.paused)).toBe(true);
     expect(app.generations).toHaveLength(2);
     expect(app.analyses[1]).toEqual(app.analyses[0]);
+    await expect(page.locator('.bp-countdown')).toHaveCount(0);
+    await expect(page.getByText(/Now see how the instructor does it/)).toHaveCount(0);
+    await expect(page.getByText('Video stayed paused where you left it', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Resume video', exact: true }).click();
+    await expectPlaying(page);
   });
 
   test('unprepared video pauses, generates, grades with setId and resumes', async ({ app }, info) => {

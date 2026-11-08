@@ -18,6 +18,7 @@ export type PracticePanelProps = {
   result: SubmissionResponse | null;
   error: { code: string; message: string; retryable: boolean } | null;
   canResume: boolean;
+  ownsPause: boolean;
   onRun(code: string): void;
   onSubmit(code: string): void;
   onSkip(): void;
@@ -109,7 +110,7 @@ function Panel(props: PracticePanelProps & { draftKey: string }) {
 
     {aiGenerated && <p className="bp-generated-label bp-generated-panel">AI-generated practice</p>}
 
-    {solved ? <Solved heading={heading} result={result} canResume={props.canResume} analysis={props.analysis ?? null}
+    {solved ? <Solved heading={heading} result={result} canResume={props.canResume} ownsPause={props.ownsPause} analysis={props.analysis ?? null}
       resumeAtS={props.breakpoint.pauseAtS} holdMs={props.holdMs ?? SOLVED_HOLD_MS} onResume={props.onResume} /> : <>
       <div className="bp-body">
         <div className="bp-intro bp-stagger">
@@ -229,8 +230,9 @@ function Results({ attempt, lastMode, result, error, coach }: {
   return <div className="bp-results" aria-live="polite" aria-atomic="true">{body}</div>;
 }
 
-function Solved({ heading, result, canResume, resumeAtS, holdMs, onResume, analysis }: {
+function Solved({ heading, result, canResume, ownsPause, resumeAtS, holdMs, onResume, analysis }: {
   heading: React.RefObject<HTMLHeadingElement | null>; result: SubmissionResponse | null; canResume: boolean;
+  ownsPause: boolean;
   resumeAtS: number; holdMs: number; onResume(): void; analysis: AnalysisState | null;
 }) {
   const rows = result?.results ?? [];
@@ -254,6 +256,9 @@ function Solved({ heading, result, canResume, resumeAtS, holdMs, onResume, analy
     {review && !review.optimal && <Efficiency review={review} />}
     {canResume ? <>
       <p className="bp-note">The browser didn’t resume playback.</p>
+      <button type="button" className="bp-button bp-primary bp-wide" onClick={onResume}><Play size={14} aria-hidden="true" />Resume video</button>
+    </> : !ownsPause ? <>
+      <p className="bp-note">Video stayed paused where you left it</p>
       <button type="button" className="bp-button bp-primary bp-wide" onClick={onResume}><Play size={14} aria-hidden="true" />Resume video</button>
     </> : counting && analysis?.status !== 'loading' ? <>
       <p className="bp-note">Now see how the instructor does it — back to {formatTimestamp(resumeAtS)}.</p>

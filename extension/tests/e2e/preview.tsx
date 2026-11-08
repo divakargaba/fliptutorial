@@ -60,7 +60,7 @@ function Preview() {
     onOpen={() => setOpen(true)} />
     <div style={{ height: 12 }} />
     {open && <PracticePanel videoId={fixture.videoId} revision={new URLSearchParams(location.search).get('revision') ?? fixture.revision}
-      breakpoint={fixture.breakpoints[0]} attempt={attempt} result={result} error={error} canResume={canResume}
+      breakpoint={fixture.breakpoints[0]} attempt={attempt} result={result} error={error} canResume={canResume} ownsPause={true}
       onRun={code => grade('run', code)} onSubmit={code => grade('submit', code)}
       onSkip={close} onClose={close} onResume={close} />}
   </>;
@@ -99,7 +99,7 @@ function TestMePreview() {
     <TestMeControls />
     {stage === 'exercise' && <PracticePanel videoId={fixture.videoId} revision={generated.setId}
       breakpoint={{ id: 'generated', pauseAtS: 300, revealAtS: 302, exercise: generated.exercise }}
-      attempt={attempt} result={result} error={error} canResume={attempt === 'passed'}
+      attempt={attempt} result={result} error={error} canResume={attempt === 'passed'} ownsPause={true}
       onRun={() => grade('run')} onSubmit={() => grade('submit')}
       onSkip={close} onClose={close} onResume={close} />}
   </TestMeContext.Provider>;
