@@ -11,6 +11,7 @@ import { listSolved, markSolved } from '../src/progress';
 import { PlaybackSession, watchVideoId, type Ticket } from '../src/playback';
 import { TestMeContext } from '../src/test-me';
 import { Badge } from '../src/ui/Badge';
+import { TestMeControls } from '../src/ui/TestMeControls';
 import { PracticePanel, SOLVED_HOLD_MS, type PracticePanelProps } from '../src/ui/PracticePanel';
 
 type RenderedPanel = PracticePanelProps & { aiGenerated: boolean };
@@ -140,6 +141,7 @@ export default defineContentScript({
             <Badge state={state} total={breakpoints.length} remaining={remaining.length} solved={solved}
               active={!!active && !active.generated} nextAtS={remaining[0]?.pauseAtS ?? null} onOpen={openFromBadge} />
           </div>}
+          <TestMeControls />
           {visiblePanel && <div data-breakpoint-panel data-ai-generated={visiblePanel.aiGenerated || undefined} tabIndex={-1} style={{ width: '100%' }}>
             <PracticePanel key={`${session.generation}/${visiblePanel.breakpoint.exercise.id}`} {...visiblePanel} />
           </div>}
