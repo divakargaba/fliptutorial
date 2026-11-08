@@ -257,6 +257,7 @@ async def submit(body: SubmitRequest) -> JSONResponse:
             outcome=grade_result.outcome,
             failing_case=failing_case,
             concepts=exercise.concepts,
+            learner_level=body.learnerLevel,
         )
 
         feedback = {
@@ -265,7 +266,8 @@ async def submit(body: SubmitRequest) -> JSONResponse:
             "outcome": "failed",
             "concept": {"id": concept_id, "name": concept_name},
             "assessedLevel": body.learnerLevel,
-            "summary": diag.misconception.explanation,
+            # What went wrong; the misconception explanation carries why + how to fix it.
+            "summary": diag.summary or diag.misconception.explanation,
             "success": None,
             "diagnosis": {
                 "misconception": diag.misconception.model_dump(),

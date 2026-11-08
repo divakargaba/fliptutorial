@@ -42,6 +42,7 @@ REFRESHER_SCHEMA = {
                     "text": {"type": "string", "description": "The choice text."},
                 },
                 "required": ["id", "text"],
+                "additionalProperties": False,  # structured output rejects nested objects without it
             },
             "description": "2-6 unique answer choices.",
         },
