@@ -64,7 +64,7 @@ export function FeedbackCard({ feedback, code }: FeedbackCardProps) {
   return <section className="bp-v2 bp-v2-feedback" aria-label="Practice feedback" aria-live="polite">
     <LevelChip concept={feedback.concept.id} level={feedback.assessedLevel} />
     <h3>{feedback.outcome === 'passed' ? 'Well done' : 'Try again'}</h3><p>{feedback.summary}</p>
-    {feedback.success && <p>{feedback.success.explanation}</p>}
+    {feedback.success && feedback.success.explanation.trim() !== feedback.summary.trim() && <p>{feedback.success.explanation}</p>}
     {optimization?.show && <details><summary>Improve your solution</summary>
       <p>Your solution: {optimization.learner.time} time · {optimization.learner.space} space</p>
       <p>Target: {optimization.best.time} time · {optimization.best.space} space</p>
