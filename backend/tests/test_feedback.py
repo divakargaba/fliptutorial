@@ -26,6 +26,16 @@ from app.runners.base import RunnerResult, CaseResult, Runner
 FIXTURES = Path(__file__).parent / "fixtures" / "submissions"
 
 
+@pytest.fixture(autouse=True)
+def _no_live_concept_model():
+    """Keep concept grading/coaching offline even when a local .env holds a real key."""
+    async def unavailable(prompt: str) -> str:
+        raise RuntimeError("concept model disabled in tests")
+
+    with patch("app.feedback.concepts.anthropic_model_call", lambda *a, **k: unavailable):
+        yield
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -1242,8 +1252,8 @@ class TestRefresherAnswerIntegration:
         assert "range(3)" in data["feedback"]["summary"]
 
     @pytest.mark.asyncio
-    async def test_answer_refresher_wrong_includes_explanation(self):
-        """Wrong refresher answer includes the curated explanation in the summary."""
+    async def test_answer_refresher_wrong_does_not_reveal_explanation(self):
+        """Wrong refresher answer coaches the mistake but keeps the curated (answer-revealing) explanation back."""
         from fastapi import FastAPI
         from app.feedback import router
 
@@ -1279,5 +1289,7 @@ class TestRefresherAnswerIntegration:
         assert resp.status_code == 200
         data = resp.json()
         assert data["correct"] is False
-        # Wrong answer: should include both the grading result and the refresher explanation
-        assert "A for loop iterates" in data["feedback"]["summary"]
+        # Wrong answer: coach the mistake, never reveal the answer (the curated explanation names it)
+        assert "A for loop iterates" not in json.dumps(data["feedback"])
+        assert '"Declares"' in data["feedback"]["summary"]
+        assert data["feedback"]["diagnosis"]["misconception"]["explanation"] != data["feedback"]["summary"]
