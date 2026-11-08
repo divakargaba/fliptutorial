@@ -240,7 +240,7 @@ export const test = base.extend<{ app: App; breakpointCount: 1 | 2; preparedVide
       app.page = page;
       await page.goto(plan ? `https://www.youtube.com/watch?v=${plan.videoId}` : preparedVideo ? watchUrl : 'https://www.youtube.com/watch?v=unknown0001');
       if (plan) {
-        await expect(page.getByText('Practice settings', { exact: true }).first()).toBeVisible();
+        await expect(page.locator('.breakpoint-shell')).toBeAttached();
         const world = worlds.findLast(world => world.origin === `chrome-extension://${id}` || world.name.includes(id));
         expect(world, 'extension isolated world').toBeDefined();
         const result = await cdp.send('Runtime.evaluate', { contextId: world!.id, expression:

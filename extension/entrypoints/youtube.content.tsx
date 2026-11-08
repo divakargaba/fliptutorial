@@ -12,7 +12,8 @@ import { listSolved, markSolved } from '../src/progress';
 import { PlaybackSession, watchVideoId, type Ticket } from '../src/playback';
 import { TestMeContext } from '../src/test-me';
 import { Badge } from '../src/ui/Badge';
-import { BrandMark } from '../src/ui/BrandMark';
+import { WorkspaceContext } from '../src/ui/workspace';
+import { PRACTICE_LAYOUT_KEY, readPracticeLayout, savePracticeLayout, type PracticeLayout } from '../src/ui/workspace-preference';
 import { TestMeControls } from '../src/ui/TestMeControls';
 import { PracticePanel, SOLVED_HOLD_MS, type PracticePanelProps } from '../src/ui/PracticePanel';
 import { HintsContext, type AnalysisState } from '../src/hints';
@@ -24,7 +25,7 @@ import { WatchSegments } from '../src/plan/watch';
 import { PlanLoader } from '../src/plan/loader';
 import { planSolved, markPlanSolved } from '../src/plan/progress';
 import type { ExercisePlan, FeedbackResult, PracticeEvent } from '../src/v2/types';
-import { ConceptQuestionPanel, LearnerSettings as LearnerSettingsView, TopicNotAvailable, TimelineMarkers, RefresherPrompt, type Award } from '../src/ui/v2';
+import { ConceptQuestionPanel, TopicNotAvailable, TimelineMarkers, RefresherPrompt, type Award } from '../src/ui/v2';
 import { saveLearnerSettings } from '../src/plan/preferences';
 import { seekForPractice } from '../src/plan/timeline';
 
@@ -57,7 +58,9 @@ export default defineContentScript({
     let planLoader: PlanLoader | undefined;
     let planLoadSequence = 0;
     let dismissedUnavailable = false;
-    let settingsError: string | null = null;
+    let layout: PracticeLayout = 'below';
+    let layoutSaving = false;
+    let layoutError: string | null = null;
     let feedbackState: { ticket: Ticket; feedback: FeedbackResult; code: string } | null = null;
     // What the latest pass / correct answer earned (B1 award endpoint), shown as a progress card.
     let progressState: { ticket: Ticket; award: Award } | null = null;
@@ -173,7 +176,7 @@ export default defineContentScript({
     const findAnchor = (): Element | null => {
       const theater = document.querySelector('ytd-watch-flexy[theater]:not([hidden])');
       const secondary = visibleIn('#secondary-inner, #secondary', 360);
-      if (!theater && secondary) return secondary;
+      if (layout === 'side' && !theater && window.innerWidth >= 1100 && secondary) return secondary;
       const below = visibleIn('#below', 1);
       if (below) return below;
       // YouTube hydrates #below and the right column after media is playable.
@@ -270,9 +273,13 @@ export default defineContentScript({
       try {
         flushSync(() => ui!.mounted!.render(<HintsContext.Provider value={hints}><TestMeContext.Provider value={testMe}><div className="breakpoint-shell" data-theme={theme()}
           data-placement={anchor?.id === 'secondary-inner' || anchor?.id === 'secondary' ? 'side' : 'below'}>
+          <WorkspaceContext.Provider value={{ layout, effectiveLayout: anchor?.id === 'secondary-inner' || anchor?.id === 'secondary' ? 'side' : 'below', saving: layoutSaving, onChange: changeLayout, onPauseVideo: session.videoId && !settings.disabledVideos.includes(session.videoId) ? () => {
+            const videoId = session.videoId!;
+            void saveLearnerSettings({ ...settings, disabledVideos: [...settings.disabledVideos, videoId] }).catch(() => { layoutError = 'Could not save this preference. Please try again.'; render(); });
+          } : undefined }}>
           {prepared === false && plan && ['not_coding', 'no_captions'].includes(plan.status) && !dismissedUnavailable
             ? <TopicNotAvailable reason={plan.verdict.reason} onDismiss={() => { dismissedUnavailable = true; render(); }} />
-            : session.route !== 'unsupported' && <div data-breakpoint-badge>
+            : session.route !== 'unsupported' && <div data-breakpoint-badge hidden={!!visiblePanel}>
             <Badge state={state} total={breakpoints.length} remaining={remaining.length} solved={solved}
               active={!!active && !active.generated} nextAtS={remaining[0]?.pauseAtS ?? null} onOpen={openFromBadge} />
           </div>}
@@ -280,16 +287,7 @@ export default defineContentScript({
           {refresher && !active && !request && accountReady && playerReady &&
             <RefresherPrompt due={[{ concept: refresher.concept, reason: refresher.reason }]}
               onStart={startRefresher} onDismiss={() => { refresher = null; render(); }} />}
-          {accountReady && session.videoId && <details className="bp-v2">
-            <summary><span className="bp-logo-inline"><BrandMark size={14} /></span>Practice settings</summary>
-            <LearnerSettingsView value={settings} videoId={session.videoId} onChange={next => {
-              // Persist first; the storage observer applies the same settings
-              // to every tab. A failed write must not pretend to be saved.
-              void saveLearnerSettings(next).then(() => { settingsError = null; render(); })
-                .catch(() => { settingsError = 'Could not save practice settings. Please try again.'; render(); });
-            }} />
-            {settingsError && <p role="alert">{settingsError}</p>}
-          </details>}
+          {layoutError && <p className="bp-layout-error" role="alert">{layoutError}</p>}
           {visiblePanel && <div data-breakpoint-panel data-ai-generated={visiblePanel.aiGenerated || undefined} tabIndex={-1} style={{ width: '100%' }}>
             {active?.planPause?.question
               ? <ConceptQuestionPanel key={`${session.generation}/${active.planPause.question.id}`}
@@ -300,8 +298,19 @@ export default defineContentScript({
                   onAnswer={answer => void answerQuestion(answer)} onSkip={skip} onClose={skip} onResume={visiblePanel.onResume} />
               : <PracticePanel key={`${session.generation}/${visiblePanel.breakpoint.exercise.id}`} {...visiblePanel} />}
           </div>}
-        </div></TestMeContext.Provider></HintsContext.Provider>));
+        </WorkspaceContext.Provider></div></TestMeContext.Provider></HintsContext.Provider>));
       } catch { failMount(); }
+    }
+
+    async function changeLayout(next: PracticeLayout) {
+      if (layoutSaving || next === layout) return;
+      layoutSaving = true; layoutError = null; render();
+      try {
+        await savePracticeLayout(next);
+        layout = next;
+        await ensureUi();
+      } catch { layoutError = 'Could not save this layout. Please try again.'; }
+      finally { layoutSaving = false; render(); }
     }
 
     function cancelTimelineSelection() {
@@ -405,7 +414,9 @@ export default defineContentScript({
 
     async function loadRoute(generation: number, videoId: string) {
       try {
-        const stored = await browser.storage.local.get([SETTINGS_KEY, ACCOUNT_KEY]);
+        const stored = await browser.storage.local.get([SETTINGS_KEY, ACCOUNT_KEY, PRACTICE_LAYOUT_KEY]);
+        layout = readPracticeLayout(stored[PRACTICE_LAYOUT_KEY]);
+        void ensureUi();
         if (generation !== session.generation || !isCurrent()) return;
         settings = readSettings(stored[SETTINGS_KEY]); accountId = readAccount(stored[ACCOUNT_KEY]);
         accountReady = true;
@@ -890,6 +901,10 @@ export default defineContentScript({
     ctx.addEventListener(window, 'resize', () => { session.reset(); void ensureUi(); });
     const onStorage = (changes: Record<string, { newValue?: unknown }>, area: string) => {
       if (area !== 'local') return;
+      if (PRACTICE_LAYOUT_KEY in changes) {
+        layout = readPracticeLayout(changes[PRACTICE_LAYOUT_KEY]?.newValue);
+        void ensureUi(); render();
+      }
       if (ACCOUNT_KEY in changes) {
         cancelTimelineSelection();
         watch.reset();

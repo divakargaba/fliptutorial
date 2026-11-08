@@ -1,3 +1,4 @@
+import { LayoutSwitch, SuccessCelebration } from '../workspace';
 import { useEffect, useId, useRef, useState } from 'react';
 import { ACTIVE_ACCOUNT_KEY, DEFAULT_SETTINGS, SETTINGS_KEY as FROZEN_SETTINGS_KEY, type FeedbackResult, type LevelId, type LearnerSettings as Settings, type PauseFrequency, type PlanQuestion, type PublicProfile } from '../../v2/types';
 import levels from '../../../../contracts/v2/levels.json';
@@ -91,7 +92,7 @@ function QuestionForm({ question, feedback, checking, error, canResume, progress
   const passed = feedback?.outcome === 'passed';
   return <section className="bp-v2 bp-panel" aria-labelledby={title}
     onKeyDown={event => event.stopPropagation()} onKeyUp={event => event.stopPropagation()} onKeyPress={event => event.stopPropagation()}>
-    <header className="bp-v2-header"><span className="bp-brand-row"><BrandMark size={16} />Concept practice</span><button type="button" onClick={onClose} aria-label="Close practice">Close</button></header>
+    <header className="bp-v2-header"><span className="bp-brand-row"><BrandMark size={16} />Concept practice</span><LayoutSwitch /><button type="button" onClick={onClose} aria-label="Close practice">Close</button></header>
     <div className="bp-v2-body"><h2 id={title} ref={heading} tabIndex={-1}>{question.title}</h2>
       <div className="bp-v2-chips">{question.concepts.map(concept => <LevelChip key={concept} concept={concept} level={question.level} />)}</div>
       {question.aiGenerated && <small>AI-generated practice</small>}<p className="bp-v2-prompt">{question.prompt}</p>
@@ -103,6 +104,7 @@ function QuestionForm({ question, feedback, checking, error, canResume, progress
         </fieldset>
         {error && <p role="alert">{error.message}{error.retryable ? ' Try your answer again, or skip and watch.' : ' Skip and watch to continue.'}</p>}
         {canResume && <p role="status">The browser didn’t resume playback. Try Resume video again.</p>}
+        {passed && <SuccessCelebration />}
         {feedback && <FeedbackCard feedback={feedback} code="" />}
         {passed && progress && <ProgressCard award={progress} />}
         <div className="bp-v2-actions"><PracticeMore onLater={onSkip} />
@@ -142,8 +144,9 @@ export function RefresherPrompt({ due, onStart, onDismiss }: {
 }) {
   if (!due.length) return null;
   const first = due[0]!;
-  return <aside className="bp-v2 bp-v2-card" aria-label="Skill refresher"><h2 className="bp-brand-row"><BrandMark size={18} />A quick refresher?</h2><p>Keep {conceptName(first.concept)} fresh with a short question.</p><p>{first.reason}</p>
-    <div className="bp-v2-actions"><button onClick={onDismiss}>Later</button><button className="bp-v2-primary" onClick={() => onStart(first.concept)}>Start refresher</button></div></aside>;
+  return <aside className="bp-v2 bp-refresher" aria-label="Skill refresher">
+    <span className="bp-refresher-icon" aria-hidden="true">💡</span><div><h2>A quick refresher?</h2><p>Keep {conceptName(first.concept)} fresh.</p></div>
+    <div className="bp-refresher-actions"><button onClick={onDismiss}>Later</button><button className="bp-v2-primary" onClick={() => onStart(first.concept)}>Start refresher</button></div></aside>;
 }
 export type LearnerSettingsValue = Settings;
 export const SETTINGS_KEY = FROZEN_SETTINGS_KEY;

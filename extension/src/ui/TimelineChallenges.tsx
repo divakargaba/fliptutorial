@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, Lightbulb } from 'lucide-react';
+import { Check } from 'lucide-react';
 import type { PlanPause } from '../v2/types';
 import { formatTimestamp } from './format';
 import { BrandMark } from './BrandMark';
@@ -64,7 +64,7 @@ export function TimelineMarkers({ markers, onSelect }: TimelineMarkersProps) {
           style={{ left: `calc(16px + (100% - 32px) * ${first.position / 100})` }}
           title={description} aria-label={description} aria-expanded={group.length > 1 ? group.some(pause => cluster?.includes(pause.id)) : undefined}
           onClick={() => group.length === 1 ? onSelect(first.id) : setCluster(group.map(pause => pause.id))}>
-          {passed ? <Check size={16} aria-hidden="true" /> : <Lightbulb size={16} aria-hidden="true" />}
+          <span className="bp-bulb" aria-hidden="true">💡</span>{passed && <Check className="bp-bulb-check" size={12} aria-hidden="true" />}
           {group.length > 1 && <span>{group.length}</span>}
         </button>;
       })}
@@ -82,7 +82,7 @@ export function TimelineMarkers({ markers, onSelect }: TimelineMarkersProps) {
 function ChallengeList({ markers, onSelect }: TimelineMarkersProps) {
   return <ol className="bp-challenge-list">{markers.map(pause => <li key={pause.id}>
     <button type="button" title={label(pause)} onClick={() => onSelect(pause.id)}>
-      {pause.status === 'passed' ? <Check size={16} aria-hidden="true" /> : <Lightbulb size={16} aria-hidden="true" />}
+      <span className="bp-bulb" aria-hidden="true">💡</span>{pause.status === 'passed' && <Check size={12} aria-hidden="true" />}
       <span><strong>{pause.title}</strong><small>{formatTimestamp(pause.timeS)} · {pause.status === 'passed' ? 'Passed · Review' : pause.status === 'attempted' ? 'Unfinished · Try again' : 'Unfinished · Practice'}</small></span>
     </button>
   </li>)}</ol>;
