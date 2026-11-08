@@ -38,6 +38,7 @@ Full product spec: `docs/PRD.md`.
   result: SubmissionResponse | null;
   error: { code: string; message: string; retryable: boolean } | null;
   canResume: boolean;                  // show "Resume video" when play() rejected
+  ownsPause: boolean;                  // whether automatic resume owns this pause
   onRun(code: string): void;
   onSubmit(code: string): void;
   onSkip(): void;
@@ -45,6 +46,15 @@ Full product spec: `docs/PRD.md`.
   onClose(): void;
 }
 ```
+`ownsPause` is separate from `canResume`: a learner-paused video stays paused after
+Submit and shows no countdown or auto-resume text. Its solved panel says "Video
+stayed paused where you left it" and offers **Resume video**, including after an
+inefficient review. `onResume` is a deliberate user-play action for the same
+current attempt/video, with no ad showing; it may play even when `ownsPause` is
+false. A rejected play sets `canResume` without changing `ownsPause`. Automatic
+resume and Close/Skip keep their ownership guard; Close still leaves a native
+pause intact.
+
 Optional panel props: `index`, `total` ("Challenge 2 of 3"), `leaving` (exit animation), `holdMs` (solved moment before auto-resume; caller waits `SOLVED_HOLD_MS`).
 Also `Badge` (`extension/src/ui/Badge.tsx`): `{ state: "loading"|"ready"|"unavailable"; total; remaining; solved; active: boolean; nextAtS: number|null; onOpen(): void }`. Always one `<button>`; non-actionable states use `aria-disabled`.
 Drafts: `extension/src/drafts.ts` (UI owner) exports `loadDraft(key)`, `saveDraft(key, code)` (debounced), `flushDraft(key)`; key = `${videoId}/${exerciseId}/${revision}`.

@@ -15,7 +15,7 @@ import { TestMeControls } from '../src/ui/TestMeControls';
 import { PracticePanel, SOLVED_HOLD_MS, type PracticePanelProps } from '../src/ui/PracticePanel';
 import { HintsContext, type AnalysisState } from '../src/hints';
 
-type RenderedPanel = PracticePanelProps & { aiGenerated: boolean };
+type RenderedPanel = PracticePanelProps & { aiGenerated: boolean; ownsPause: boolean };
 
 export default defineContentScript({
   matches: ['https://www.youtube.com/*'],
@@ -118,10 +118,11 @@ export default defineContentScript({
       const solved = breakpoints.filter(b => session.solvedIds.has(b.exercise.id)).length;
       let panel: RenderedPanel | null = null;
       if (active && session.videoId) {
+        const ticket = session.ticket();
         panel = {
           videoId: session.videoId, revision: active.revision, breakpoint: active.breakpoint,
           attempt: active.state, result: active.result, error: active.error, canResume: active.canResume,
-          aiGenerated: active.generated,
+          aiGenerated: active.generated, ownsPause: active.ownsPause,
           ...(active.generated ? {} : {
             index: Math.max(0, breakpoints.findIndex(b => b.id === active.breakpoint.id)), total: breakpoints.length,
           }),
@@ -130,7 +131,7 @@ export default defineContentScript({
           // submission ticket may supply feedback to this panel instance.
           analysis: analysisState && session.isCurrent(analysisState.ticket) ? analysisState.state : null,
           onRun: code => void grade('run', code), onSubmit: code => void grade('submit', code),
-          onSkip: skip, onClose: skip, onResume: resumeNow,
+          onSkip: skip, onClose: skip, onResume: () => resumeNow(ticket),
         };
         clearTimeout(leavingTimer); leavingPanel = null;
       } else if (shownPanel) {
@@ -344,10 +345,14 @@ export default defineContentScript({
       if (ownsPause) void video.play().catch(() => video.focus());
     }
 
-    async function resume(ticket: Ticket) {
+    async function resume(ticket: Ticket, explicit = false) {
       const video = player;
+      // Only the panel's explicit click may release a native pause. Automatic
+      // solved/Skip paths retain the original ownership and frame checks.
       if (!video || !isCurrent() || video !== currentPlayer() || isAd() || isFullscreen() ||
-          !session.canResume(ticket, video.currentTime, video.paused)) {
+          (explicit
+            ? video.seeking || !session.canUserResume(ticket, video.currentTime, video.paused)
+            : !session.canResume(ticket, video.currentTime, video.paused))) {
         if (session.isCurrent(ticket)) { session.interrupt(); render(); focusBadge(); }
         return;
       }
@@ -362,9 +367,10 @@ export default defineContentScript({
       }
     }
 
-    function resumeNow() {
+    function resumeNow(ticket: Ticket) {
+      if (!session.isCurrent(ticket)) return;
       clearTimeout(holdTimer); holdTimer = undefined;
-      void resume(session.ticket());
+      void resume(ticket, true);
     }
 
     function skip() {

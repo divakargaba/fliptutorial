@@ -177,8 +177,18 @@ export class PlaybackSession {
     return this.matches(ticket) && practice?.ownsPause === true && paused && Math.abs(time - practice.pausedAt) < 0.25;
   }
 
+  canUserResume(ticket: Ticket, time: number, paused: boolean): boolean {
+    const active = this.active;
+    // A deliberate Resume click may release a native pause, but never grants
+    // ownership to a later automatic callback or an obsolete panel's button.
+    return this.isCurrent(ticket) && active !== null && (active.state === 'passed' || active.canResume) &&
+      paused && Math.abs(time - active.pausedAt) < 0.25;
+  }
+
   resumeRejected(ticket: Ticket): void {
-    if (this.isCurrent(ticket) && this.active!.ownsPause) this.active!.canResume = true;
+    // Explicit play can also be rejected for a learner-owned pause. Keep the
+    // retry button reachable without changing who owns automatic playback.
+    if (this.isCurrent(ticket)) this.active!.canResume = true;
   }
 
   releaseFailedMount(): void {

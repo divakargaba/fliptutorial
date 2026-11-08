@@ -126,6 +126,47 @@ describe('grading and resume ownership', () => {
     expect(session.canResume(ticket, 72, true)).toBe(false);
   });
 
+  it.each([false, true])('explicit Resume can play a solved attempt with ownsPause=%s', ownsPause => {
+    const session = ready();
+    session.open(breakpoint, 72, ownsPause);
+    expect(session.canUserResume(session.ticket(), 72, true)).toBe(false);
+    const ticket = session.beginGrade()!;
+    expect(session.canUserResume(ticket, 72, true)).toBe(false);
+    session.finishGrade(ticket, 'submit', { ok: true, data: passed });
+    expect(session.canUserResume(ticket, 72, true)).toBe(true);
+    expect(session.canResume(ticket, 72, true)).toBe(ownsPause);
+    expect(session.canUserResume(ticket, 73, true)).toBe(false);
+    expect(session.canUserResume(ticket, 72, false)).toBe(false);
+    expect(session.canUserResume(ticket, Number.NaN, true)).toBe(false);
+    session.resumeRejected(ticket);
+    expect(session.active).toMatchObject({ ownsPause, canResume: true, state: 'passed' });
+    expect(session.canUserResume(ticket, 72, true)).toBe(true);
+    expect(session.canResume(ticket, 72, true)).toBe(ownsPause);
+  });
+
+  it('does not let an old Resume button or rejection control a new attempt', () => {
+    const session = ready();
+    session.open(breakpoint, 72, false);
+    const ticket = session.beginGrade()!;
+    session.finishGrade(ticket, 'submit', { ok: true, data: passed });
+    session.skip();
+    expect(session.canUserResume(ticket, 72, true)).toBe(false);
+    expect(session.canUserResume(session.ticket(), 72, true)).toBe(false);
+    session.resumeRejected(ticket);
+    expect(session.active?.canResume).toBe(false);
+    session.navigate(data.videoId);
+    session.acceptLookup(session.generation, data);
+    session.open(breakpoint, 72, false);
+    const next = session.beginGrade()!;
+    session.finishGrade(next, 'submit', { ok: true, data: passed });
+    expect(session.canUserResume(ticket, 72, true)).toBe(false);
+    session.resumeRejected(ticket);
+    expect(session.active?.canResume).toBe(false);
+    expect(session.canUserResume(next, 72, true)).toBe(true);
+    session.interrupt();
+    expect(session.canUserResume(next, 72, true)).toBe(false);
+  });
+
   it('ignores a pending result after Skip, even when play rejects', () => {
     const session = paused();
     const grade = session.beginGrade()!;
@@ -133,6 +174,7 @@ describe('grading and resume ownership', () => {
     session.resumeRejected(skip);
     expect(session.active?.canResume).toBe(true);
     expect(session.canResume(skip, 72, true)).toBe(true);
+    expect(session.canUserResume(skip, 72, true)).toBe(true);
     expect(session.finishGrade(grade, 'submit', { ok: true, data: passed })).toBe('ignored');
   });
 
