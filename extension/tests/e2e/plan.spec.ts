@@ -159,9 +159,9 @@ test.describe('v2 plan preferences', () => {
     const worker = context.serviceWorkers()[0] ?? await context.waitForEvent('serviceworker');
     const popup = await context.newPage();
     await popup.goto(`chrome-extension://${new URL(worker.url()).host}/popup.html`);
-    await popup.getByLabel('Test account').selectOption('test-ben');
+    await popup.getByLabel('Viewing as').selectOption('test-ben');
     await expect.poll(() => app.planRequests.at(-1)?.learnerLevels.loops).toBe('intermediate-1');
-    await expect(popup.getByRole('heading', { name: 'Ben (test)', level: 1 })).toBeVisible();
+    await expect(popup.getByRole('heading', { name: 'Ben', exact: true, level: 1 })).toBeVisible();
     await popup.close();
   });
 });
