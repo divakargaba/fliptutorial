@@ -7,18 +7,21 @@ test('placement moves the mounted workspace, preserves edits and is remembered',
   const editor = page.getByRole('textbox', { name: 'Python code' });
   const draft = 'def raise_to_power(base, exponent):\n    return base ** exponent # my draft';
   await editor.fill(draft);
-  await expect(page.locator('.breakpoint-shell')).toHaveAttribute('data-placement', 'below');
+  // Side (right of the video) is the default; narrow windows have no room and fall back to below.
+  const side = info.project.name.endsWith('narrow') ? 'below' : 'side';
+  await expect(page.getByRole('button', { name: 'Side', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.breakpoint-shell')).toHaveAttribute('data-placement', side);
   await expect(page.getByText('Practice settings', { exact: true })).toHaveCount(0);
   await expect(page.locator('[data-breakpoint-badge]')).not.toBeVisible();
-  await page.locator('.bp-workbench').screenshot({ animations: 'disabled', path: info.outputPath('workbench-below.png') });
+  await page.locator('.bp-workbench').screenshot({ animations: 'disabled', path: info.outputPath('workbench-side.png') });
   await editor.evaluate(el => { el.dataset.mountProof = 'same-editor'; });
-  await page.getByRole('button', { name: 'Side', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Side', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.locator('.breakpoint-shell')).toHaveAttribute('data-placement', info.project.name.endsWith('narrow') ? 'below' : 'side');
+  await page.getByRole('button', { name: 'Below', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Below', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.breakpoint-shell')).toHaveAttribute('data-placement', 'below');
   await expect(editor).toHaveAttribute('data-mount-proof', 'same-editor');
   await expect(editor).toHaveText(draft);
   expect(await page.locator('video').evaluate(video => video.paused)).toBe(true);
-  await page.locator('.bp-workbench').screenshot({ animations: 'disabled', path: info.outputPath('workbench-side.png') });
+  await page.locator('.bp-workbench').screenshot({ animations: 'disabled', path: info.outputPath('workbench-below.png') });
   const extensionId = new URL(page.context().serviceWorkers()[0]!.url()).host;
   const storagePage = await page.context().newPage();
   await storagePage.goto(`chrome-extension://${extensionId}/popup.html`);
@@ -26,10 +29,10 @@ test('placement moves the mounted workspace, preserves edits and is remembered',
   await storagePage.close();
   await page.reload();
   await automaticPause(page);
-  await expect(page.getByRole('button', { name: 'Side', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: 'Below', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(editor).toHaveText(draft);
-  await page.getByRole('button', { name: 'Below', exact: true }).click();
-  await expect(page.locator('.breakpoint-shell')).toHaveAttribute('data-placement', 'below');
+  await page.getByRole('button', { name: 'Side', exact: true }).click();
+  await expect(page.locator('.breakpoint-shell')).toHaveAttribute('data-placement', side);
 });
 
 test('hints overlay without resizing the editor and reopen without another request', async ({ app }, info) => {
