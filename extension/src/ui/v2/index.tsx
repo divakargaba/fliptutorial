@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import type { FeedbackResult, LevelId, PauseFrequency, PlanQuestion, PublicProfile } from '../../v2/types';
+import { ACTIVE_ACCOUNT_KEY, DEFAULT_SETTINGS, SETTINGS_KEY as FROZEN_SETTINGS_KEY, type FeedbackResult, type LevelId, type LearnerSettings as Settings, type PauseFrequency, type PlanQuestion, type PublicProfile } from '../../v2/types';
 import levels from '../../../../contracts/v2/levels.json';
 import concepts from '../../../../contracts/v2/concepts.json';
 import { FeedbackEditor } from './FeedbackEditor';
@@ -87,10 +87,10 @@ export function RefresherPrompt({ due, onStart, onDismiss }: {
   return <aside className="bp-v2 bp-v2-card" aria-label="Skill refresher"><h2>A quick refresher?</h2><p>Keep {conceptName(first.concept)} fresh with a short question.</p><p>{first.reason}</p>
     <div className="bp-v2-actions"><button onClick={onDismiss}>Later</button><button className="bp-v2-primary" onClick={() => onStart(first.concept)}>Start refresher</button></div></aside>;
 }
-export type LearnerSettingsValue = { frequency: PauseFrequency; autoPause: boolean; disabledVideos: string[] };
-export const SETTINGS_KEY = 'breakpoint:learner-settings';
-export const ACCOUNT_KEY = 'breakpoint:active-account';
-export const defaultSettings: LearnerSettingsValue = { frequency: 'normal', autoPause: true, disabledVideos: [] };
+export type LearnerSettingsValue = Settings;
+export const SETTINGS_KEY = FROZEN_SETTINGS_KEY;
+export const ACCOUNT_KEY = ACTIVE_ACCOUNT_KEY;
+export const defaultSettings: LearnerSettingsValue = DEFAULT_SETTINGS;
 export function LearnerSettings({ value, videoId, onChange }: { value: LearnerSettingsValue; videoId?: string; onChange(value: LearnerSettingsValue): void }) {
   return <section className="bp-v2 bp-v2-card" aria-label="Practice settings"><h2>Practice settings</h2>
     <label className="bp-v2-choice"><input type="checkbox" checked={value.autoPause} onChange={event => onChange({ ...value, autoPause: event.target.checked })} />Automatically pause for practice</label>

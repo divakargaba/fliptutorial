@@ -5,6 +5,7 @@ import { Prec } from '@codemirror/state';
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import { tags as t } from '@lezer/highlight';
 import { python } from '@codemirror/lang-python';
+import type { Language } from '../v2/types';
 
 // Colours come from CSS variables so the editor follows YouTube's light/dark theme.
 const highlight = HighlightStyle.define([
@@ -35,12 +36,13 @@ const theme = EditorView.theme({
   '.cm-tooltip-autocomplete > ul > li[aria-selected]': { backgroundColor: 'var(--bp-selection)', color: 'var(--bp-text)' },
 });
 
-export function PythonEditor({ initialCode, onChange, onRun, onSubmit, describedBy }: {
+export function PythonEditor({ initialCode, onChange, onRun, onSubmit, describedBy, language = 'python' }: {
   initialCode: string;
   onChange(code: string): void;
   onRun(): void;
   onSubmit(): void;
   describedBy?: string;
+  language?: Language;
 }) {
   const host = useRef<HTMLDivElement>(null);
   const handlers = useRef({ onChange, onRun, onSubmit });
@@ -57,9 +59,9 @@ export function PythonEditor({ initialCode, onChange, onRun, onSubmit, described
           { key: 'Mod-Enter', run: () => { handlers.current.onRun(); return true; } },
           { key: 'Mod-Shift-Enter', run: () => { handlers.current.onSubmit(); return true; } },
         ])),
-        basicSetup, python(), syntaxHighlighting(highlight), theme,
+        basicSetup, ...(language === 'python' ? [python(), syntaxHighlighting(highlight)] : []), theme,
         EditorView.contentAttributes.of({
-          'aria-label': 'Python code', spellcheck: 'false', ...(describedBy ? { 'aria-describedby': describedBy } : {}),
+          'aria-label': `${{ python: 'Python', javascript: 'JavaScript', typescript: 'TypeScript', java: 'Java', cpp: 'C++', c: 'C', csharp: 'C#', go: 'Go', rust: 'Rust', sql: 'SQL', pseudocode: 'Pseudocode', unknown: 'Source' }[language]} code`, spellcheck: 'false', ...(describedBy ? { 'aria-describedby': describedBy } : {}),
         }),
         EditorView.updateListener.of(update => {
           if (update.docChanged) handlers.current.onChange(update.state.doc.toString());

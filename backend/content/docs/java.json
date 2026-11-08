@@ -1,0 +1,150 @@
+{
+ "language": "java",
+ "source": "Oracle Java SE Documentation (docs.oracle.com), summarized",
+ "chunks": [
+  {
+   "id": "java-for-statement",
+   "title": "The for statement",
+   "url": "https://docs.oracle.com/javase/tutorial/java/nutsandbolts/for.html",
+   "tags": ["loops", "for", "iteration"],
+   "text": "The for statement has three parts: initialization, termination condition and increment. for (int i = 0; i < n; i++) runs the body n times. The enhanced for-each (for (Type item : collection)) iterates over arrays and Iterables.",
+   "nudge": "Think about your loop bounds: does the condition use < or <=, and does it cover every index you need?"
+  },
+  {
+   "id": "java-while",
+   "title": "The while statement",
+   "url": "https://docs.oracle.com/javase/tutorial/java/nutsandbolts/while.html",
+   "tags": ["loops", "while"],
+   "text": "while (condition) repeats the body as long as condition is true. do-while runs the body at least once, then checks the condition. Make sure something inside the loop changes the condition.",
+   "nudge": "Check what changes each iteration so the loop eventually terminates."
+  },
+  {
+   "id": "java-if-else",
+   "title": "The if-then-else statement",
+   "url": "https://docs.oracle.com/javase/tutorial/java/nutsandbolts/if.html",
+   "tags": ["conditionals", "if", "else"],
+   "text": "if (condition) runs a block when the condition is true. else if adds more branches. else is the fallback. Only one branch executes. Conditions must be boolean expressions (no truthy/falsy like in JavaScript).",
+   "nudge": "Make sure your condition evaluates to a boolean. If you need to compare objects, use .equals() instead of ==."
+  },
+  {
+   "id": "java-comparisons",
+   "title": "Equality and relational operators",
+   "url": "https://docs.oracle.com/javase/tutorial/java/nutsandbolts/op2.html",
+   "tags": ["conditionals", "comparison", "operators"],
+   "text": "Relational: <, >, <=, >=. Equality: == (reference/value for primitives), != (not equal). For objects, == checks reference identity; use .equals() for value equality. String comparison always needs .equals(), never ==.",
+   "nudge": "If comparing Strings or objects, use .equals() — the == operator compares references, not contents."
+  },
+  {
+   "id": "java-arithmetic",
+   "title": "Arithmetic operators",
+   "url": "https://docs.oracle.com/javase/tutorial/java/nutsandbolts/op1.html",
+   "tags": ["arithmetic", "operators", "math"],
+   "text": "Java supports +, -, *, / and % (remainder). Integer division truncates: 7/2 gives 3. To get a floating-point result, cast one operand: (double)a / b. No power operator; use Math.pow(base, exp) which returns double.",
+   "nudge": "If dividing two ints gives an unexpected result, remember Java integer division truncates toward zero."
+  },
+  {
+   "id": "java-math",
+   "title": "Math class",
+   "url": "https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Math.html",
+   "tags": ["math", "functions"],
+   "text": "Math provides static methods: Math.abs(), Math.max(), Math.min(), Math.pow(a, b), Math.sqrt(), Math.floor(), Math.ceil(), Math.round(), Math.random(). Math.pow returns double; cast to int or long if needed.",
+   "nudge": "Need a power or absolute value? Check the Math class. Remember Math.pow returns a double."
+  },
+  {
+   "id": "java-methods",
+   "title": "Defining methods",
+   "url": "https://docs.oracle.com/javase/tutorial/java/javaOO/methods.html",
+   "tags": ["functions", "methods", "return"],
+   "text": "Methods are declared with a return type, name and parameter list: public int add(int a, int b) { return a + b; }. void methods don't return a value. Every non-void method must return on all code paths. Methods can be overloaded (same name, different parameters).",
+   "nudge": "Make sure every branch of your method reaches a return statement with the correct type."
+  },
+  {
+   "id": "java-return",
+   "title": "The return statement",
+   "url": "https://docs.oracle.com/javase/tutorial/java/javaOO/returnvalue.html",
+   "tags": ["functions", "return"],
+   "text": "return exits the method and provides the value to the caller. The value's type must match the method's declared return type. A void method can use return; with no value to exit early.",
+   "nudge": "If you get a 'missing return statement' error, check that all if/else branches return a value."
+  },
+  {
+   "id": "java-types",
+   "title": "Primitive data types",
+   "url": "https://docs.oracle.com/javase/tutorial/java/nutsandbolts/datatypes.html",
+   "tags": ["types", "primitives"],
+   "text": "Java has 8 primitives: byte, short, int, long, float, double, boolean, char. int is 32-bit (±2 billion). long is 64-bit. float/double for decimals. Wrapper classes (Integer, Double) for object contexts. Auto-boxing converts between them.",
+   "nudge": "If your numbers overflow or you get precision issues, check whether int is large enough or if you need long or double."
+  },
+  {
+   "id": "java-strings",
+   "title": "Strings",
+   "url": "https://docs.oracle.com/javase/tutorial/java/data/strings.html",
+   "tags": ["strings", "methods"],
+   "text": "Strings are immutable objects. Common methods: .length(), .charAt(i), .substring(start, end), .indexOf(str), .contains(str), .equals(str), .equalsIgnoreCase(str), .toUpperCase(), .toLowerCase(), .trim(), .split(regex), .replace(old, new). Use StringBuilder for efficient concatenation in loops.",
+   "nudge": "Remember Strings are immutable. Each method returns a new String; use StringBuilder if building in a loop."
+  },
+  {
+   "id": "java-arrays",
+   "title": "Arrays",
+   "url": "https://docs.oracle.com/javase/tutorial/java/nutsandbolts/arrays.html",
+   "tags": ["arrays", "data-structures"],
+   "text": "Arrays have fixed size: int[] arr = new int[n] or int[] arr = {1, 2, 3}. Access by index (0-based), .length gives the size (no parentheses). ArrayIndexOutOfBoundsException on invalid index. Use Arrays.sort(), Arrays.copyOf(), Arrays.toString() from java.util.Arrays.",
+   "nudge": "Array length is a field (.length), not a method. Check your indices stay within 0 to length-1."
+  },
+  {
+   "id": "java-arraylist",
+   "title": "ArrayList",
+   "url": "https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/ArrayList.html",
+   "tags": ["lists", "data-structures", "collections"],
+   "text": "ArrayList<E> is a resizable array: .add(e), .get(i), .set(i, e), .remove(i), .size(), .contains(e), .indexOf(e). Cannot hold primitives directly; use wrapper types (Integer, Double). Iterate with for-each or indices.",
+   "nudge": "If you need a growable list, use ArrayList. Remember it uses wrapper types, not primitives."
+  },
+  {
+   "id": "java-hashmap",
+   "title": "HashMap",
+   "url": "https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/HashMap.html",
+   "tags": ["maps", "data-structures", "collections"],
+   "text": "HashMap<K,V> stores key-value pairs: .put(k, v), .get(k), .containsKey(k), .remove(k), .size(), .keySet(), .values(), .entrySet(). get returns null for missing keys; use getOrDefault(k, default) to avoid NullPointerException.",
+   "nudge": "If you need to look up values by key, use a HashMap. Check for null returns from .get() when the key might be absent."
+  },
+  {
+   "id": "java-try-catch",
+   "title": "try-catch-finally",
+   "url": "https://docs.oracle.com/javase/tutorial/essential/exceptions/handling.html",
+   "tags": ["errors", "exceptions"],
+   "text": "try { ... } catch (ExceptionType e) { ... } catches specific exception types. finally always runs. Checked exceptions must be caught or declared with throws. Common: NullPointerException, ArrayIndexOutOfBoundsException, NumberFormatException, IOException.",
+   "nudge": "If the compiler says you must handle an exception, wrap the risky code in try/catch with the specific exception type."
+  },
+  {
+   "id": "java-null",
+   "title": "null in Java",
+   "url": "https://docs.oracle.com/javase/tutorial/java/data/autoboxing.html",
+   "tags": ["types", "null"],
+   "text": "null means no object reference. Calling a method on null throws NullPointerException. Check with if (obj != null) before use. Primitives cannot be null, but their wrapper types (Integer, etc.) can be.",
+   "nudge": "If you get NullPointerException, trace which variable is null and add a null check before using it."
+  },
+  {
+   "id": "java-collections-sort",
+   "title": "Collections.sort()",
+   "url": "https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Collections.html#sort(java.util.List)",
+   "tags": ["sorting", "collections"],
+   "text": "Collections.sort(list) sorts a List in natural order. For custom order: Collections.sort(list, comparator) or list.sort(comparator). Comparator.comparingInt(fn) sorts by an int key. Arrays.sort(arr) sorts an array in place.",
+   "nudge": "Use Collections.sort() for Lists and Arrays.sort() for arrays. Provide a Comparator for custom order."
+  },
+  {
+   "id": "java-boolean-logic",
+   "title": "Boolean operators",
+   "url": "https://docs.oracle.com/javase/tutorial/java/nutsandbolts/op2.html",
+   "tags": ["boolean", "logic", "operators"],
+   "text": "&& is logical AND (short-circuit), || is logical OR (short-circuit), ! is logical NOT. Short-circuit means the second operand is not evaluated if the first determines the result. Use parentheses to clarify complex conditions.",
+   "nudge": "If your condition is complex, break it into parts and check the truth table. && short-circuits on false, || on true."
+  },
+  {
+   "id": "java-integer-parse",
+   "title": "Integer.parseInt()",
+   "url": "https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/Integer.html#parseInt(java.lang.String)",
+   "tags": ["types", "conversion", "parsing"],
+   "text": "Integer.parseInt(str) converts a String to int. Throws NumberFormatException for invalid input. Double.parseDouble(str) for doubles. String.valueOf(n) converts a number to String.",
+   "nudge": "If converting a String to a number, be ready for NumberFormatException on non-numeric input."
+  }
+ ]
+}

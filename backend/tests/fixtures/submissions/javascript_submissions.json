@@ -1,0 +1,100 @@
+{
+  "language": "javascript",
+  "exercise": {
+    "id": "test-js-fizzbuzz",
+    "revision": "r1",
+    "title": "FizzBuzz",
+    "language": "javascript",
+    "statement": "Write fizzBuzz(n) that returns 'Fizz' if n is divisible by 3, 'Buzz' if divisible by 5, 'FizzBuzz' if both, or the number as a string otherwise.",
+    "functionName": "fizzBuzz",
+    "starterCode": "function fizzBuzz(n) {\n  // your code here\n}\n",
+    "concepts": ["conditionals", "functions"],
+    "level": "beginner-2",
+    "examples": [
+      {"args": [3], "expected": "Fizz"},
+      {"args": [5], "expected": "Buzz"},
+      {"args": [15], "expected": "FizzBuzz"},
+      {"args": [7], "expected": "7"}
+    ],
+    "hiddenTests": [
+      {"args": [1], "expected": "1"},
+      {"args": [9], "expected": "Fizz"},
+      {"args": [10], "expected": "Buzz"},
+      {"args": [30], "expected": "FizzBuzz"},
+      {"args": [4], "expected": "4"}
+    ],
+    "referenceSolution": "function fizzBuzz(n) {\n  if (n % 15 === 0) return 'FizzBuzz';\n  if (n % 3 === 0) return 'Fizz';\n  if (n % 5 === 0) return 'Buzz';\n  return String(n);\n}\n"
+  },
+  "submissions": [
+    {
+      "id": "js-pass-1",
+      "code": "function fizzBuzz(n) {\n  if (n % 15 === 0) return 'FizzBuzz';\n  if (n % 3 === 0) return 'Fizz';\n  if (n % 5 === 0) return 'Buzz';\n  return String(n);\n}\n",
+      "expectedOutcome": "passed",
+      "expectedMisconception": null,
+      "description": "Correct solution checking 15 first"
+    },
+    {
+      "id": "js-pass-2",
+      "code": "function fizzBuzz(n) {\n  let result = '';\n  if (n % 3 === 0) result += 'Fizz';\n  if (n % 5 === 0) result += 'Buzz';\n  return result || String(n);\n}\n",
+      "expectedOutcome": "passed",
+      "expectedMisconception": null,
+      "description": "Correct solution using string concatenation"
+    },
+    {
+      "id": "js-fail-order",
+      "code": "function fizzBuzz(n) {\n  if (n % 3 === 0) return 'Fizz';\n  if (n % 5 === 0) return 'Buzz';\n  if (n % 15 === 0) return 'FizzBuzz';\n  return String(n);\n}\n",
+      "expectedOutcome": "wrong_answer",
+      "expectedMisconception": "wrong-order",
+      "description": "Checks 3 and 5 before 15, so FizzBuzz is never returned"
+    },
+    {
+      "id": "js-fail-equality",
+      "code": "function fizzBuzz(n) {\n  if (n % 15 == 0) return 'FizzBuzz';\n  if (n % 3 == 0) return 'Fizz';\n  if (n % 5 == 0) return 'Buzz';\n  return n;\n}\n",
+      "expectedOutcome": "wrong_answer",
+      "expectedMisconception": "wrong-return-type",
+      "description": "Returns number instead of string for non-fizzbuzz values"
+    },
+    {
+      "id": "js-fail-wrong-modulo",
+      "code": "function fizzBuzz(n) {\n  if (n % 15 === 0) return 'FizzBuzz';\n  if (n % 3 === 0) return 'Fizz';\n  if (n % 5 === 0) return 'Buzz';\n  return n.toString();\n}\n",
+      "expectedOutcome": "passed",
+      "expectedMisconception": null,
+      "description": "Correct using toString()"
+    },
+    {
+      "id": "js-fail-syntax",
+      "code": "function fizzBuzz(n) {\n  if (n % 15 === 0) return 'FizzBuzz'\n  if (n % 3 === 0) return 'Fizz'\n  if (n % 5 === 0) return 'Buzz'\n  return String(n)\n",
+      "expectedOutcome": "syntax_error",
+      "expectedMisconception": "syntax-error",
+      "description": "Missing closing brace"
+    },
+    {
+      "id": "js-fail-undefined-fn",
+      "code": "function fizzBuzz(n) {\n  return fizzbuzz_helper(n);\n}\n",
+      "expectedOutcome": "runtime_error",
+      "expectedMisconception": "undefined-variable",
+      "description": "Calls undefined helper function"
+    },
+    {
+      "id": "js-fail-modulo-wrong",
+      "code": "function fizzBuzz(n) {\n  if (n / 15 === 0) return 'FizzBuzz';\n  if (n / 3 === 0) return 'Fizz';\n  if (n / 5 === 0) return 'Buzz';\n  return String(n);\n}\n",
+      "expectedOutcome": "wrong_answer",
+      "expectedMisconception": "wrong-operator",
+      "description": "Uses division instead of modulo"
+    },
+    {
+      "id": "js-pass-3",
+      "code": "function fizzBuzz(n) {\n  const div3 = n % 3 === 0;\n  const div5 = n % 5 === 0;\n  if (div3 && div5) return 'FizzBuzz';\n  if (div3) return 'Fizz';\n  if (div5) return 'Buzz';\n  return '' + n;\n}\n",
+      "expectedOutcome": "passed",
+      "expectedMisconception": null,
+      "description": "Correct using boolean variables"
+    },
+    {
+      "id": "js-fail-no-return",
+      "code": "function fizzBuzz(n) {\n  if (n % 15 === 0) return 'FizzBuzz';\n  if (n % 3 === 0) return 'Fizz';\n  if (n % 5 === 0) return 'Buzz';\n}\n",
+      "expectedOutcome": "wrong_answer",
+      "expectedMisconception": "missing-return",
+      "description": "Missing return for non-FizzBuzz numbers; returns undefined"
+    }
+  ]
+}
