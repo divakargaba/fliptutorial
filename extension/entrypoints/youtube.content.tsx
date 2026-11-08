@@ -58,6 +58,7 @@ export default defineContentScript({
     let dismissedUnavailable = false;
     let settingsError: string | null = null;
     let feedbackState: { ticket: Ticket; feedback: FeedbackResult; code: string } | null = null;
+    let levelUpState: { ticket: Ticket; concept: string; level: string } | null = null;
     let refresher: Refresher | null = null;
     let refresherSequence = 0;
     const attemptEvents = new WeakMap<object, { accountId: string; attempts: number; hintsUsed: number }>();
@@ -89,6 +90,11 @@ export default defineContentScript({
       if (!concept) return 'beginner-1';
       const reply = await sendPlanRequest({ type: 'levelV2', accountId: account, concept }, LevelResultSchema, sendV2);
       return reply.ok ? reply.data.level : 'beginner-1';
+    }
+    async function learnerRank(concept: string | undefined, account: string): Promise<number> {
+      if (!concept) return 1;
+      const reply = await sendPlanRequest({ type: 'levelV2', accountId: account, concept }, LevelResultSchema, sendV2);
+      return reply.ok ? reply.data.rank : 1;
     }
     let player: HTMLVideoElement | null = null;
     let oldPlayer: HTMLVideoElement | null = null;
@@ -214,6 +220,8 @@ export default defineContentScript({
             })),
             feedback: feedbackState && session.isCurrent(feedbackState.ticket)
               ? { result: feedbackState.feedback, submittedCode: feedbackState.code } : null,
+            levelUp: levelUpState && session.isCurrent(levelUpState.ticket)
+              ? { concept: levelUpState.concept, level: levelUpState.level } : null,
           } : {}),
           aiGenerated: active.generated, ownsPause: active.ownsPause,
           ...(active.generated ? {} : {
@@ -303,7 +311,7 @@ export default defineContentScript({
           video.seeking || !video.paused || isAd() || isFullscreen() || !mountable() ||
           document.visibilityState !== 'visible') return;
       if (session.openFromTimeline(id, video.currentTime, ownsPause)) {
-        feedbackState = null; analysisState = null;
+        feedbackState = null; analysisState = null; levelUpState = null;
         render(); focusPanel(); releaseEmptyPanel(video);
       }
     }
@@ -410,7 +418,7 @@ export default defineContentScript({
           document.visibilityState !== 'visible' || !mountable()) return;
       const ticket = session.startRefresher(offer.question, video.currentTime, !video.paused);
       if (!ticket) return;
-      refresher = null; feedbackState = null;
+      refresher = null; feedbackState = null; levelUpState = null;
       eventContext(); // Capture the learner before any async answer work starts.
       video.pause(); render(); focusPanel(); releaseEmptyPanel(video);
     }
@@ -531,10 +539,12 @@ export default defineContentScript({
       if (active.planPause?.exercise) {
         const item = active.planPause.exercise;
         const context = eventContext(active)!;
-        feedbackState = null;
+        feedbackState = null; levelUpState = null;
         if (mode === 'submit') context.attempts++;
         render();
-        const level = await learnerLevel(item.concepts[0], context.accountId);
+        const concept = item.concepts[0];
+        const [level, rankBefore] = await Promise.all([learnerLevel(concept, context.accountId),
+          mode === 'submit' ? learnerRank(concept, context.accountId) : Promise.resolve(0)]);
         if (!isCurrent() || !session.isCurrent(ticket)) return;
         const reply = await sendPlanRequest({ type: 'submitV2', exerciseId: item.id, revision: item.revision,
           language: item.language, code, mode, learnerLevel: level }, SubmitResultSchema, sendV2);
@@ -547,7 +557,17 @@ export default defineContentScript({
             practiceEvent(reply.data.feedback.outcome, active, {
               ...(reply.data.feedback.diagnosis ? { misconception: reply.data.feedback.diagnosis.misconception.id } : {}),
             });
-            if (action === 'passed') void markPlanSolved(context.accountId, videoId, item.id, item.revision).catch(() => {});
+            if (action === 'passed') {
+              void markPlanSolved(context.accountId, videoId, item.id, item.revision).catch(() => {});
+              // Check for level-up after the events have been flushed.
+              if (concept) {
+                const afterReply = await sendPlanRequest({ type: 'levelV2', accountId: context.accountId, concept }, LevelResultSchema, sendV2);
+                if (isCurrent() && session.isCurrent(ticket) && afterReply.ok && afterReply.data.rank > rankBefore) {
+                  levelUpState = { ticket, concept, level: afterReply.data.level };
+                  render();
+                }
+              }
+            }
           }
         }
         // v2 feedback is instructional content. Keep it visible until the
@@ -598,8 +618,10 @@ export default defineContentScript({
       const ticket = session.beginGrade();
       if (!ticket) return;
       const context = eventContext(active)!;
-      context.attempts++; feedbackState = null; render();
-      const level = await learnerLevel(item.concepts[0], context.accountId);
+      const concept = item.concepts[0];
+      context.attempts++; feedbackState = null; levelUpState = null; render();
+      const [level, rankBefore] = await Promise.all([learnerLevel(concept, context.accountId),
+        learnerRank(concept, context.accountId)]);
       if (!isCurrent() || !session.isCurrent(ticket)) return;
       const reply = await sendPlanRequest({ type: 'answerV2', questionId: item.id, revision: item.revision,
         answer, learnerLevel: level }, AnswerResultSchema, sendV2);
@@ -621,6 +643,13 @@ export default defineContentScript({
         } else if (!active.refresher) {
           practiceEvent(reply.data.correct ? 'passed' : 'failed', active,
             reply.data.feedback.diagnosis ? { misconception: reply.data.feedback.diagnosis.misconception.id } : {});
+        }
+        // Check for level-up after a correct answer (concept or refresher).
+        if (reply.data.correct && concept) {
+          const afterReply = await sendPlanRequest({ type: 'levelV2', accountId: context.accountId, concept }, LevelResultSchema, sendV2);
+          if (isCurrent() && session.isCurrent(ticket) && afterReply.ok && afterReply.data.rank > rankBefore) {
+            levelUpState = { ticket, concept, level: afterReply.data.level };
+          }
         }
       }
       render();
@@ -833,7 +862,7 @@ export default defineContentScript({
       timelineUi?.remove(); timelineUi = undefined; timelineMounting = false; timelineSignature = '';
       watch.reset(); planLoader?.stop(); planLoader = undefined;
       refresher = null; refresherSequence++;
-      plan = null; planSolvedIds.clear(); prepared = null; dismissedUnavailable = false; feedbackState = null; accountReady = false;
+      plan = null; planSolvedIds.clear(); prepared = null; dismissedUnavailable = false; feedbackState = null; levelUpState = null; accountReady = false;
       oldPlayer = player; oldSource = player?.currentSrc ?? '';
       stopPlayer(); observer?.disconnect(); observer = undefined;
       player = null; playerReady = false;
@@ -863,7 +892,7 @@ export default defineContentScript({
         const video = player;
         const ownsPause = video && isCurrent() && video === currentPlayer() && !video.seeking && !isAd() && !isFullscreen() &&
           session.canResume(session.ticket(), video.currentTime, video.paused);
-        session.interrupt(); feedbackState = null;
+        session.interrupt(); feedbackState = null; levelUpState = null;
         accountId = readAccount(changes[ACCOUNT_KEY]?.newValue);
         void loadRefresher(session.generation, accountId);
         if (prepared === false) {
