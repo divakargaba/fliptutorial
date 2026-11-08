@@ -10,6 +10,39 @@ const plan: ExercisePlan = {
   pauses: source.pauses.map((pause, index) => ({ ...pause, pauseAtS: [2, 8, 14][index]!, revealAtS: pause.revealAtS === null ? null : [4, 10, 16][index]! })),
 };
 
+test.describe('v2 refresher runtime', () => {
+  const question = { ...source.pauses[1]!.question!, id: 'rf-lists-browser' };
+  test.use({
+    plan: { ...plan, pauses: [] },
+    refresher: { accountId: 'test-ana', concept: 'lists', conceptName: 'Lists', strength: 0.2,
+      reason: 'A short review will keep lists fresh.', question },
+  });
+
+  test('offered refresher opens a question, records its answer and waits for explicit Resume', async ({ app }) => {
+    const page = app.page;
+    await expect(page.getByRole('complementary', { name: 'Skill refresher' })).toBeVisible();
+    await page.locator('#start').click();
+    await expect.poll(() => page.locator('video').evaluate(video => video.paused)).toBe(false);
+    await page.getByRole('button', { name: 'Start refresher', exact: true }).click();
+    await expect(page.getByRole('heading', { name: question.title })).toBeVisible();
+    expect(await page.locator('video').evaluate(video => video.paused)).toBe(true);
+    await page.getByRole('radio', { name: '3', exact: true }).check();
+    await page.getByRole('button', { name: 'Check answer', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Well done' })).toBeVisible();
+    expect(app.answers).toEqual([{ questionId: question.id, revision: question.revision, answer: 'c', learnerLevel: 'beginner-1' }]);
+    await expect.poll(() => app.events.filter(event => event.type === 'refresher_answered').length).toBe(1);
+    expect(app.events.find(event => event.type === 'refresher_answered')).toMatchObject({
+      accountId: 'test-ana', exerciseId: question.id, concepts: ['lists'], correct: true,
+    });
+    expect(await page.locator('video').evaluate(video => video.paused)).toBe(true);
+    await page.getByRole('button', { name: 'Resume video', exact: true }).click();
+    await expect(page.getByRole('heading', { name: question.title })).toHaveCount(0);
+    await expect.poll(() => page.locator('video').evaluate(video => video.paused)).toBe(false);
+    expect(app.events.filter(event => event.type === 'refresher_answered')).toHaveLength(1);
+    expect(app.events.filter(event => event.type === 'passed' || event.type === 'failed')).toHaveLength(0);
+  });
+});
+
 test.describe('v2 plan retry recovery', () => {
   test.use({ plan, planErrors: 1 });
 

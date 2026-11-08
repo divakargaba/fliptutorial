@@ -4,7 +4,8 @@ import { readFile } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import type { AnalysisResponse, HintResponse, LastResult, PracticeResponse } from '../../src/contracts';
-import type { ExercisePlan } from '../../src/v2/types';
+import type { ExercisePlan, PracticeEvent } from '../../src/v2/types';
+import type { Refresher } from '../../src/plan/schemas';
 const practice: PracticeResponse = JSON.parse(readFileSync(new URL('../../../contracts/practice-response.fixture.json', import.meta.url), 'utf8'));
 const failed = JSON.parse(readFileSync(new URL('../../../contracts/submission-response.fixture.json', import.meta.url), 'utf8'));
 const publicProfile = JSON.parse(readFileSync(new URL('../../../contracts/v2/public-profile.fixture.json', import.meta.url), 'utf8'));
@@ -24,6 +25,7 @@ type App = {
   page: Page;
   planRequests: Array<{ videoId: string; learnerLevels: Record<string, string> }>;
   answers: Array<{ questionId: string; answer: string }>;
+  events: PracticeEvent[];
   requests: Submission[];
   hold: boolean;
   unavailable: boolean;
@@ -42,18 +44,19 @@ type App = {
   rejectResume(reject: boolean): Promise<void>;
 };
 
-export const test = base.extend<{ app: App; breakpointCount: 1 | 2; preparedVideo: boolean; plan: ExercisePlan | null; planningPolls: number; planErrors: number; delayedPlayer: boolean }>({
+export const test = base.extend<{ app: App; breakpointCount: 1 | 2; preparedVideo: boolean; plan: ExercisePlan | null; refresher: Refresher | null; planningPolls: number; planErrors: number; delayedPlayer: boolean }>({
   breakpointCount: [1, { option: true }],
   preparedVideo: [true, { option: true }],
   plan: [null, { option: true }],
+  refresher: [null, { option: true }],
   planningPolls: [0, { option: true }],
   planErrors: [0, { option: true }],
   delayedPlayer: [false, { option: true }],
-  app: async ({ viewport, breakpointCount, preparedVideo, plan, planningPolls, planErrors, delayedPlayer }, use) => {
+  app: async ({ viewport, breakpointCount, preparedVideo, plan, refresher, planningPolls, planErrors, delayedPlayer }, use) => {
     const requests: Submission[] = [];
     const pending: Array<() => void> = [];
     const releasePending = () => pending.splice(0).forEach(fn => fn());
-    const app = { requests, planRequests: [], answers: [], hold: false, unavailable: false, failure: null, revision: practice.revision!, lookupCount: 0,
+    const app = { requests, planRequests: [], answers: [], events: [], hold: false, unavailable: false, failure: null, revision: practice.revision!, lookupCount: 0,
       generations: [], holdGeneration: false, generationFailure: null,
       hints: [], analyses: [], holdAnalysis: false,
       analysis: { ...analysisFixture, optimal: true, best: analysisFixture.learner, betterSolution: null } } as App;
@@ -69,7 +72,10 @@ export const test = base.extend<{ app: App; breakpointCount: 1 | 2; preparedVide
       const json = (status: number, body: unknown) => {
         if (!res.destroyed) res.writeHead(status, { 'Content-Type': 'application/json' }).end(JSON.stringify(body));
       };
-      if (req.method === 'POST' && req.url === '/v2/plan' && plan) {
+      if (req.method === 'GET' && req.url?.startsWith('/v2/refresher/')) {
+        if (refresher && req.url === `/v2/refresher/${refresher.accountId}`) json(200, refresher);
+        else res.writeHead(204).end();
+      } else if (req.method === 'POST' && req.url === '/v2/plan' && plan) {
         let body = '';
         for await (const chunk of req) body += chunk;
         app.planRequests.push(JSON.parse(body));
@@ -95,7 +101,9 @@ export const test = base.extend<{ app: App; breakpointCount: 1 | 2; preparedVide
       } else if (req.method === 'POST' && req.url === '/v2/events') {
         let body = '';
         for await (const chunk of req) body += chunk;
-        json(200, { accepted: JSON.parse(body).events.length, duplicates: 0, rejected: [] });
+        const events = JSON.parse(body).events as PracticeEvent[];
+        app.events.push(...events);
+        json(200, { accepted: events.length, duplicates: 0, rejected: [] });
       } else if (req.method === 'GET' && req.url === '/v2/accounts') {
         json(200, [{ accountId: 'test-ana', displayName: 'Ana (test)' }, { accountId: 'test-ben', displayName: 'Ben (test)' }]);
       } else if (req.method === 'GET' && req.url?.startsWith('/v2/profile/')) {
