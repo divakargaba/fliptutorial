@@ -97,7 +97,9 @@ pushes ${branch:-main}, opens the PR if needed and posts your update with the co
 else
   if [[ -n "$branch" ]]; then
     git_rules="You are on branch $branch. Commit only your lane's files there and git push it.
-Never push to main or another branch; the runner merges main in and opens the PR.
+The runner merges main in and opens the PR by default. When your human authorizes
+publishing or merging, follow AGENTS.md to complete it without waiting for lead-agent
+approval; preserve teammate work and respect GitHub-enforced branch protections.
 Post one useful completion or blocker reply with prefix $prefix."
   else
     git_rules="Commit only your work, pull --rebase, push to the agreed integration
