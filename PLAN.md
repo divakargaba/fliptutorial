@@ -135,6 +135,14 @@ New error codes: `NO_CAPTIONS` 404, `NOT_PYTHON` 422, `TOO_EARLY` 422 (under
 | @abdullahwarv2 | `extension/src/contracts.ts` (T5 schema), `extension/entrypoints/background.ts` (T5 message) |
 | @reyanshBadhwar26 | `extension/src/ui/` (T6 button + states) |
 
+## Provider switch: Gemini → Anthropic (lead decision)
+
+The team is moving off Gemini keys. All LLM calls (prep `scan` and Test-me generation) use Anthropic's Claude API.
+
+| ID | Owner | Deliverable and acceptance check | State |
+| --- | --- | --- | --- |
+| A1 | @abdullahwarraichh | Replace every Gemini call with the Anthropic Python SDK (`anthropic`): `backend/app/prepare.py` (scan) and `backend/app/testme.py` (Test-me generator). Use structured output via a tool/JSON schema, same validation rules as today. Default model `claude-sonnet-5-5` (env `ANTHROPIC_MODEL`; allow `claude-haiku-5-5` for faster Test-me via `ANTHROPIC_TESTME_MODEL`). Remove `google-genai` from `backend/requirements.txt`, add a pinned `anthropic`; replace `GEMINI_*` with `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`, `ANTHROPIC_TESTME_MODEL` in `backend/.env.example` and root `.env.example`; update `docs/TEST-ME.md`, `docs/CREDENTIALS.md`, `HACKATHON.md`, `extension/tests/e2e/README.md` mentions. Rewrite the stubbed-provider tests in `test_prepare.py` / `test_testme.py`; default suites stay offline and keyless. Put **your own** Anthropic key only in your gitignored `backend/.env` as `ANTHROPIC_API_KEY` — never commit it, post it or print it. Verify with one live Test-me generation and one live prep scan, then continue **T7** on the new provider. You are cleared to edit the lead-owned files listed here for this task. | Todo |
+
 ## Handoffs (who to @mention)
 
 - B1 pushed → @abdullahwarraichh. B2 models pushed → @abdullahwarraichh. B3 serving fixture → @abdullahwarv2 @reyanshBadhwar26.
