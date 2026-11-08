@@ -11,6 +11,7 @@ test('v2 built popup loads local profile and persists account and settings', asy
   await expect(popup.getByRole('progressbar', { name: 'Loops level progress' })).toHaveAttribute('value', '0.5625');
   await popup.getByLabel('Test account').selectOption('test-ben');
   await expect(popup.getByRole('heading', { name: 'Ben (test)', level: 1 })).toBeVisible();
+  await popup.getByRole('button', { name: 'Settings' }).click();
   await popup.getByLabel('Pause frequency').selectOption('few');
   await popup.getByLabel('Automatically pause for practice').uncheck();
   await expect.poll(() => popup.evaluate(async () => {
@@ -19,6 +20,7 @@ test('v2 built popup loads local profile and persists account and settings', asy
   })).toBe(false);
   await popup.reload();
   await expect(popup.getByRole('heading', { name: 'Ben (test)', level: 1 })).toBeVisible();
+  await popup.getByRole('button', { name: 'Settings' }).click();
   await expect(popup.getByLabel('Pause frequency')).toHaveValue('few');
   await expect(popup.getByLabel('Automatically pause for practice')).not.toBeChecked();
   await popup.screenshot({ path: info.outputPath('profile-popup.png'), fullPage: true });
