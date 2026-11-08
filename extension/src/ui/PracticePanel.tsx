@@ -147,7 +147,6 @@ function Panel(props: PracticePanelProps & { draftKey: string }) {
       <span className="bp-workspace-brand"><BrandMark size={18} /><span>Breakpoint</span></span>
       <span className="bp-paused"><Pause size={12} aria-hidden="true" />Paused at {formatTimestamp(props.breakpoint.pauseAtS)}</span>
       {total > 1 && <span className="bp-step">{props.reviewOnly ? 'Reviewing challenge' : 'Challenge'} {(props.index ?? 0) + 1} of {total}</span>}
-      {solved && aiGenerated && <small className="bp-generated-label">AI-generated practice</small>}
       <LayoutSwitch />
       <button type="button" className="bp-icon-button" aria-label="Close practice" onClick={() => leave(props.onClose)}>
         <X size={18} aria-hidden="true" />
