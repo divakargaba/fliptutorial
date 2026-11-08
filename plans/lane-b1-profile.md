@@ -57,5 +57,8 @@ pytest driven by `practice-events.fixture.json` + generated event streams: level
   the same generated question until they answer it. Spend bounds: ≤5 generated per (concept, level) shared by all
   accounts, 15 s timeout, 10 min back-off after a failure, one generation at a time per (concept, level).
   Check: `cd backend && python -m pytest -q tests/test_profile.py` → 34 passed offline (stub generators).
-- Waiting on: lane A2's `app.feedback.refresher.generate_refresher` (until it lands, refreshers come from the bank);
-  popup toggle UI (B2) calling the public endpoint.
+- [x] Verified against lane A2's `generate_refresher` (lane/a2-feedback 6cdf6ed) offline with a stubbed Anthropic
+  client: `/v2/refresher/test-ana` serves `rf-gen-lists-*` (`aiGenerated: true`, no answer in the response), one model
+  call, the same question on repeat, and `lookup_refresher` returns the answer for grading. Generated title limit raised
+  80 → 100 chars to match A2's validator. Activates once A2's branch is merged to main; no B1 change needed.
+- Waiting on: popup toggle UI (B2) calling the public endpoint.
