@@ -3,8 +3,9 @@ import { CircleAlert, LoaderCircle, Play, Sparkles, X } from 'lucide-react';
 import { TestMeContext } from '../test-me';
 
 const ERRORS: Record<string, { title: string; action: string }> = {
-  NO_CAPTIONS: { title: 'No English captions', action: 'Try a Python tutorial with English captions.' },
-  NOT_PYTHON: { title: 'Python practice only', action: 'Try a tutorial teaching Python.' },
+  NO_CAPTIONS: { title: 'No English captions', action: 'Try a coding tutorial with English captions.' },
+  // Backend code kept for compatibility: the taught language isn't one Test me can grade yet.
+  NOT_PYTHON: { title: 'Not a supported language yet', action: 'Try a tutorial teaching Python, JavaScript, Java or C++.' },
   TOO_EARLY: { title: 'Keep watching a little longer', action: 'Watch at least three minutes of the tutorial before trying again.' },
   GENERATOR_UNAVAILABLE: { title: 'Practice generation unavailable', action: 'Try again, or resume the video.' },
   GENERATOR_TIMEOUT: { title: 'Practice generation timed out', action: 'Try again, or resume the video.' },
@@ -30,7 +31,7 @@ export function TestMeControls() {
   const description = error ? ERRORS[error.code] : null;
   return <div className="bp-test-me">
     <button ref={start} type="button" className="bp-badge" disabled={!canStart} aria-disabled={!canStart || undefined} onClick={onStart}
-      title="Create Python practice from what you have watched so far">
+      title="Create practice from what you have watched so far">
       <Sparkles size={15} aria-hidden="true" />Test me
     </button>
     {request && <section className="bp-panel bp-generation" aria-labelledby="bp-generation-heading">
