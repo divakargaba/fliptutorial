@@ -352,6 +352,19 @@ def test_seeded_refreshers(seeded):
     assert seeded.get("/v2/refresher/test-dee", params=NOW_Q).status_code == 204
 
 
+def test_requested_skill_review_keeps_profile_and_default_due_behavior(seeded):
+    before = seeded.get("/v2/profile/test-ana", params=NOW_Q).json()
+    due = seeded.get("/v2/refresher/test-ana", params=NOW_Q).json()
+    manual = seeded.get("/v2/refresher/test-ana", params={**NOW_Q, "concept": "loops"})
+    assert manual.status_code == 200
+    assert manual.json()["concept"] == "loops"
+    assert "answer" not in manual.json()["question"]
+    assert seeded.get("/v2/profile/test-ana", params=NOW_Q).json() == before
+    assert seeded.get("/v2/refresher/test-ana", params=NOW_Q).json()["concept"] == due["concept"]
+    assert seeded.get("/v2/refresher/test-ana", params={**NOW_Q, "concept": "bogus"}).status_code == 422
+    assert seeded.get("/v2/refresher/test-ana", params={**NOW_Q, "concept": "sorting"}).status_code == 204
+
+
 # --- profile (contract §4) --------------------------------------------------------------------------
 
 

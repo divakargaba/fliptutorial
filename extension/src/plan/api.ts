@@ -36,7 +36,7 @@ export async function requestPlanApi(raw: unknown, base: string, fetcher: typeof
     const path = m.type === 'pollPlan' ? `/v2/plan/${encodeURIComponent(m.videoId)}`
       : m.type === 'levelV2' ? `/v2/profile/${encodeURIComponent(m.accountId)}/level/${encodeURIComponent(m.concept)}`
       : m.type === 'levelsV2' ? `/v2/profile/${encodeURIComponent(m.accountId)}/levels`
-      : m.type === 'refresherV2' ? `/v2/refresher/${encodeURIComponent(m.accountId)}`
+      : m.type === 'refresherV2' ? `/v2/refresher/${encodeURIComponent(m.accountId)}${m.concept ? `?concept=${encodeURIComponent(m.concept)}` : ''}`
       : m.type === 'awardV2' ? `/v2/profile/${encodeURIComponent(m.accountId)}/award/${encodeURIComponent(m.eventId)}`
       : { plan: '/v2/plan', submitV2: '/v2/submit', answerV2: '/v2/answer', hintV2: '/v2/hint', eventsV2: '/v2/events' }[m.type];
     const response = await fetcher(apiOrigin(base) + path, {
@@ -64,7 +64,7 @@ export async function requestPlanApi(raw: unknown, base: string, fetcher: typeof
     }
     if (m.type === 'refresherV2') {
       const pick = RefresherSchema.safeParse(json);
-      if (!pick.success || !pick.data || pick.data.accountId !== m.accountId) {
+      if (!pick.success || !pick.data || pick.data.accountId !== m.accountId || (m.concept && pick.data.concept !== m.concept)) {
         return { ok: false, error: apiError('INVALID_RESPONSE', 'Invalid refresher for this learner.') };
       }
       return { ok: true, data: pick.data };

@@ -100,7 +100,8 @@ test.describe('opt-in Test me through the built worker', () => {
     const editor = page.getByRole('textbox', { name: 'Python code' });
     await editor.fill('# wrong generated answer');
     await page.getByRole('button', { name: 'Run', exact: true }).click();
-    await expect(page.getByText('Wrong answer', { exact: true })).toBeVisible();
+    await expect(page.getByText('What went wrong', { exact: true })).toBeVisible();
+      await page.locator('.bp-feedback-content summary').click();
     expect(await page.locator('video').evaluate(v => v.currentTime)).toBe(pausedAt);
     await expect(page.getByText('AI-generated practice', { exact: true })).toBeVisible();
     // The fixture grader recognizes this string; no Python or provider code runs.

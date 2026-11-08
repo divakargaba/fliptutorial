@@ -14,10 +14,17 @@ import type { PracticeLayout } from '../../src/ui/workspace-preference';
 import generated from '../../../contracts/testme-response.fixture.json';
 
 const local = {
-  async get(key: string) { return { [key]: localStorage.getItem(key) ?? undefined }; },
-  async set(values: Record<string, string>) {
-    for (const [key, value] of Object.entries(values)) localStorage.setItem(key, value);
+  async get(key: string | null) {
+    return Object.fromEntries((key === null ? Object.keys(localStorage) : [key]).map(k => {
+      const raw = localStorage.getItem(k); let value: unknown = raw ?? undefined;
+      try { if (raw !== null) value = JSON.parse(raw); } catch {}
+      return [k, value];
+    }));
   },
+  async set(values: Record<string, unknown>) {
+    for (const [key, value] of Object.entries(values)) localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value));
+  },
+  async remove(keys: string | string[]) { for (const key of typeof keys === 'string' ? [keys] : keys) localStorage.removeItem(key); },
 };
 Object.assign(globalThis, { chrome: { storage: { local } }, pageHotkeys: 0 });
 document.documentElement.style.fontSize = '10px';

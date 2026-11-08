@@ -19,14 +19,15 @@ test('shadow theme, keyboard isolation, grading and resume controls', async ({ p
   await expect(page.getByRole('button', { name: 'More', exact: true })).toBeFocused();
   await editor.fill('def raise_to_power(base, exponent):\n    return base * exponent');
   await page.getByRole('button', { name: 'Run', exact: true }).click();
-  await expect(page.getByText('wrong answer', { exact: false })).toBeVisible();
+  await expect(page.getByText('What went wrong', { exact: true })).toBeVisible();
+  await page.locator('.bp-feedback-content summary').click();
   await expect(page.locator('.bp-case-detail')).toContainText('Expected8');
   await expect(page.locator('.bp-case-detail')).toContainText('Output6');
   await page.locator('.bp-results').scrollIntoViewIfNeeded();
   await page.screenshot({ path: info.outputPath('failed.png') });
   await editor.fill('def raise_to_power(base, exponent):\n    return base ** exponent');
   await page.getByRole('button', { name: 'Run', exact: true }).click();
-  await expect(page.getByText('Examples passed', { exact: false })).toBeVisible();
+  await expect(page.getByText('Run complete', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Resume video' })).toHaveCount(0);
   await page.getByRole('button', { name: 'Submit', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Solved' })).toBeVisible();

@@ -8,6 +8,8 @@ import levels from '../../../contracts/v2/levels.json';
 import { conceptName, defaultSettings, type LearnerSettingsValue } from '../ui/v2';
 import { z } from 'zod';
 import type { PracticeLayout } from '../ui/workspace-preference';
+import { HistoryList, SolutionDetail, SkillReview, useHistory } from './learning';
+import type { SavedSolution } from '../learning/local';
 
 const accountSchema = z.object({ accountId: z.string().min(1), displayName: z.string(), public: z.boolean().optional() });
 const profileSchema = z.object({
@@ -117,26 +119,27 @@ function SectionLabel({ children, end }: { children: ReactNode; end?: ReactNode 
 }
 
 // ---------- skills ----------
-function SkillRow({ skill }: { skill: Skill }) {
+function SkillRow({ skill, onSelect }: { skill: Skill; onSelect?(skill: Skill): void }) {
   const { next, progress, left } = progressFor(skill);
   const name = skillName(skill.concept);
   const pct = Math.round(progress * 100);
   const parts = [skill.passed > 0 ? `${num(skill.passed)} solved` : `Watched ${skill.tutorials} ${skill.tutorials === 1 ? 'tutorial' : 'tutorials'}`,
     `${num(skill.xp)} XP`, next ? `${num(left)} to ${tierLabel(next.name)}` : 'Max level', shortDate(skill.lastPracticedAt)];
   return <li className="bp-pf-skill">
-    <div className="bp-pf-skill-top"><h3>{name}</h3><Tier level={skill.level} levelName={skill.levelName} /><Recall strength={skill.strength} /></div>
+    <div className="bp-pf-skill-top"><h3>{onSelect ? <button className="bp-skill-name" onClick={() => onSelect(skill)}>{name}<ChevronRight size={15} /></button> : name}</h3><Tier level={skill.level} levelName={skill.levelName} /><Recall strength={skill.strength} /></div>
     <div className="bp-pf-bar" role="progressbar" aria-label={`${name} level progress`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}
       aria-valuetext={next ? `${pct}%, ${num(left)} XP to ${tierLabel(next.name)}` : 'Max level'} data-left={left}><span style={{ width: `${pct}%` }} /></div>
-    <Meta parts={parts} />
+    <dl className="bp-learning-skill-stats"><div><dt>Solved</dt><dd>{num(skill.passed)}</dd></div><div><dt>XP</dt><dd>{num(skill.xp)}</dd></div></dl>
+    <p className="bp-learning-next">{next ? `${num(left)} XP to ${tierLabel(next.name)}` : 'Highest level reached'}<span>Practiced {shortDate(skill.lastPracticedAt)}</span></p>
   </li>;
 }
-function SkillsGroup({ profile, label = 'Skills' }: { profile: PublicProfile; label?: string }) {
+function SkillsGroup({ profile, label = 'Skills', onSelect }: { profile: PublicProfile; label?: string; onSelect?(skill: Skill): void }) {
   const sorted = [...profile.skills].sort(byLevel);
   return <section aria-labelledby={`skills-${profile.accountId}`}>
     <div className="bp-pf-label"><h2 id={`skills-${profile.accountId}`}>{label}</h2>
       <span className="bp-pf-label-end" title="Chance you'd solve this today. Drops if you don't practice.">Recall<Info size={13} aria-label="Recall: chance you'd solve this today. Drops if you don't practice." role="img" /></span></div>
     <div className="bp-v2-card bp-pf-group">{!sorted.length ? <p className="bp-pf-empty">Solve a challenge to start a skill. Every skill starts at Beginner 1.</p>
-      : <ul>{sorted.map(skill => <SkillRow key={skill.concept} skill={skill} />)}</ul>}</div>
+      : <ul>{sorted.map(skill => <SkillRow key={skill.concept} skill={skill} onSelect={onSelect} />)}</ul>}</div>
   </section>;
 }
 function FadingNudge({ profile }: { profile: PublicProfile }) {
@@ -309,12 +312,14 @@ function Hero({ profile }: { profile: PublicProfile }) {
     </div>
   </header>;
 }
-function Tabs({ tab, setTab, count }: { tab: 'skills' | 'network'; setTab(tab: 'skills' | 'network'): void; count: number }) {
-  const tabs: { id: 'skills' | 'network'; label: string; count?: number }[] = [{ id: 'skills', label: 'Skills' }, { id: 'network', label: 'Network', count }];
+type ProfileTab = 'home' | 'skills' | 'history' | 'network';
+function Tabs({ tab, setTab, count }: { tab: ProfileTab; setTab(tab: ProfileTab): void; count: number }) {
+  const tabs: { id: ProfileTab; label: string; count?: number }[] = [{ id: 'home', label: 'Home' }, { id: 'skills', label: 'Skills' }, { id: 'history', label: 'History' }, { id: 'network', label: 'Network', count }];
   const onKey = (event: ReactKeyboardEvent) => {
-    if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft' && event.key !== 'Home' && event.key !== 'End') return;
+    if (!['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(event.key)) return;
     event.preventDefault();
-    const next = event.key === 'Home' ? 'skills' : event.key === 'End' ? 'network' : tab === 'skills' ? 'network' : 'skills';
+    const i = tabs.findIndex(t => t.id === tab);
+    const next = tabs[event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : (i + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length]!.id;
     setTab(next); (event.currentTarget.querySelector(`#tab-${next}`) as HTMLElement | null)?.focus();
   };
   return <div className="bp-pf-tabs" role="tablist" aria-label="Profile sections" onKeyDown={onKey}>
@@ -325,15 +330,44 @@ function Tabs({ tab, setTab, count }: { tab: 'skills' | 'network'; setTab(tab: '
   </div>;
 }
 export function ProfileView({ profile, accountIds, onViewProfile, toggle }: { profile: PublicProfile; accountIds?: string[]; onViewProfile?(accountId: string): void; toggle?: ReactNode }) {
-  const [tab, setTab] = useState<'skills' | 'network'>('skills');
+  const [tab, setTab] = useState<ProfileTab>('home');
+  const [skill, setSkill] = useState<Skill | null>(null);
+  const [solution, setSolution] = useState<SavedSolution | null>(null);
+  const [review, setReview] = useState<Skill | null>(null);
+  const history = useHistory(profile.accountId);
   const ids = accountIds ?? profile.complements.map(mate => mate.accountId);
   const pairings = useNetwork(profile, ids);
-  return <MotionConfig reducedMotion="user"><article className="bp-v2 bp-pf-root bp-pf-page" aria-label="Skill profile">
-    <Hero profile={profile} />
-    <Tabs tab={tab} setTab={setTab} count={pairings.length} />
-    <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} className="bp-pf-panel">
-      {tab === 'skills' ? <><FadingNudge profile={profile} /><SkillsGroup profile={profile} /><InDemand profile={profile} /></>
-        : <NetworkTab pairings={pairings} toggle={toggle} onView={onViewProfile} />}
+  const due = profile.skills.find(s => profile.refresherDue.some(d => d.concept === s.concept));
+  const back = () => { setSolution(null); setReview(null); };
+  const focusView = useRef<HTMLDivElement>(null);
+  useEffect(() => { focusView.current?.focus({ preventScroll: true }); }, [skill, solution, review, tab]);
+  return <MotionConfig reducedMotion="user"><article className="bp-v2 bp-pf-root bp-pf-page bp-learning-home" aria-label="Skill profile">
+    <div ref={focusView} tabIndex={-1} className="bp-learning-view">
+    {solution ? <SolutionDetail row={solution} onBack={back} onDeleted={() => { setSolution(null); history.refresh(); }} />
+    : review ? <SkillReview key={`${profile.accountId}/${review.concept}`} accountId={profile.accountId} concept={review.concept} level={review.level} onBack={back} />
+    : skill ? <section className="bp-learning-detail" aria-label={`${skillName(skill.concept)} details`}>
+      <button className="bp-pf-back" onClick={() => setSkill(null)}><ArrowLeft size={16} />Back</button>
+      <h1>{skillName(skill.concept)}</h1><p className="bp-pf-caption">Your progress & recall</p>
+      <ul className="bp-learning-skill-detail"><SkillRow skill={skill} /></ul>
+      <button className="bp-pf-primary" onClick={() => setReview(skill)}>Review skill</button>
+      <SectionLabel><span>Learned here</span></SectionLabel><HistoryList rows={history.rows.filter(r => r.concepts.includes(skill.concept))} onSelect={setSolution} />
+    </section> : <>
+      <div className="bp-learning-welcome"><p className="bp-pf-caption">YOUR LEARNING SPACE</p><Hero profile={profile} /></div>
+      <Tabs tab={tab} setTab={setTab} count={pairings.length} />
+      <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} className="bp-pf-panel">
+        {tab === 'home' ? <>
+          <InDemand profile={profile} />
+          {due && <div className="bp-learning-nudge"><TrendingDown size={19} /><div><strong>Keep {skillName(due.concept)} fresh</strong><small>One quick question</small></div><button className="bp-pf-primary" onClick={() => setReview(due)}>Review now</button></div>}
+          <SectionLabel end={<button className="bp-learning-link" onClick={() => setTab('history')}>View history<ChevronRight size={14} /></button>}><span>Recent practice</span></SectionLabel>
+          <HistoryList rows={history.rows.slice(0, 2)} onSelect={setSolution} />
+          <SkillsGroup profile={{ ...profile, skills: [...profile.skills].sort(byLevel).slice(0, 2) }} label="Your skills" onSelect={setSkill} />
+          <button className="bp-learning-link" onClick={() => setTab('skills')}>See all {profile.skills.length} skills<ChevronRight size={14} /></button>
+        </> : tab === 'skills' ? <SkillsGroup profile={profile} onSelect={setSkill} />
+          : tab === 'history' ? <><SectionLabel><span>Learning history</span></SectionLabel><p className="bp-learning-privacy">Private to this browser and learner. Last 200 saved solutions. Export anything you want to keep.</p><HistoryList rows={history.rows} onSelect={setSolution} /></>
+          : <NetworkTab pairings={pairings} toggle={toggle} onView={onViewProfile} />}
+        {history.error && tab !== 'network' && <p className="bp-pf-caption" role="status">{history.error}</p>}
+      </div>
+    </>}
     </div>
   </article></MotionConfig>;
 }
@@ -549,7 +583,7 @@ export function ProfilePage({ preferences: prefs = preferences }: { preferences?
     </header>
     {viewing ? <TeammateDetail accountId={viewing} me={profile} onBack={() => setViewing(null)} />
       : error ? <div role="alert" className="bp-pf-page"><p className="bp-pf-body">{error}</p><button type="button" className="bp-pf-ghost" onClick={() => setRetry(value => value + 1)}>Retry</button></div>
-      : profile ? <ProfileView profile={profile} accountIds={accounts.map(item => item.accountId)} onViewProfile={setViewing} toggle={toggle} />
+      : profile ? <ProfileView key={profile.accountId} profile={profile} accountIds={accounts.map(item => item.accountId)} onViewProfile={setViewing} toggle={toggle} />
       : <div className="bp-pf-page"><Skeleton /></div>}
     {savingError && <p role="alert" className="bp-pf-body bp-pf-gutter">{savingError}</p>}
     <AnimatePresence>{sheet && <SettingsSheet layout={layout} onLayout={saveLayout} settings={settings} onChange={saveSettings} onClose={closeSettings} />}</AnimatePresence>

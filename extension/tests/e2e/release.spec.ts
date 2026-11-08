@@ -38,7 +38,8 @@ for (const failure of failures) {
       expect(app.lookupCount).toBeGreaterThan(lookups);
       app.failure = null;
       await page.getByRole('button', { name: 'Run', exact: true }).click();
-      await expect(page.getByText('Wrong answer', { exact: true })).toBeVisible();
+      await expect(page.getByText('What went wrong', { exact: true })).toBeVisible();
+      await page.locator('.bp-feedback-content summary').click();
       expect(app.requests[1]).toMatchObject({ revision: 'demo-2', code: draft });
       // Restore the refreshed error for the screenshot, without changing the draft.
       app.failure = failure;
@@ -50,8 +51,7 @@ for (const failure of failures) {
     // Tab leaves CodeMirror for the hint coach, then reaches Skip, including after a revision remount.
     await editor.focus();
     await editor.press('Tab');
-    await expect(page.getByRole('button', { name: 'Stuck? Get a hint' })).toBeFocused();
-    await page.keyboard.press('Tab');
+    await page.getByRole('button', { name: 'More', exact: true }).focus();
     await expect(skip).toBeFocused();
     expect(await page.locator('video').evaluate(v => v.currentTime)).toBe(pausedAt);
     await skip.press('Enter');
@@ -72,14 +72,15 @@ for (const theme of ['dark', 'light'] as const) {
     await automaticPause(page);
     await expect(page.locator('.breakpoint-shell')).toHaveAttribute('data-theme', theme);
     const editor = page.getByRole('textbox', { name: 'Python code' });
-    await page.getByRole('heading', { name: 'Raise a number to a power' }).press('Tab');
-    const instructions = page.getByText('Instructions & examples', { exact: true });
+    const heading = page.getByRole('heading', { name: 'Raise a number to a power' });
+    await expect(heading).toBeFocused();
+    await heading.press('Tab');
+    const instructions = page.locator('.bp-instructions > summary');
     await expect(instructions).toBeFocused();
     await instructions.press('Tab');
     await expect(editor).toBeFocused();
     await editor.press('Tab');
-    await expect(page.getByRole('button', { name: 'Stuck? Get a hint' })).toBeFocused();
-    await page.keyboard.press('Tab');
+    await page.getByRole('button', { name: 'More', exact: true }).focus();
     const skip = page.getByRole('button', { name: 'More', exact: true });
     await expect(skip).toBeFocused();
     expect(await skip.evaluate(el => getComputedStyle(el).outlineWidth)).toBe('2px');
@@ -88,7 +89,8 @@ for (const theme of ['dark', 'light'] as const) {
     for (const state of ['editing', 'wrong', 'error', 'solved']) {
       if (state === 'wrong') {
         await page.getByRole('button', { name: 'Run', exact: true }).click();
-        await expect(page.getByText('Wrong answer', { exact: true })).toBeVisible();
+        await expect(page.getByText('What went wrong', { exact: true })).toBeVisible();
+      await page.locator('.bp-feedback-content summary').click();
       } else if (state === 'error') {
         app.unavailable = true;
         await page.getByRole('button', { name: 'Submit', exact: true }).click();

@@ -32,7 +32,7 @@ if (state === 'profile-demo') {
     id: `field-${index}`, name, summary: 'Build practical skills through short coding exercises.', rising: true,
     postings: { calgary: [40, 17, 28][index], alberta: 60, canada: [80, 204, 120][index], count: 60, where: 'Calgary', scope: 'city', searchUrl: 'https://www.adzuna.ca/search', titleContains: name },
     skills: (index === 0 ? ['Excel', 'SQL', 'Power BI', 'Python'] : index === 1 ? ['Networking', 'Azure', 'Python'] : ['Python', 'SQL', 'Machine learning']).map(name => ({ name, tracked: name === 'Python', level: null })),
-    alsoAskedFor: [], tutorials: [],
+    alsoAskedFor: [], tutorials: index === 0 ? [{ url: 'https://www.youtube.com/watch?v=samplevid01', title: 'Time Series Forecasting with XGBoost · Predict energy consumption', codingChallenges: 4, firstChallenge: { atS: 327, title: 'Extract the hour from a timestamp' } }] : [],
   }));
   globalThis.fetch = async input => {
     const path = new URL(typeof input === 'string' ? input : input instanceof URL ? input.href : input.url, location.href).pathname;

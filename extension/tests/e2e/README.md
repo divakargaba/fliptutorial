@@ -11,11 +11,17 @@ npm run test:e2e
 The existing npm command and `npx playwright test --config playwright.config.ts`
 both run the preview checks and built MV3 checks. The suite builds the production
 extension with the loopback test API origin before starting the preview server.
-Keep ports 4173 and 8000 free; stop the development backend first. A port conflict
-fails the suite rather than sending test submissions to a running backend.
+Keep port 4173 and the selected test API port free. In PowerShell, set
+`$env:WXT_API_BASE_URL = 'http://127.0.0.1:18766'` to keep the development backend
+on 8000 running. A port conflict fails before tests send submissions. The fixture
+also checks that the built worker contains the selected API origin.
+
+Tests use a separate WXT output directory. Still avoid running a normal WXT build
+during preview tests: generated WXT metadata can trigger a Vite page refresh.
+After tests, remove the test-only environment override before a normal build.
 
 MV3 checks use a fresh persistent Chromium profile per test and load
-`.output/chrome-mv3` through browser CDP `Extensions.loadUnpacked`. The intercepted
+`.output/e2e/chrome-mv3` through browser CDP `Extensions.loadUnpacked`. The intercepted
 YouTube watch page has a real canvas MediaStream, media clock, play/pause events,
 desktop and narrow anchors, and an ad class. The extension's worker, validation,
 shadow root, editor and Chrome storage run unchanged. A local HTTP server supplies

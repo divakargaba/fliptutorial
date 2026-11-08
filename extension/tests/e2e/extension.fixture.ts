@@ -25,6 +25,7 @@ type App = {
   page: Page;
   planRequests: Array<{ videoId: string; learnerLevels: Record<string, string> }>;
   answers: Array<{ questionId: string; answer: string }>;
+  answerWrong: boolean;
   events: PracticeEvent[];
   awardRequests: string[];
   requests: Submission[];
@@ -45,7 +46,8 @@ type App = {
   rejectResume(reject: boolean): Promise<void>;
 };
 
-export const test = base.extend<{ app: App; breakpointCount: 1 | 2; preparedVideo: boolean; plan: ExercisePlan | null; refresher: Refresher | null; planningPolls: number; planErrors: number; delayedPlayer: boolean; award: 'progress' | 'levelUp' | null }>({
+export const test = base.extend<{ app: App; seekableVideo: boolean; breakpointCount: 1 | 2; preparedVideo: boolean; plan: ExercisePlan | null; refresher: Refresher | null; planningPolls: number; planErrors: number; delayedPlayer: boolean; award: 'progress' | 'levelUp' | null }>({
+  seekableVideo: [false, { option: true }],
   breakpointCount: [1, { option: true }],
   preparedVideo: [true, { option: true }],
   plan: [null, { option: true }],
@@ -55,16 +57,18 @@ export const test = base.extend<{ app: App; breakpointCount: 1 | 2; preparedVide
   planningPolls: [0, { option: true }],
   planErrors: [0, { option: true }],
   delayedPlayer: [false, { option: true }],
-  app: async ({ viewport, breakpointCount, preparedVideo, plan, refresher, planningPolls, planErrors, delayedPlayer, award }, use) => {
+  app: async ({ viewport, seekableVideo, breakpointCount, preparedVideo, plan, refresher, planningPolls, planErrors, delayedPlayer, award }, use) => {
     const requests: Submission[] = [];
     const pending: Array<() => void> = [];
     const releasePending = () => pending.splice(0).forEach(fn => fn());
-    const app = { requests, planRequests: [], answers: [], events: [], awardRequests: [], hold: false, unavailable: false, failure: null, revision: practice.revision!, lookupCount: 0,
+    const app = { requests, planRequests: [], answers: [], answerWrong: false, events: [], awardRequests: [], hold: false, unavailable: false, failure: null, revision: practice.revision!, lookupCount: 0,
       generations: [], holdGeneration: false, generationFailure: null,
       hints: [], analyses: [], holdAnalysis: false,
       analysis: { ...analysisFixture, optimal: true, best: analysisFixture.learner, betterSolution: null } } as App;
     const api = new URL(process.env.WXT_API_BASE_URL || 'http://127.0.0.1:8000');
     if (api.hostname !== '127.0.0.1' || api.protocol !== 'http:') throw new Error('The test API must use HTTP loopback.');
+    const bundle = await readFile(new URL('../../.output/e2e/chrome-mv3/background.js', import.meta.url), 'utf8');
+    expect(bundle, 'test bundle must target the isolated fixture API').toContain(api.origin);
     const [original] = practice.breakpoints;
     const first = { ...original!, pauseAtS, revealAtS: breakpointCount === 2 ? 2.6 : 10 };
     const breakpoints = breakpointCount === 1 ? [first] : [first, {
@@ -76,7 +80,7 @@ export const test = base.extend<{ app: App; breakpointCount: 1 | 2; preparedVide
         if (!res.destroyed) res.writeHead(status, { 'Content-Type': 'application/json' }).end(JSON.stringify(body));
       };
       if (req.method === 'GET' && req.url?.startsWith('/v2/refresher/')) {
-        if (refresher && req.url === `/v2/refresher/${refresher.accountId}`) json(200, refresher);
+        if (refresher && req.url.split("?")[0] === `/v2/refresher/${refresher.accountId}`) json(200, refresher);
         else res.writeHead(204).end();
       } else if (req.method === 'POST' && req.url === '/v2/plan' && plan) {
         let body = '';
@@ -95,7 +99,12 @@ export const test = base.extend<{ app: App; breakpointCount: 1 | 2; preparedVide
         feedback.success.optimization.show = false;
         if (req.url === '/v2/answer') {
           app.answers.push(input);
-          json(200, { correct: true, feedback });
+          const respond = () => {
+            const result = app.answerWrong ? JSON.parse(readFileSync(new URL('../../../contracts/v2/feedback-result.failed.fixture.json', import.meta.url), 'utf8')) : feedback;
+            result.exerciseId = input.questionId;
+            json(200, { correct: !app.answerWrong, feedback: result });
+          };
+          if (app.hold) pending.push(respond); else respond();
         } else {
           requests.push(input);
           json(200, { grade: { outcome: 'passed', passedCount: 1, totalCount: 1,
@@ -194,13 +203,13 @@ export const test = base.extend<{ app: App; breakpointCount: 1 | 2; preparedVide
     try {
       context = await chromium.launchPersistentContext('', {
         channel: 'chromium', headless: true, viewport,
-        args: ['--enable-unsafe-extension-debugging', '--disable-extensions-except=' + fileURLToPath(new URL('../../.output/chrome-mv3', import.meta.url))],
+        args: ['--enable-unsafe-extension-debugging', '--disable-extensions-except=' + fileURLToPath(new URL('../../.output/e2e/chrome-mv3', import.meta.url))],
       });
       const page = context.pages()[0] ?? await context.newPage();
       app.release = async () => {
         if (!pending.length) return;
         const downloaded = context.waitForEvent('requestfinished', request =>
-          ['/v1/submissions', '/v1/test-me', '/v1/analysis'].some(path => request.url() === `${api.origin}${path}`));
+          ['/v1/submissions', '/v1/test-me', '/v1/analysis', '/v2/answer'].some(path => request.url() === `${api.origin}${path}`));
         releasePending();
         await downloaded;
         // Let the worker message and the content renderer run after the fetch finishes.
@@ -208,7 +217,7 @@ export const test = base.extend<{ app: App; breakpointCount: 1 | 2; preparedVide
       };
       const browserCdp = await context.browser()!.newBrowserCDPSession();
       const { id } = await browserCdp.send('Extensions.loadUnpacked', {
-        path: fileURLToPath(new URL('../../.output/chrome-mv3', import.meta.url)),
+        path: fileURLToPath(new URL('../../.output/e2e/chrome-mv3', import.meta.url)),
       });
       const cdp = await context.newCDPSession(page);
       const worlds: Array<{ id: number; origin: string; name: string }> = [];
@@ -225,6 +234,7 @@ export const test = base.extend<{ app: App; breakpointCount: 1 | 2; preparedVide
         expect(result.exceptionDetails).toBeUndefined();
       };
       let html = await readFile(new URL('./watch.html', import.meta.url), 'utf8');
+      if (seekableVideo) html = html.replace('video.srcObject = canvas.captureStream(25);', "video.src = '/fixture.webm';");
       if (delayedPlayer) {
         // Hold the actual MediaStream until the test observes the bind deadline.
         html = html.replace('video.srcObject = canvas.captureStream(25);',
@@ -236,11 +246,22 @@ export const test = base.extend<{ app: App; breakpointCount: 1 | 2; preparedVide
         html = html.replace('</style>', '#movie_player { position: relative; } .ytp-progress-bar { position:absolute; bottom:8px; left:12px; right:12px; height:4px; }</style>')
           .replace('</video>', '</video><div class="ytp-progress-bar"></div>');
       }
-      await context.route('https://www.youtube.com/**', route => route.fulfill({ contentType: 'text/html', body: html }));
+      await context.route('https://www.youtube.com/**', async route => {
+        if (seekableVideo && new URL(route.request().url()).pathname === '/fixture.webm') {
+          const media = await readFile(new URL('../../../demo/exponent-challenge.webm', import.meta.url));
+          const range = /^bytes=(\d+)-(\d*)$/.exec(route.request().headers().range ?? '');
+          const start = range ? Number(range[1]) : 0;
+          const end = range?.[2] ? Math.min(Number(range[2]), media.length - 1) : media.length - 1;
+          await route.fulfill({ status: range ? 206 : 200, contentType: 'video/webm',
+            headers: { 'Accept-Ranges': 'bytes', 'Content-Length': String(end - start + 1), ...(range ? { 'Content-Range': `bytes ${start}-${end}/${media.length}` } : {}) },
+            body: media.subarray(start, end + 1) });
+        }
+        else await route.fulfill({ contentType: 'text/html', body: html });
+      });
       app.page = page;
       await page.goto(plan ? `https://www.youtube.com/watch?v=${plan.videoId}` : preparedVideo ? watchUrl : 'https://www.youtube.com/watch?v=unknown0001');
       if (plan) {
-        await expect(page.locator('.breakpoint-shell')).toBeAttached();
+        await expect(page.locator('.breakpoint-shell:not(.breakpoint-timeline)')).toBeAttached();
         const world = worlds.findLast(world => world.origin === `chrome-extension://${id}` || world.name.includes(id));
         expect(world, 'extension isolated world').toBeDefined();
         const result = await cdp.send('Runtime.evaluate', { contextId: world!.id, expression:
@@ -272,4 +293,20 @@ export async function automaticPause(page: Page) {
 export async function expectPlaying(page: Page) {
   await expect.poll(() => page.locator('video').evaluate(video => video.paused)).toBe(false);
   await expect(page.locator('.bp-panel')).toHaveCount(0);
+}
+
+/** Complete distinct incorrect attempts through the real panel, never seed the gate. */
+export async function unlockHints(page: Page, stage = 0) {
+  const editor = page.getByRole('textbox', { name: 'Python code' });
+  for (const expression of ['base * exponent', 'base + exponent']) {
+    const code = `def raise_to_power(base, exponent):\n    return ${expression}${stage ? ` + ${stage}` : ''}`;
+    await editor.fill(code);
+    await page.getByRole('button', { name: 'Run', exact: true }).click();
+    await expect(page.getByText('What went wrong', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Back to code', exact: true }).click();
+  }
+  if (stage) {
+    await page.getByRole('button', { name: `Hints (${stage} of 3)`, exact: true }).click();
+    await expect(page.getByRole('button', { name: `Next hint (${stage + 1} of 3)`, exact: true })).toBeEnabled();
+  } else await expect(page.getByRole('button', { name: 'Stuck? Get a hint', exact: true })).toBeEnabled();
 }
