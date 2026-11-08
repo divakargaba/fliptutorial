@@ -2,8 +2,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import practice from '../../../contracts/practice-response.fixture.json';
 import grade from '../../../contracts/submission-response.fixture.json';
 import testMe from '../../../contracts/testme-response.fixture.json';
+import hintFixture from '../../../contracts/hint-response.fixture.json';
+import analysisFixture from '../../../contracts/analysis-response.fixture.json';
 import { isContentSender, requestApi, sendRequest } from '../../src/api';
-import { ApiErrorSchema, PracticeResponseSchema, SubmissionResponseSchema, TestMeResponseSchema } from '../../src/contracts';
+import { AnalysisResponseSchema, ApiErrorSchema, HintResponseSchema, PracticeResponseSchema, SubmissionResponseSchema, TestMeResponseSchema, WorkerMessageSchema } from '../../src/contracts';
 
 const base = 'http://127.0.0.1:8000';
 const lookup = { type: 'lookup', videoId: practice.videoId } as const;
@@ -121,5 +123,20 @@ describe('extension API boundary', () => {
     const timeout = { ok: false, error: { error: { code: 'TIMEOUT', retryable: true } } };
     expect(await workerReply).toMatchObject(timeout);
     expect(await contentReply).toMatchObject(timeout);
+  });
+});
+
+describe('hint and analysis contracts (H1/H2)', () => {
+  it('parses the shared fixtures', () => {
+    expect(HintResponseSchema.parse(hintFixture).level).toBe(2);
+    expect(AnalysisResponseSchema.parse(analysisFixture).optimal).toBe(false);
+  });
+  it('rejects non-https doc links and out-of-range hint levels', () => {
+    const base = { level: 1, maxLevel: 3, feedback: null, hint: 'x', focus: 'f', aiGenerated: true };
+    expect(HintResponseSchema.safeParse({ ...base, sources: [{ title: 't', url: 'javascript:alert(1)' }] }).success).toBe(false);
+    expect(WorkerMessageSchema.safeParse({ type: 'hint', exerciseId: 'e', revision: 'r', code: '', level: 4 }).success).toBe(false);
+    expect(WorkerMessageSchema.safeParse({ type: 'hint', exerciseId: 'e', revision: 'r', code: 'x', level: 0,
+      lastResult: { outcome: 'wrong_answer', args: [1], expected: 2, actual: 3 } }).success).toBe(true);
+    expect(WorkerMessageSchema.safeParse({ type: 'analyze', exerciseId: 'e', revision: 'r', code: '' }).success).toBe(false);
   });
 });

@@ -6,7 +6,8 @@ import { createRoot } from 'react-dom/client';
 import css from '../../src/ui/theme.css?inline';
 import { Badge } from '../../src/ui/Badge';
 import { PracticePanel, type PracticePanelProps } from '../../src/ui/PracticePanel';
-import type { Breakpoint, SubmissionResponse } from '../../src/contracts';
+import type { AnalysisResponse, Breakpoint, HintResponse, SubmissionResponse, WorkerReply } from '../../src/contracts';
+import { HintsContext } from '../../src/hints';
 
 const q = new URLSearchParams(location.search);
 const state = q.get('state') ?? 'editing';
@@ -32,13 +33,41 @@ const examples: SubmissionResponse = { outcome: 'passed', passedCount: 2, totalC
 const solved: SubmissionResponse = { outcome: 'passed', passedCount: 8, totalCount: 8, results: [
   ...examples.results, ...Array.from({ length: 6 }, (_, i) => ({ kind: 'hidden' as const, index: i + 2, passed: true })),
 ] };
+const slow: AnalysisResponse = {
+  learner: { time: 'O(n)', space: 'O(1)' }, best: { time: 'O(log n)', space: 'O(1)' }, optimal: false,
+  summary: 'You passed! Your loop multiplies pow_num times, but squaring lets you halve the work each step.',
+  tip: 'Square the base and halve the exponent each step (exponentiation by squaring).',
+  betterSolution: 'def raise_to_power(base_num, pow_num):\n    result = 1\n    while pow_num > 0:\n        if pow_num % 2 == 1:\n            result *= base_num\n        base_num *= base_num\n        pow_num //= 2\n    return result\n',
+  aiGenerated: true,
+};
+const HINTS: HintResponse[] = [
+  { level: 1, maxLevel: 3, feedback: null, focus: 'repeated multiplication', aiGenerated: true, sources: [],
+    hint: 'Raising to a power means multiplying the base by itself again and again. How many times should that happen?' },
+  { level: 2, maxLevel: 3, feedback: null, focus: 'range()', aiGenerated: true,
+    sources: [{ title: 'range()', url: 'https://docs.python.org/3/library/stdtypes.html#range' }],
+    hint: 'A for loop over range(pow_num) runs exactly pow_num times; keep a running result that starts at 1.' },
+  { level: 3, maxLevel: 3, feedback: null, focus: 'outline', aiGenerated: true, sources: [],
+    hint: '1. Start a result at 1. 2. Repeat pow_num times. 3. Each time, multiply the result by base_num. 4. Give the result back.' },
+];
+const hintsStub = {
+  async requestHint(input: { level: number }): Promise<WorkerReply<HintResponse>> {
+    await new Promise(r => setTimeout(r, 150));
+    if (input.level === 0) return { ok: true as const, data: { ...HINTS[0]!, level: 0, hint: null, sources: [],
+      feedback: 'For raise_to_power(3, 2) your function returned 6, but 9 is expected, so it is multiplying base by exponent once instead of repeating the multiplication.' } };
+    return { ok: true as const, data: HINTS[input.level - 1]! };
+  },
+};
 const props: Record<string, Partial<PracticePanelProps>> = {
   editing: { attempt: 'editing' },
   checking: { attempt: 'checking' },
   failed: { attempt: 'failed', result: wrong },
   examples: { attempt: 'editing', result: examples },
   error: { attempt: 'failed', error: { code: 'GRADER_UNAVAILABLE', message: 'The grader is unavailable right now.', retryable: true } },
-  solved: { attempt: 'passed', result: solved, holdMs: 60_000 },
+  solved: { attempt: 'passed', result: solved, holdMs: 60_000, analysis: { status: 'done', data: {
+    learner: { time: 'O(n)', space: 'O(1)' }, best: { time: 'O(n)', space: 'O(1)' }, optimal: true,
+    summary: 'Efficient.', tip: null, betterSolution: null, aiGenerated: true } } },
+  'solved-slow': { attempt: 'passed', result: solved, holdMs: 60_000, analysis: { status: 'done', data: slow } },
+  'solved-checking': { attempt: 'passed', result: solved, holdMs: 60_000, analysis: { status: 'loading' } },
 };
 const dark = theme === 'dark';
 document.body.style.cssText = `margin:0;background:${dark ? '#0f0f0f' : '#fff'};font-family:Roboto,Arial,sans-serif`;
@@ -86,9 +115,9 @@ function Shell() {
     const panel = state !== 'ready';
     createRoot(mount).render(<>
       <Badge state="ready" total={1} remaining={panel ? 0 : 1} solved={0} active={panel} nextAtS={breakpoint.pauseAtS} onOpen={() => {}} />
-      {panel && <div style={{ width: '100%' }}><PracticePanel videoId="rfscVS0vtbw" revision="demo" breakpoint={breakpoint}
+      {panel && <div style={{ width: '100%' }}><HintsContext.Provider value={hintsStub}><PracticePanel videoId="rfscVS0vtbw" revision="demo" breakpoint={breakpoint}
         attempt="editing" result={null} error={null} canResume={false}
-        onRun={() => {}} onSubmit={() => {}} onSkip={() => {}} onResume={() => {}} onClose={() => {}} {...props[state]} /></div>}
+        onRun={() => {}} onSubmit={() => {}} onSkip={() => {}} onResume={() => {}} onClose={() => {}} {...props[state]} /></HintsContext.Provider></div>}
     </>);
   };
   return <div ref={host} />;

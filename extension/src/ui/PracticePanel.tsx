@@ -1,6 +1,7 @@
 import { useContext, useEffect, useRef, useState } from 'react';
-import { Check, CircleAlert, LoaderCircle, Pause, Play, Send, SkipForward, X } from 'lucide-react';
-import type { Breakpoint, SubmissionResponse } from '../contracts';
+import { Check, ChevronDown, CircleAlert, ExternalLink, Gauge, Lightbulb, LoaderCircle, Pause, Play, Send, SkipForward, Sparkles, X } from 'lucide-react';
+import type { Breakpoint, HintResponse, LastResult, SubmissionResponse } from '../contracts';
+import { HintsContext, type AnalysisState } from '../hints';
 import { flushDraft, loadDraft, saveDraft } from '../drafts';
 import { PythonEditor } from './PythonEditor';
 import { TestMeContext } from '../test-me';
@@ -28,6 +29,8 @@ export type PracticePanelProps = {
   /** Rendered for its exit animation only; the attempt is already over. */
   leaving?: boolean;
   holdMs?: number;
+  /** Efficiency review of the passing submission (content-script driven). */
+  analysis?: AnalysisState | null;
 };
 
 export function PracticePanel(props: PracticePanelProps) {
@@ -61,6 +64,7 @@ function Panel(props: PracticePanelProps & { draftKey: string }) {
   const invalidCode = code === null || !code.trim() || tooLarge;
   const blocked = leaving || checking || invalidCode || solved || error?.code === 'SET_EXPIRED';
   const fn = functionName(exercise.starterCode);
+  const coach = useHints(props, code);
 
   useEffect(() => {
     let active = true;
@@ -105,7 +109,7 @@ function Panel(props: PracticePanelProps & { draftKey: string }) {
 
     {aiGenerated && <p className="bp-generated-label bp-generated-panel">AI-generated practice</p>}
 
-    {solved ? <Solved heading={heading} result={result} canResume={props.canResume}
+    {solved ? <Solved heading={heading} result={result} canResume={props.canResume} analysis={props.analysis ?? null}
       resumeAtS={props.breakpoint.pauseAtS} holdMs={props.holdMs ?? SOLVED_HOLD_MS} onResume={props.onResume} /> : <>
       <div className="bp-body">
         <div className="bp-intro bp-stagger">
@@ -135,7 +139,9 @@ function Panel(props: PracticePanelProps & { draftKey: string }) {
         {tooLarge && <p className="bp-inline-error">Code must be at most 16 KiB.</p>}
         {storageError && <p className="bp-note">Draft saving is unavailable here — copy your code before leaving.</p>}
 
-        <Results attempt={attempt} lastMode={lastMode} result={result} error={error} />
+        <HintsSection coach={coach} disabled={leaving || checking} />
+
+        <Results attempt={attempt} lastMode={lastMode} result={result} error={error} coach={coach} />
       </div>
 
       {props.canResume && <div className="bp-resume-bar">
@@ -160,9 +166,9 @@ function Panel(props: PracticePanelProps & { draftKey: string }) {
   </section>;
 }
 
-function Results({ attempt, lastMode, result, error }: {
+function Results({ attempt, lastMode, result, error, coach }: {
   attempt: PracticePanelProps['attempt']; lastMode: 'run' | 'submit' | null;
-  result: SubmissionResponse | null; error: PracticePanelProps['error'];
+  result: SubmissionResponse | null; error: PracticePanelProps['error']; coach: Coach;
 }) {
   const visible = result?.results.filter(row => row.kind === 'visible') ?? [];
   const hidden = result?.results.filter(row => row.kind === 'hidden') ?? [];
@@ -215,6 +221,7 @@ function Results({ attempt, lastMode, result, error }: {
         <dt>Output</dt><dd><code className={row.passed ? 'bp-pass' : 'bp-fail'}>{formatValue(row.actual)}</code></dd>
       </dl>}
       {row?.diagnostic && <pre className="bp-diagnostic">{row.diagnostic}</pre>}
+      {!examplesPassed && <CoachFeedback coach={coach} />}
     </div>;
   } else {
     body = <p className="bp-console-idle" key="idle"><strong>Run</strong> checks the examples. <strong>Submit</strong> runs every test.</p>;
@@ -222,11 +229,14 @@ function Results({ attempt, lastMode, result, error }: {
   return <div className="bp-results" aria-live="polite" aria-atomic="true">{body}</div>;
 }
 
-function Solved({ heading, result, canResume, resumeAtS, holdMs, onResume }: {
+function Solved({ heading, result, canResume, resumeAtS, holdMs, onResume, analysis }: {
   heading: React.RefObject<HTMLHeadingElement | null>; result: SubmissionResponse | null; canResume: boolean;
-  resumeAtS: number; holdMs: number; onResume(): void;
+  resumeAtS: number; holdMs: number; onResume(): void; analysis: AnalysisState | null;
 }) {
   const rows = result?.results ?? [];
+  const review = analysis?.status === 'done' ? analysis.data : null;
+  // Auto-resume only once the review is back and says the solution is already efficient.
+  const counting = !analysis || analysis.status === 'error' || (review?.optimal ?? false);
   return <div className="bp-solved" role="status">
     <svg className="bp-check" viewBox="0 0 52 52" aria-hidden="true">
       <circle className="bp-check-ring" cx="26" cy="26" r="24" />
@@ -237,13 +247,130 @@ function Solved({ heading, result, canResume, resumeAtS, holdMs, onResume }: {
     {rows.length > 0 && <div className="bp-solved-dots" aria-hidden="true">
       {rows.map((r, i) => <span key={`${r.kind}-${r.index}`} style={{ animationDelay: `${420 + i * 45}ms` }} />)}
     </div>}
+    {analysis?.status === 'loading' && <p className="bp-efficiency is-loading" role="status">
+      <LoaderCircle size={14} className="bp-spin" aria-hidden="true" />Checking how efficient your solution is…</p>}
+    {review?.optimal && <p className="bp-efficiency is-optimal">
+      <Gauge size={14} aria-hidden="true" />Efficient · {review.learner.time} time · {review.learner.space} space</p>}
+    {review && !review.optimal && <Efficiency review={review} />}
     {canResume ? <>
       <p className="bp-note">The browser didn’t resume playback.</p>
       <button type="button" className="bp-button bp-primary bp-wide" onClick={onResume}><Play size={14} aria-hidden="true" />Resume video</button>
-    </> : <>
+    </> : counting && analysis?.status !== 'loading' ? <>
       <p className="bp-note">Now see how the instructor does it — back to {formatTimestamp(resumeAtS)}.</p>
       <div className="bp-countdown" aria-hidden="true"><span style={{ animationDuration: `${holdMs}ms` }} /></div>
       <button type="button" className="bp-button bp-secondary bp-wide" onClick={onResume}><Play size={14} aria-hidden="true" />Resume now</button>
+    </> : <button type="button" className={`bp-button bp-wide ${review && !review.optimal ? 'bp-primary' : 'bp-secondary'}`} onClick={onResume}>
+      <Play size={14} aria-hidden="true" />{review && !review.optimal ? 'Resume video' : 'Resume now'}</button>}
+  </div>;
+}
+
+// ---------------------------------------------------------------------------
+// Hints and coach feedback (H1)
+// ---------------------------------------------------------------------------
+
+type Coach = {
+  hints: HintResponse[];
+  loading: boolean;
+  error: string | null;
+  feedback: { text: string | null; loading: boolean; sources: HintResponse['sources'] } | null;
+  available: boolean;
+  next(): void;
+};
+
+function lastResultOf(result: SubmissionResponse | null): LastResult | undefined {
+  if (!result || result.outcome === 'passed') return undefined;
+  const row = result.results.find(r => !r.passed && r.kind === 'visible');
+  if (row && row.kind === 'visible') {
+    return { outcome: result.outcome, args: row.args, expected: row.expected, actual: row.actual,
+      diagnostic: row.diagnostic ? row.diagnostic.slice(0, 4000) : null };
+  }
+  return { outcome: result.outcome };
+}
+
+function useHints(props: PracticePanelProps, code: string | null): Coach {
+  const ctx = useContext(HintsContext);
+  const [hints, setHints] = useState<HintResponse[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<Coach['feedback']>(null);
+  const codeRef = useRef(code);
+  codeRef.current = code;
+  const failing = props.attempt !== 'checking' ? lastResultOf(props.result) : undefined;
+  const failingKey = failing ? JSON.stringify(props.result) : null;
+
+  // Feedback on every wrong attempt: explain the failing case, never the fix.
+  useEffect(() => {
+    if (!ctx || !failing || codeRef.current === null) { setFeedback(null); return; }
+    let live = true;
+    setFeedback({ text: null, loading: true, sources: [] });
+    void ctx.requestHint({ code: codeRef.current, level: 0, lastResult: failing }).then(reply => {
+      if (!live) return;
+      setFeedback(reply.ok ? { text: reply.data.feedback, loading: false, sources: reply.data.sources } : null);
+    });
+    return () => { live = false; };
+  }, [failingKey, ctx, code === null]);
+
+  const next = () => {
+    if (!ctx || loading || codeRef.current === null || hints.length >= 3) return;
+    setLoading(true); setError(null);
+    void ctx.requestHint({ code: codeRef.current, level: hints.length + 1, lastResult: lastResultOf(props.result),
+      previousHints: hints.map(h => h.hint ?? '').filter(Boolean) }).then(reply => {
+      setLoading(false);
+      if (reply.ok && reply.data.hint) setHints(h => [...h, reply.data]);
+      else setError(reply.ok ? 'No hint available right now.' : reply.error.error.message);
+    });
+  };
+  return { hints, loading, error, feedback, available: !!ctx, next };
+}
+
+function CoachFeedback({ coach }: { coach: Coach }) {
+  if (!coach.feedback || (!coach.feedback.loading && !coach.feedback.text)) return null;
+  return <div className="bp-coach">
+    <Sparkles size={14} aria-hidden="true" />
+    {coach.feedback.loading
+      ? <span className="bp-coach-loading">Looking at what went wrong…</span>
+      : <div><strong>What went wrong</strong><p>{coach.feedback.text}</p></div>}
+  </div>;
+}
+
+function HintsSection({ coach, disabled }: { coach: Coach; disabled: boolean }) {
+  if (!coach.available) return null;
+  const used = coach.hints.length;
+  return <div className="bp-hints">
+    {coach.hints.map((h, i) => <div className="bp-hint-card" key={i}>
+      <div className="bp-hint-head"><Lightbulb size={13} aria-hidden="true" />Hint {i + 1} of 3<span>· {h.focus}</span></div>
+      <p>{h.hint}</p>
+      {h.sources.length > 0 && <div className="bp-hint-sources">
+        {h.sources.map(src => <a key={src.url} href={src.url} target="_blank" rel="noopener noreferrer">
+          {src.title}<ExternalLink size={11} aria-hidden="true" /></a>)}
+      </div>}
+    </div>)}
+    {coach.error && <p className="bp-inline-error">{coach.error}</p>}
+    {used < 3 ? <button type="button" className="bp-hint-button" onClick={coach.next} disabled={disabled || coach.loading}
+      aria-busy={coach.loading || undefined}>
+      {coach.loading ? <LoaderCircle size={14} className="bp-spin" aria-hidden="true" /> : <Lightbulb size={14} aria-hidden="true" />}
+      {coach.loading ? 'Finding a hint…' : used === 0 ? 'Stuck? Get a hint' : `Next hint (${used + 1} of 3)`}
+    </button> : <p className="bp-note">That's every hint. The outline above walks through the whole approach.</p>}
+    {used === 0 && <p className="bp-note">Hints point you to the right idea and the official docs. They never give the answer.</p>}
+  </div>;
+}
+
+function Efficiency({ review }: { review: NonNullable<Extract<AnalysisState, { status: 'done' }>['data']> }) {
+  const [open, setOpen] = useState(false);
+  return <div className="bp-efficiency-card">
+    <div className="bp-efficiency-head"><Gauge size={15} aria-hidden="true" />You passed, and it can be faster</div>
+    <div className="bp-complexity">
+      <span><em>Yours</em><strong className="bp-fail">{review.learner.time}</strong><small>{review.learner.space} space</small></span>
+      <span className="bp-arrow" aria-hidden="true">→</span>
+      <span><em>Possible</em><strong className="bp-pass">{review.best.time}</strong><small>{review.best.space} space</small></span>
+    </div>
+    <p>{review.summary}</p>
+    {review.tip && <p className="bp-efficiency-tip"><Lightbulb size={13} aria-hidden="true" />{review.tip}</p>}
+    {review.betterSolution && <>
+      <button type="button" className="bp-disclosure" aria-expanded={open} onClick={() => setOpen(o => !o)}>
+        <ChevronDown size={14} aria-hidden="true" />{open ? 'Hide' : 'Show'} a faster solution
+      </button>
+      {open && <pre className="bp-better-code"><code>{review.betterSolution}</code></pre>}
     </>}
   </div>;
 }

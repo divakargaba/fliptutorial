@@ -1,13 +1,16 @@
 import { z } from 'zod';
 import {
-  ApiErrorSchema, PracticeResponseSchema, SubmissionResponseSchema, TestMeResponseSchema, WorkerMessageSchema,
-  type ApiError, type PracticeResponse, type SubmissionResponse, type TestMeResponse, type WorkerMessage, type WorkerReply,
+  AnalysisResponseSchema, ApiErrorSchema, HintResponseSchema, PracticeResponseSchema, SubmissionResponseSchema,
+  TestMeResponseSchema, WorkerMessageSchema, type AnalysisResponse, type ApiError, type HintResponse,
+  type PracticeResponse, type SubmissionResponse, type TestMeResponse, type WorkerMessage, type WorkerReply,
 } from './contracts';
 
 const requests = {
   lookup: { timeoutMs: 3000, schema: PracticeResponseSchema },
   grade: { timeoutMs: 15000, schema: SubmissionResponseSchema, path: '/v1/submissions' },
   testMe: { timeoutMs: 20000, schema: TestMeResponseSchema, path: '/v1/test-me' },
+  hint: { timeoutMs: 18000, schema: HintResponseSchema, path: '/v1/hints' },
+  analyze: { timeoutMs: 15000, schema: AnalysisResponseSchema, path: '/v1/analysis' },
 };
 
 export function apiError(code: string, message: string, retryable = true): ApiError {
@@ -27,7 +30,7 @@ export function apiOrigin(base: string): string {
   return url.origin;
 }
 
-export async function requestApi(raw: unknown, base: string, fetcher: typeof fetch = fetch): Promise<WorkerReply<PracticeResponse | SubmissionResponse | TestMeResponse>> {
+export async function requestApi(raw: unknown, base: string, fetcher: typeof fetch = fetch): Promise<WorkerReply<PracticeResponse | SubmissionResponse | TestMeResponse | HintResponse | AnalysisResponse>> {
   const parsed = WorkerMessageSchema.safeParse(raw);
   if (!parsed.success) {
     const testMe = typeof raw === 'object' && raw !== null && 'type' in raw && raw.type === 'testMe';

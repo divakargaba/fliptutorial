@@ -315,3 +315,67 @@
   .bp-check-ring, .bp-check-tick { stroke-dashoffset: 0; }
   .bp-countdown { display: none; }
 }
+
+/* ---------- Hints and coach feedback (H1) ---------- */
+.bp-hints { display: grid; gap: 8px; }
+.bp-hint-button {
+  justify-self: start; display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px 0 10px;
+  border: 1px dashed var(--bp-line); border-radius: 16px; background: transparent; color: var(--bp-text-2);
+  font-size: 13px; font-weight: 500; transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
+}
+.bp-hint-button:hover:not(:disabled) { background: var(--bp-chip); color: var(--bp-text); border-style: solid; }
+.bp-hint-button:disabled { opacity: .5; }
+.bp-hint-button svg { color: var(--bp-warn, #f2c94c); }
+.bp-hint-card {
+  padding: 10px 12px; border-radius: 10px; background: var(--bp-raised); border-left: 3px solid var(--bp-warn, #f2c94c);
+  animation: bp-rise 260ms var(--bp-ease-out) both;
+}
+.bp-hint-head { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; color: var(--bp-text); font-size: 12px; font-weight: 600; }
+.bp-hint-head svg { color: var(--bp-warn, #f2c94c); }
+.bp-hint-head span { color: var(--bp-text-3); font-weight: 400; }
+.bp-hint-card p { color: var(--bp-text); font-size: 13px; line-height: 19px; }
+.bp-hint-sources { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.bp-hint-sources a {
+  display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 8px; border-radius: 11px;
+  background: var(--bp-chip); color: var(--bp-focus); font-size: 11.5px; text-decoration: none;
+}
+.bp-hint-sources a:hover { background: var(--bp-chip-hover); }
+.bp-coach {
+  display: grid; grid-template-columns: 14px 1fr; gap: 8px; align-items: start; padding: 10px 12px; border-radius: 8px;
+  background: var(--bp-raised); font-size: 12.5px; animation: bp-rise 240ms var(--bp-ease-out) both;
+}
+.bp-coach > svg { margin-top: 2px; color: var(--bp-focus); }
+.bp-coach strong { display: block; color: var(--bp-text); font-weight: 600; margin-bottom: 2px; }
+.bp-coach p { color: var(--bp-text-2); line-height: 18px; }
+.bp-coach-loading { color: var(--bp-text-3); animation: bp-pulse 1.1s ease-in-out infinite; }
+
+/* ---------- Efficiency review on the solved screen (H2) ---------- */
+.bp-efficiency { display: inline-flex; align-items: center; gap: 6px; margin: 2px 0 6px; font-size: 12.5px; color: var(--bp-text-2); }
+.bp-efficiency.is-optimal { color: var(--bp-pass); animation: bp-fade-in 260ms ease both; }
+.bp-efficiency.is-loading { color: var(--bp-text-3); }
+.bp-efficiency-card {
+  width: 100%; display: grid; gap: 8px; margin: 4px 0 12px; padding: 12px; border-radius: 10px; text-align: left;
+  background: var(--bp-raised); border: 1px solid var(--bp-line); animation: bp-rise 300ms var(--bp-ease-out) both;
+}
+.bp-efficiency-head { display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 13.5px; color: var(--bp-text); }
+.bp-efficiency-head svg { color: var(--bp-warn, #f2c94c); }
+.bp-complexity { display: flex; align-items: center; justify-content: center; gap: 14px; padding: 6px 0; }
+.bp-complexity > span:not(.bp-arrow) { display: grid; justify-items: center; gap: 1px; }
+.bp-complexity em { font-style: normal; font-size: 11px; color: var(--bp-text-3); text-transform: none; }
+.bp-complexity strong { font-family: var(--bp-mono); font-size: 16px; }
+.bp-complexity small { font-size: 11px; color: var(--bp-text-3); }
+.bp-efficiency-card > p { color: var(--bp-text-2); font-size: 12.5px; line-height: 18px; }
+.bp-efficiency-tip { display: flex; gap: 6px; align-items: flex-start; color: var(--bp-text) !important; }
+.bp-efficiency-tip svg { flex-shrink: 0; margin-top: 2px; color: var(--bp-warn, #f2c94c); }
+.bp-disclosure {
+  justify-self: start; display: inline-flex; align-items: center; gap: 4px; height: 28px; padding: 0 10px 0 6px; border: 0;
+  border-radius: 14px; background: var(--bp-chip); color: var(--bp-text); font-size: 12.5px; font-weight: 500;
+}
+.bp-disclosure[aria-expanded='true'] svg { transform: rotate(180deg); }
+.bp-disclosure svg { transition: transform 150ms ease; }
+.bp-better-code {
+  max-height: 220px; overflow: auto; padding: 10px 12px; border-radius: 8px; background: var(--bp-editor-bg);
+  border: 1px solid var(--bp-line); font-size: 12.5px; line-height: 19px; white-space: pre; animation: bp-rise 220ms var(--bp-ease-out) both;
+}
+.breakpoint-shell[data-theme='dark'], .breakpoint-shell { --bp-warn: #f2c94c; }
+.breakpoint-shell[data-theme='light'] { --bp-warn: #b7791f; }

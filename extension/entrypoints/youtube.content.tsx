@@ -5,7 +5,7 @@ import { flushSync } from 'react-dom';
 import { browser } from 'wxt/browser';
 import { createShadowRootUi, type ShadowRootContentScriptUi } from 'wxt/utils/content-script-ui/shadow-root';
 import { sendRequest } from '../src/api';
-import { PracticeResponseSchema, SubmissionResponseSchema, TestMeResponseSchema, type WorkerMessage } from '../src/contracts';
+import { PracticeResponseSchema, SubmissionResponseSchema, TestMeResponseSchema, type WorkerMessage, HintResponseSchema, AnalysisResponseSchema } from '../src/contracts';
 import { flushDraft, loadDraft, saveDraft } from '../src/drafts';
 import { listSolved, markSolved } from '../src/progress';
 import { PlaybackSession, watchVideoId, type Ticket } from '../src/playback';
@@ -13,6 +13,7 @@ import { TestMeContext } from '../src/test-me';
 import { Badge } from '../src/ui/Badge';
 import { TestMeControls } from '../src/ui/TestMeControls';
 import { PracticePanel, SOLVED_HOLD_MS, type PracticePanelProps } from '../src/ui/PracticePanel';
+import { HintsContext, type AnalysisState } from '../src/hints';
 
 type RenderedPanel = PracticePanelProps & { aiGenerated: boolean };
 
@@ -48,6 +49,17 @@ export default defineContentScript({
     let lastHref = '';
     // A passed attempt lingers on its solved moment briefly before playback resumes.
     let holdTimer: ReturnType<typeof setTimeout> | undefined;
+    // Efficiency review of the latest passing submission, keyed to its attempt.
+    let analysisState: { key: string; state: AnalysisState } | null = null;
+    const attemptKey = () => session.active ? `${session.generation}/${session.active.breakpoint.exercise.id}` : '';
+    const hints = {
+      requestHint(input: { code: string; level: number; lastResult?: unknown; previousHints?: string[] }) {
+        const a = session.active;
+        if (!a) return Promise.resolve({ ok: false as const, error: { error: { code: 'NO_ATTEMPT', message: 'No exercise is open.', retryable: false }, requestId: 'local' } });
+        return sendRequest({ type: 'hint', exerciseId: a.breakpoint.exercise.id, revision: a.revision, ...input } as WorkerMessage,
+          HintResponseSchema, send);
+      },
+    };
     // The last rendered panel, kept mounted for its exit animation after the attempt ends.
     let shownPanel: RenderedPanel | null = null;
     let leavingPanel: RenderedPanel | null = null;
@@ -115,6 +127,7 @@ export default defineContentScript({
             index: Math.max(0, breakpoints.findIndex(b => b.id === active.breakpoint.id)), total: breakpoints.length,
           }),
           holdMs: SOLVED_HOLD_MS,
+          analysis: analysisState?.key === attemptKey() ? analysisState.state : null,
           onRun: code => void grade('run', code), onSubmit: code => void grade('submit', code),
           onSkip: skip, onClose: skip, onResume: resumeNow,
         };
@@ -135,7 +148,7 @@ export default defineContentScript({
         onStart: startTestMe, onRetry: retryTestMe, onClose: closeTestMe,
       } : null;
       try {
-        flushSync(() => ui!.mounted!.render(<TestMeContext.Provider value={testMe}><div className="breakpoint-shell" data-theme={theme()}
+        flushSync(() => ui!.mounted!.render(<HintsContext.Provider value={hints}><TestMeContext.Provider value={testMe}><div className="breakpoint-shell" data-theme={theme()}
           data-placement={anchor?.id === 'secondary-inner' || anchor?.id === 'secondary' ? 'side' : 'below'}>
           {session.route !== 'unsupported' && <div data-breakpoint-badge>
             <Badge state={state} total={breakpoints.length} remaining={remaining.length} solved={solved}
@@ -145,7 +158,7 @@ export default defineContentScript({
           {visiblePanel && <div data-breakpoint-panel data-ai-generated={visiblePanel.aiGenerated || undefined} tabIndex={-1} style={{ width: '100%' }}>
             <PracticePanel key={`${session.generation}/${visiblePanel.breakpoint.exercise.id}`} {...visiblePanel} />
           </div>}
-        </div></TestMeContext.Provider>));
+        </div></TestMeContext.Provider></HintsContext.Provider>));
       } catch { failMount(); }
     }
 
@@ -258,7 +271,22 @@ export default defineContentScript({
         }
         if (action === 'resume') {
           clearTimeout(holdTimer);
-          holdTimer = setTimeout(() => { holdTimer = undefined; void resume(ticket); }, SOLVED_HOLD_MS);
+          // Review efficiency before resuming: an inefficient pass stays on screen until the learner resumes.
+          const key = attemptKey();
+          analysisState = { key, state: { status: 'loading' } };
+          render();
+          const review = await Promise.race([
+            sendRequest({ type: 'analyze', exerciseId: active.breakpoint.exercise.id, revision: active.revision, code },
+              AnalysisResponseSchema, send),
+            new Promise<null>(done => setTimeout(() => done(null), 9000)),
+          ]);
+          if (!isCurrent() || !session.isCurrent(ticket) || analysisState?.key !== key) return;
+          const data = review && review.ok ? review.data : null;
+          analysisState = { key, state: data ? { status: 'done', data } : { status: 'error' } };
+          render();
+          if (!data || data.optimal) {
+            holdTimer = setTimeout(() => { holdTimer = undefined; void resume(ticket); }, SOLVED_HOLD_MS);
+          }
         }
       }
     }
@@ -438,7 +466,7 @@ export default defineContentScript({
       stopPlayer(); observer?.disconnect(); observer = undefined;
       player = null; playerReady = false;
       ui?.remove(); ui = undefined; mounting = false; anchor = null; uiFailed = false; bindExpired = false;
-      clearTimeout(holdTimer); holdTimer = undefined;
+      clearTimeout(holdTimer); holdTimer = undefined; analysisState = null;
       clearTimeout(leavingTimer); leavingPanel = null; shownPanel = null;
       session.navigate(id);
       if (!id) return;

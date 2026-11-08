@@ -60,15 +60,44 @@ export const GradeMessageSchema = z.object({
     'Enter Python code of at most 16 KiB',
   ),
 }).strict();
+const OutcomeFailSchema = z.enum(['wrong_answer', 'syntax_error', 'runtime_error', 'time_limit', 'invalid_output']);
+export const LastResultSchema = z.object({
+  outcome: OutcomeFailSchema, args: z.array(z.json()).optional(), expected: z.json().optional(),
+  actual: z.json().optional(), diagnostic: z.string().max(4000).nullable().optional(),
+}).strict();
+export const HintMessageSchema = z.object({
+  type: z.literal('hint'), exerciseId: text, revision: text, code: z.string().max(16384),
+  level: z.number().int().min(0).max(3), lastResult: LastResultSchema.optional(),
+  previousHints: z.array(z.string().max(400)).max(6).optional(),
+}).strict();
+export const AnalyzeMessageSchema = z.object({
+  type: z.literal('analyze'), exerciseId: text, revision: text, code: z.string().min(1).max(16384),
+}).strict();
+export const HintResponseSchema = z.object({
+  level: z.number().int().min(0).max(3), maxLevel: z.number().int().positive(),
+  feedback: z.string().nullable(), hint: z.string().nullable(), focus: z.string(),
+  sources: z.array(z.object({ title: text, url: z.string().url().refine(u => u.startsWith('https://'), 'https only') }).strict()),
+  aiGenerated: z.boolean(),
+}).strict();
+const ComplexitySchema = z.object({ time: text, space: text }).strict();
+export const AnalysisResponseSchema = z.object({
+  learner: ComplexitySchema, best: ComplexitySchema, optimal: z.boolean(), summary: text,
+  tip: z.string().nullable(), betterSolution: z.string().nullable(), aiGenerated: z.boolean(),
+}).strict();
 export const WorkerMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('lookup'), videoId: VideoIdSchema }).strict(),
   GradeMessageSchema,
   z.object({ type: z.literal('testMe'), videoId: VideoIdSchema, timestampS: time }).strict(),
+  HintMessageSchema,
+  AnalyzeMessageSchema,
 ]);
 
 export type Breakpoint = z.infer<typeof BreakpointSchema>;
 export type PracticeResponse = z.infer<typeof PracticeResponseSchema>;
 export type TestMeResponse = z.infer<typeof TestMeResponseSchema>;
+export type HintResponse = z.infer<typeof HintResponseSchema>;
+export type AnalysisResponse = z.infer<typeof AnalysisResponseSchema>;
+export type LastResult = z.infer<typeof LastResultSchema>;
 export type SubmissionResponse = z.infer<typeof SubmissionResponseSchema>;
 export type ApiError = z.infer<typeof ApiErrorSchema>;
 export type WorkerMessage = z.infer<typeof WorkerMessageSchema>;
