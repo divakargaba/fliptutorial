@@ -2,10 +2,10 @@ import { useContext, useEffect, useRef, useState } from 'react';
 import { Check, ChevronDown, CircleAlert, ExternalLink, Gauge, Lightbulb, LoaderCircle, Pause, Play, Send, SkipForward, Sparkles, X } from 'lucide-react';
 import type { Breakpoint, HintResponse, LastResult, SubmissionResponse } from '../contracts';
 import { HintsContext, type AnalysisState } from '../hints';
-import { flushDraft, loadDraft, saveDraft } from '../drafts';
+import { flushDraft, loadDraft, practiceDraftKey, saveDraft } from '../drafts';
 import { PythonEditor } from './PythonEditor';
 import { TestMeContext } from '../test-me';
-import type { FeedbackResult, LevelId } from '../v2/types';
+import type { FeedbackResult, Language, LevelId } from '../v2/types';
 import { FeedbackCard, LevelChip, LevelUp } from './v2';
 import { formatCall, formatTimestamp, formatValue, functionName, richText } from './format';
 
@@ -40,10 +40,14 @@ export type PracticePanelProps = {
   feedback?: { result: FeedbackResult; submittedCode: string } | null;
   /** v2 keeps success feedback visible until the learner explicitly resumes. */
   manualResume?: boolean;
+  /** Local learner identity. Omit only for legacy v1 draft keys. */
+  accountId?: string;
+  /** Language of the exercise; Python remains the v1 default. */
+  language?: Language;
 };
 
 export function PracticePanel(props: PracticePanelProps) {
-  const key = `${props.videoId}/${props.breakpoint.exercise.id}/${props.revision}`;
+  const key = practiceDraftKey(props.videoId, props.breakpoint.exercise.id, props.revision, props.accountId);
   return <Panel key={key} {...props} draftKey={key} />;
 }
 
@@ -73,6 +77,9 @@ function Panel(props: PracticePanelProps & { draftKey: string }) {
   const invalidCode = code === null || !code.trim() || tooLarge;
   const blocked = leaving || checking || invalidCode || solved || error?.code === 'SET_EXPIRED';
   const fn = functionName(exercise.starterCode);
+  const language = props.language ?? 'python';
+  const filename = { python: 'main.py', javascript: 'main.js', typescript: 'main.ts', java: 'Main.java', cpp: 'main.cpp', c: 'main.c', csharp: 'Main.cs', go: 'main.go', rust: 'main.rs', sql: 'query.sql', pseudocode: 'pseudocode.txt', unknown: 'code.txt' }[language];
+  const value = (item: unknown) => language === 'python' ? formatValue(item) : JSON.stringify(item) ?? 'no output';
   const coach = useHints(props, code);
 
   useEffect(() => {
@@ -130,29 +137,29 @@ function Panel(props: PracticePanelProps & { draftKey: string }) {
 
         <div className="bp-examples bp-stagger" role="group" aria-label="Examples">
           {exercise.examples.slice(0, 3).map((example, i) => <div className="bp-example" key={i}>
-            <code className="bp-call">{formatCall(fn, example.args)}</code>
+            <code className="bp-call">{language === 'python' ? formatCall(fn, example.args) : `Input: ${example.args.map(value).join(', ')}`}</code>
             <span className="bp-arrow" aria-label="returns">→</span>
-            <code className="bp-expected">{formatValue(example.expected)}</code>
+            <code className="bp-expected">{value(example.expected)}</code>
           </div>)}
         </div>
 
         <div className="bp-editor-card bp-stagger">
           <div className="bp-editor-tab">
-            <span className="bp-file"><span className="bp-file-dot" aria-hidden="true" />main.py</span>
+            <span className="bp-file"><span className="bp-file-dot" aria-hidden="true" />{filename}</span>
             <span id="bp-editor-help" className="bp-hint">
               <kbd>{MOD}</kbd><kbd>↵</kbd> run <span aria-hidden="true">·</span> Tab to leave editor
             </span>
           </div>
           {code === null
             ? <div className="bp-editor-loading" role="status">Restoring your draft…</div>
-            : <PythonEditor initialCode={code} onChange={changeCode} onRun={run} onSubmit={submit} describedBy="bp-editor-help" />}
+            : <PythonEditor key={language} language={language} initialCode={code} onChange={changeCode} onRun={run} onSubmit={submit} describedBy="bp-editor-help" />}
         </div>
         {tooLarge && <p className="bp-inline-error">Code must be at most 16 KiB.</p>}
         {storageError && <p className="bp-note">Draft saving is unavailable here — copy your code before leaving.</p>}
 
         <HintsSection coach={coach} disabled={leaving || checking} />
 
-        <Results attempt={attempt} lastMode={lastMode} result={result} error={error} coach={coach} />
+        <Results attempt={attempt} lastMode={lastMode} result={result} error={error} coach={coach} value={value} />
       </div>
 
       {props.canResume && <div className="bp-resume-bar">
@@ -178,9 +185,10 @@ function Panel(props: PracticePanelProps & { draftKey: string }) {
   </section>;
 }
 
-function Results({ attempt, lastMode, result, error, coach }: {
+function Results({ attempt, lastMode, result, error, coach, value }: {
   attempt: PracticePanelProps['attempt']; lastMode: 'run' | 'submit' | null;
   result: SubmissionResponse | null; error: PracticePanelProps['error']; coach: Coach;
+  value(item: unknown): string;
 }) {
   const visible = result?.results.filter(row => row.kind === 'visible') ?? [];
   const hidden = result?.results.filter(row => row.kind === 'hidden') ?? [];
@@ -228,9 +236,9 @@ function Results({ attempt, lastMode, result, error, coach }: {
         </div>}
       </div>
       {row && <dl className="bp-case-detail" role="tabpanel">
-        {row.args && <><dt>Input</dt><dd><code>{row.args.map(formatValue).join(', ')}</code></dd></>}
-        <dt>Expected</dt><dd><code>{formatValue(row.expected)}</code></dd>
-        <dt>Output</dt><dd><code className={row.passed ? 'bp-pass' : 'bp-fail'}>{formatValue(row.actual)}</code></dd>
+        {row.args && <><dt>Input</dt><dd><code>{row.args.map(value).join(', ')}</code></dd></>}
+        <dt>Expected</dt><dd><code>{value(row.expected)}</code></dd>
+        <dt>Output</dt><dd><code className={row.passed ? 'bp-pass' : 'bp-fail'}>{value(row.actual)}</code></dd>
       </dl>}
       {row?.diagnostic && <pre className="bp-diagnostic">{row.diagnostic}</pre>}
       {!examplesPassed && <CoachFeedback coach={coach} />}
