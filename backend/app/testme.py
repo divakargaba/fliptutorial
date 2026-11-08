@@ -48,9 +48,9 @@ logger = logging.getLogger("breakpoint.testme")
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 PROMPT_VERSION = "tm1"
-# ANTHROPIC_TESTME_MODEL (e.g. claude-haiku-5-5 for speed) overrides
-# ANTHROPIC_MODEL; both fall back to DEFAULT_MODEL.
-DEFAULT_MODEL = "claude-sonnet-5-5"
+# Test me runs on Haiku for latency headroom under BUDGET_S; ANTHROPIC_TESTME_MODEL
+# overrides it. ANTHROPIC_MODEL (prep scan, Sonnet) does not apply here.
+DEFAULT_MODEL = "claude-haiku-5-5"
 MAX_OUTPUT_TOKENS = 4096
 
 BUDGET_S = 18.0
@@ -198,7 +198,7 @@ def _is_server_error(exc: BaseException) -> bool:
 
 
 def resolve_model() -> str:
-    return os.environ.get("ANTHROPIC_TESTME_MODEL") or os.environ.get("ANTHROPIC_MODEL") or DEFAULT_MODEL
+    return os.environ.get("ANTHROPIC_TESTME_MODEL") or DEFAULT_MODEL
 
 
 def anthropic_model_call(model: str | None = None) -> ModelCall:

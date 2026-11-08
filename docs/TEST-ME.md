@@ -117,8 +117,9 @@ Time budget: the extension waits 20 s, so the backend budget is 18 s end to end
   requests for the same key share one generation. `get_set(setId)` returns the
   private set or `None` after expiry (→ `SET_EXPIRED`).
 - Rate limit: 10 new sets per rolling 60 s (cache hits don't count) → `BUSY`.
-- Model: `ANTHROPIC_TESTME_MODEL` (e.g. `claude-haiku-5-5` for speed), else
-  `ANTHROPIC_MODEL`, else `claude-sonnet-5-5`; max 4096 output tokens. The SDK's own
+- Model: `ANTHROPIC_TESTME_MODEL`, default `claude-haiku-5-5` (latency headroom under
+  the 18 s budget). `ANTHROPIC_MODEL` (prep scan, `claude-sonnet-5-5`) does not apply
+  to Test me. Max 4096 output tokens. The SDK's own
   retries are off (`max_retries=0`, timeout = the 18 s budget) so the budget holds;
   one manual retry on a fast 5xx/529 (overloaded). A `max_tokens` cut-off is
   `GENERATOR_UNAVAILABLE`.

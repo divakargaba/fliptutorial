@@ -338,11 +338,12 @@ def test_model_env_resolution(monkeypatch):
 
     monkeypatch.delenv("ANTHROPIC_TESTME_MODEL", raising=False)
     monkeypatch.delenv("ANTHROPIC_MODEL", raising=False)
-    assert testme.resolve_model() == "claude-sonnet-5-5"
-    monkeypatch.setenv("ANTHROPIC_MODEL", "claude-sonnet-5-5")
-    assert testme.resolve_model() == "claude-sonnet-5-5"
-    monkeypatch.setenv("ANTHROPIC_TESTME_MODEL", "claude-haiku-5-5")
     assert testme.resolve_model() == "claude-haiku-5-5"
+    # The prep-scan model does not leak into Test me.
+    monkeypatch.setenv("ANTHROPIC_MODEL", "claude-sonnet-5-5")
+    assert testme.resolve_model() == "claude-haiku-5-5"
+    monkeypatch.setenv("ANTHROPIC_TESTME_MODEL", "claude-sonnet-5-5")
+    assert testme.resolve_model() == "claude-sonnet-5-5"
 
 
 def test_provider_rate_limit_is_busy(monkeypatch):
