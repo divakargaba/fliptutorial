@@ -116,10 +116,11 @@ Time budget: the extension waits 20 s, so the backend budget is 18 s end to end
   requests for the same key share one generation. `get_set(setId)` returns the
   private set or `None` after expiry (→ `SET_EXPIRED`).
 - Rate limit: 10 new sets per rolling 60 s (cache hits don't count) → `BUSY`.
-- Model: `GEMINI_TESTME_MODEL`, else `gemini-flash-latest`, temperature 0.2, thinking
+- Model: `GEMINI_TESTME_MODEL`, default `gemini-2.5-flash`, temperature 0.2, thinking
   budget `GEMINI_TESTME_THINKING` (default 1024; -1 leaves it to the model). With
   thinking off, live runs gave wrong solutions with syntax errors, or ones that
-  passed every test. `gemini-2.5-flash` on the team key is capped at 20 requests/day.
+  passed every test. `gemini-2.5-flash` on the free tier is 5 req/min, 20 req/day;
+  cache hits are free, so 20/day covers T7's ~6-12 generations.
 - Live results 2026-11-08 (`eWRfhZUzrAc`, never prepared): Judge0-verified sets in
   13.1 s and 18.4 s (2.5-flash). `gemini-flash-latest` latency varied from 3.1 s to
   over 200 s with 503 "high demand" errors, so many requests end in

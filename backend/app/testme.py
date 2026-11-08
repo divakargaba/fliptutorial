@@ -48,9 +48,11 @@ logger = logging.getLogger("breakpoint.testme")
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 PROMPT_VERSION = "tm1"
-# gemini-2.5-flash on the team key is capped at 20 requests/day (free tier), so it
-# cannot serve runtime generation; gemini-flash-latest has headroom.
-DEFAULT_MODEL = "gemini-flash-latest"
+# gemini-2.5-flash is the recommended default: it supports thinking (needed for
+# quality) and its free-tier quota (5/min, 20/day) covers T7's ~6-12 generations
+# since cache hits are free.  gemini-flash-latest has more headroom but returns
+# 503 under load and lacks thinking support.
+DEFAULT_MODEL = "gemini-2.5-flash"
 # Thinking budget for 2.5 models: with 0 the model ignored "wrong solution must be
 # valid Python" and "must fail a hidden test" in live runs.
 THINKING_BUDGET = int(os.environ.get("GEMINI_TESTME_THINKING", "1024"))
