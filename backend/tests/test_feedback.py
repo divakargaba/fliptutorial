@@ -1293,3 +1293,34 @@ class TestRefresherAnswerIntegration:
         assert "A for loop iterates" not in json.dumps(data["feedback"])
         assert '"Declares"' in data["feedback"]["summary"]
         assert data["feedback"]["diagnosis"]["misconception"]["explanation"] != data["feedback"]["summary"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("language", ["javascript", "java", "cpp", "sql"])
+async def test_hint_non_python_exercise_does_not_500(language):
+    """Regression: /v2/hint on a non-Python exercise reaches the hint service with that language."""
+    fixture = load_fixture("python_submissions.json")
+    ex = fixture["exercise"]
+    ex_id = f"{ex['id']}-{language}"
+    register_exercise(
+        exercise_id=ex_id, revision=ex["revision"], title=ex["title"],
+        language=language, statement=ex["statement"],
+        function_name=ex["functionName"], starter_code="// start",
+        concepts=ex["concepts"], level=ex["level"],
+        examples=ex["examples"], hidden_tests=ex["hiddenTests"],
+        reference_solution="// ref",
+    )
+    from app.hints import HintResponse
+    fake_resp = HintResponse(focus="f", feedback="", hint="h", level=1, sources=[], aiGenerated=False)
+    with patch("app.hints.service") as mock_svc:
+        mock_svc.return_value.hint = AsyncMock(return_value=fake_resp)
+        from app.main import app
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post("/v2/hint", json={
+                "exerciseId": ex_id, "revision": ex["revision"], "code": "x", "hintLevel": 1,
+            })
+    assert resp.status_code == 200, resp.text
+    call = mock_svc.return_value.hint.call_args
+    assert call.kwargs["language"] == language
+    assert f"(Language: {language})" in call.args[0].statement
