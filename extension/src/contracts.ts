@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { Language } from './v2/types';
 
 export const VideoIdSchema = z.string().regex(/^[A-Za-z0-9_-]{11}$/);
 const text = z.string().min(1);
@@ -96,8 +97,16 @@ export const WorkerMessageSchema = z.discriminatedUnion('type', [
   AnalyzeMessageSchema,
 ]);
 
-export type Breakpoint = z.infer<typeof BreakpointSchema>;
-export type PracticeResponse = z.infer<typeof PracticeResponseSchema>;
+// The prepared v1 wire schema remains Python-only. The shared panel/runtime can
+// also receive a separately validated v2 exercise in any supported language.
+export type Breakpoint = Omit<z.infer<typeof BreakpointSchema>, 'exercise'> & {
+  exercise: Omit<z.infer<typeof ExerciseSchema>, 'language' | 'examples'> & {
+    language: Language; examples: { args: unknown[]; expected: unknown }[];
+  };
+};
+export type PracticeResponse = { schemaVersion: 1; videoId: string; breakpoints: Breakpoint[] } & (
+  { status: 'ready'; revision: string } | { status: 'unsupported'; revision: null }
+);
 export type TestMeResponse = z.infer<typeof TestMeResponseSchema>;
 export type HintResponse = z.infer<typeof HintResponseSchema>;
 export type AnalysisResponse = z.infer<typeof AnalysisResponseSchema>;
