@@ -28,8 +28,22 @@ off/disabled states, loading cancellation, eight generation errors and explicit
 retry, labels through Run and Solved, and expired-set draft recovery with disabled
 grading in dark/light themes. These tests simulate the caller callbacks; they do
 not prove worker requests, player pause/resume or mounting on an unprepared video.
-The content-script owner still needs to mount `TestMeControls` as documented in
-`src/ui/README.md`; then add/run the opt-in MV3 flow before T7 live walkthroughs.
+
+T6 integration checks (`test-me.spec.ts`) exercise the mounted controls through
+the production content script and service worker on an unprepared watch fixture:
+
+```powershell
+$env:WXT_TESTME_ENABLED = 'true'
+npm.cmd run test:e2e -- --project mv3-desktop --project mv3-narrow --grep 'Test me through'
+Remove-Item Env:WXT_TESTME_ENABLED
+```
+
+These opt-in checks cover generation pause/loading, setId grading, generated labels
+through failure and Solved, rejected-resume recovery, six API generation errors,
+explicit retries, cancellation/navigation/native playback during generation, and
+expired-set draft recovery through Chrome storage. They use a local fixture API,
+not FastAPI, captions, Gemini or Judge0. The normal suite skips these opt-in cases
+and checks that the default build hides Test me. T7 owns live provider validation.
 
 The rejected-resume case injects a rejected `play()` only in the content script's
 isolated world, then restores it before checking the Resume video button. Other

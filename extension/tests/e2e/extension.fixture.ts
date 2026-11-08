@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import type { PracticeResponse } from '../../src/contracts';
 const practice: PracticeResponse = JSON.parse(readFileSync(new URL('../../../contracts/practice-response.fixture.json', import.meta.url), 'utf8'));
 const failed = JSON.parse(readFileSync(new URL('../../../contracts/submission-response.fixture.json', import.meta.url), 'utf8'));
+export const generated = JSON.parse(readFileSync(new URL('../../../contracts/testme-response.fixture.json', import.meta.url), 'utf8'));
 
 export const watchUrl = 'https://www.youtube.com/watch?v=samplevid01';
 export const pauseAtS = 1.2;
@@ -21,17 +22,22 @@ type App = {
   failure: { status: number; code: string; retryable: boolean } | null;
   revision: string;
   lookupCount: number;
+  generations: Array<{ videoId: string; timestampS: number }>;
+  holdGeneration: boolean;
+  generationFailure: { status: number; code: string; retryable: boolean } | null;
   release(): Promise<void>;
   rejectResume(reject: boolean): Promise<void>;
 };
 
-export const test = base.extend<{ app: App; breakpointCount: 1 | 2 }>({
+export const test = base.extend<{ app: App; breakpointCount: 1 | 2; preparedVideo: boolean }>({
   breakpointCount: [1, { option: true }],
-  app: async ({ viewport, breakpointCount }, use) => {
+  preparedVideo: [true, { option: true }],
+  app: async ({ viewport, breakpointCount, preparedVideo }, use) => {
     const requests: Submission[] = [];
     const pending: Array<() => void> = [];
     const releasePending = () => pending.splice(0).forEach(fn => fn());
-    const app = { requests, hold: false, unavailable: false, failure: null, revision: practice.revision!, lookupCount: 0 } as App;
+    const app = { requests, hold: false, unavailable: false, failure: null, revision: practice.revision!, lookupCount: 0,
+      generations: [], holdGeneration: false, generationFailure: null } as App;
     const api = new URL(process.env.WXT_API_BASE_URL || 'http://127.0.0.1:8000');
     if (api.hostname !== '127.0.0.1' || api.protocol !== 'http:') throw new Error('The test API must use HTTP loopback.');
     const [original] = practice.breakpoints;
@@ -52,6 +58,14 @@ export const test = base.extend<{ app: App; breakpointCount: 1 | 2 }>({
             ...b, exercise: { ...b.exercise, title: 'Updated exponent challenge' },
           }),
         } : { schemaVersion: 1, videoId: id, revision: null, status: 'unsupported', breakpoints: [] });
+      } else if (req.method === 'POST' && req.url === '/v1/test-me') {
+        let body = '';
+        for await (const chunk of req) body += chunk;
+        app.generations.push(JSON.parse(body));
+        const respond = () => app.generationFailure
+          ? json(app.generationFailure.status, { error: { code: app.generationFailure.code, retryable: app.generationFailure.retryable, message: `Fixture ${app.generationFailure.code}.` }, requestId: 'fixture-generation' })
+          : json(200, generated);
+        if (app.holdGeneration) pending.push(respond); else respond();
       } else if (req.method === 'POST' && req.url === '/v1/submissions') {
         let body = '';
         for await (const chunk of req) body += chunk;
@@ -82,7 +96,8 @@ export const test = base.extend<{ app: App; breakpointCount: 1 | 2 }>({
       const page = context.pages()[0] ?? await context.newPage();
       app.release = async () => {
         if (!pending.length) return;
-        const downloaded = context.waitForEvent('requestfinished', request => request.url() === `${api.origin}/v1/submissions`);
+        const downloaded = context.waitForEvent('requestfinished', request =>
+          request.url() === `${api.origin}/v1/submissions` || request.url() === `${api.origin}/v1/test-me`);
         releasePending();
         await downloaded;
         // Let the worker message and the content renderer run after the fetch finishes.
@@ -109,8 +124,9 @@ export const test = base.extend<{ app: App; breakpointCount: 1 | 2 }>({
       const html = await readFile(new URL('./watch.html', import.meta.url), 'utf8');
       await context.route('https://www.youtube.com/**', route => route.fulfill({ contentType: 'text/html', body: html }));
       app.page = page;
-      await page.goto(watchUrl);
-      await expect(page.getByRole('button', { name: new RegExp(`^Breakpoint · ${breakpointCount} challenge${breakpointCount === 1 ? '' : 's'}`) })).toBeVisible();
+      await page.goto(preparedVideo ? watchUrl : 'https://www.youtube.com/watch?v=unknown0001');
+      if (preparedVideo) await expect(page.getByRole('button', { name: new RegExp(`^Breakpoint · ${breakpointCount} challenge${breakpointCount === 1 ? '' : 's'}`) })).toBeVisible();
+      else await expect(page.getByRole('button', { name: 'Test me', exact: true })).toBeEnabled();
       await use(app);
     } finally {
       releasePending();

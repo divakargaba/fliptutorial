@@ -167,7 +167,7 @@ test('navigation invalidates a pending attempt without resuming the next video',
     document.dispatchEvent(new Event('yt-navigate-finish'));
   });
   await expect(page.locator('.bp-panel')).toHaveCount(0);
-  await expect(page.locator('.bp-badge')).toHaveCount(0);
+  await expect(page.locator('[data-breakpoint-badge] .bp-badge')).toHaveCount(0);
   await app.release();
   await expect(page.locator('.bp-panel')).toHaveCount(0);
   expect(await page.locator('video').evaluate(video => video.paused)).toBe(true);
