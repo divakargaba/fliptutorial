@@ -63,8 +63,8 @@ background colors and applies WCAG AA text thresholds (4.5:1 for normal text,
 3:1 for large text), checks control names/tab eligibility and result announcements,
 and verifies keyboard entry/exit plus the visible two-pixel Skip focus outline.
 Editing, wrong-answer, API-error and solved states run in both YouTube themes.
-JSON reports and screenshots are saved in `test-results/`; reviewed release
-evidence is copied to `assets/ui-checks/release/`.
+JSON reports are attached to Playwright test results; screenshots are saved in
+`test-results/`. Reviewed release evidence is copied to `assets/ui-checks/release/`.
 
 This focused regression audit is not a full WCAG conformance certification or an
 axe run. It does not assess every assistive technology, forced colors, zoom,
