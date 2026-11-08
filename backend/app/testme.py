@@ -384,7 +384,7 @@ def check_output(
     if status == "notpython" or (status == "ok" and out.language.strip().lower() != "python"):
         raise TestMeError("NOT_PYTHON", "this part of the video is not teaching Python")
     if status == "noexercise":
-        raise TestMeError("GENERATOR_UNAVAILABLE", "no exercise fits this part of the video yet", True)
+        raise TestMeError("TOO_EARLY", "There is not enough taught material for an exercise at this moment. Keep watching, then try again.")
     if status != "ok":
         raise _CheckFailed(f"unknown status {out.status!r}")
 

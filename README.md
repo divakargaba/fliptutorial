@@ -130,3 +130,15 @@ npm run test:e2e       # Playwright E2E (preview + built MV3)
 - **Port conflict:** if port 8000 is in use, stop the other process or change
   the uvicorn `--port` flag and set `WXT_API_BASE_URL` to the new origin before
   building the extension.
+
+
+### Optional extra practice: Test me
+
+Normal builds include **Test me** beside the lesson's challenge status. It creates
+one checked coding exercise from captions leading up to the current video position,
+including before three minutes and after the video ends. At the start or during an
+intro with nothing codeable yet, it explains that more taught material is needed.
+The local backend needs its existing provider and grader configuration. No special
+flag is required; `WXT_TESTME_ENABLED=false` (extension build) and
+`BREAKPOINT_TESTME=false` (backend) are explicit opt-outs only. Run `npm run build`
+in `extension/`, reload the unpacked extension, then refresh the YouTube tab.

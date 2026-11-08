@@ -19,7 +19,7 @@ Full product spec: `docs/PRD.md`.
 - `POST /v1/test-me` body `{ "videoId", "timestampS" }` — generates a coding exercise from the transcript up to `timestampS`. Returns the same exercise shape as a breakpoint exercise, plus `"generated": true` and `"setId"` for cache lookups. Grading reuses `/v1/submissions`. Generated exercises carry an `"aiGenerated": true` flag. The set expires after a TTL; submitting against an expired set returns `SET_EXPIRED` 410.
 - Errors: `{ "error": { "code", "message", "retryable" }, "requestId" }`.
   Codes: `INVALID_CODE` 422, `EXERCISE_NOT_FOUND` 404, `STALE_EXERCISE` 409, `BUSY` 429, `GRADER_UNAVAILABLE` 503, `GRADER_TIMEOUT` 504.
-  Test-me codes: `NO_CAPTIONS` 404, `NOT_PYTHON` 422, `TOO_EARLY` 422 (under 180 s of transcript), `GENERATOR_UNAVAILABLE` 503, `GENERATOR_TIMEOUT` 504 (20 s), `SET_EXPIRED` 410.
+  Test-me codes: `NO_CAPTIONS` 404, `NOT_PYTHON` 422, `TOO_EARLY` 422 (no past captions or no codeable concept taught yet), `GENERATOR_UNAVAILABLE` 503, `GENERATOR_TIMEOUT` 504 (20 s), `SET_EXPIRED` 410.
 
 ## Extension messages (content script → background service worker)
 - `{ type: "lookup", videoId }` → `{ ok: true, data: PracticeResponse } | { ok: false, error }` (3 s timeout).

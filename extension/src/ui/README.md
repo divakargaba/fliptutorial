@@ -28,9 +28,9 @@ import it and render `<TestMeControls />` inside the existing provider and
 `.breakpoint-shell`, **outside** the `session.route !== 'unsupported'` badge
 condition and before the practice-panel wrapper. No props or contract changes
 are required. This mounting change landed in `9e2448a`. Build with
-`WXT_TESTME_ENABLED=true` to enable it; the component preview alone does not
+`WXT_TESTME_ENABLED=false` only to opt out; it is enabled by default; the component preview alone does not
 validate playback or worker integration. See `tests/e2e/test-me.spec.ts` for the
-opt-in built-extension checks.
+default-build integration checks.
 
 Loading and error panels keep Close/Resume available; retryable errors offer
 Try again. The shared `PracticePanel` reads `aiGenerated` from the same context

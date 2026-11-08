@@ -1,5 +1,19 @@
 /* One workspace, two placements. Presentation only; native player stays untouched. */
 .breakpoint-shell { --bp-workspace-accent: #f6c94c; --bp-workspace-ink: #221b09; }
+.bp-practice-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 8px 0 12px; }
+.bp-practice-toolbar[hidden] { display: none; }
+.bp-practice-toolbar > .bp-test-me { display: contents; }
+.bp-practice-toolbar [data-breakpoint-badge] .bp-badge { margin: 0; }
+.bp-test-me .bp-test-me-trigger { gap: 7px; margin: 0; border: 1px solid color-mix(in srgb, var(--bp-workspace-accent) 45%, var(--bp-line)); background: var(--bp-surface); color: var(--bp-text); font-size: 13px; min-height: 38px; padding: 8px 12px; }
+.bp-test-me-trigger > svg { color: var(--bp-workspace-accent); }
+.bp-bonus-tag { color: var(--bp-text-2); font-size: 10px; font-weight: 500; padding-left: 7px; border-left: 1px solid var(--bp-line); }
+.bp-test-me .bp-test-me-trigger:hover:not(:disabled) { background: var(--bp-chip); border-color: var(--bp-workspace-accent); }
+.bp-test-me .bp-test-me-trigger:disabled { opacity: .5; cursor: default; }
+.bp-practice-toolbar .bp-generation { flex: 1 0 100%; min-width: 0; width: 100%; max-width: none; margin: 0; border-radius: 16px; }
+.bp-generation .bp-body { padding: 20px; }
+.bp-generation .bp-header { border-bottom: 1px solid var(--bp-line); }
+.bp-generation .bp-generation-message { color: var(--bp-text-2); font-size: 14px; line-height: 1.6; }
+.breakpoint-shell[data-theme='light'] .bp-test-me-trigger > svg { color: #755300; }
 .breakpoint-shell [data-breakpoint-panel] { scroll-margin-block: 80px 16px; }
 .bp-more-options .bp-button { width: 100%; height: auto; min-height: 36px; white-space: normal; line-height: 1.4; text-align: left; justify-content: flex-start; }
 .bp-workbench .bp-more { position: static; }

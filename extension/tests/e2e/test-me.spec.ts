@@ -1,8 +1,8 @@
 import { expect } from '@playwright/test';
 import { analysisFixture, correctCode, expectPlaying, generated, test } from './extension.fixture';
 
-test.describe('opt-in Test me through the built worker', () => {
-  test.skip(process.env.WXT_TESTME_ENABLED !== 'true', 'Build with WXT_TESTME_ENABLED=true.');
+test.describe('Test me through the default built worker', () => {
+  test.skip(process.env.WXT_TESTME_ENABLED === 'false', 'Test me explicitly disabled for this build.');
   test.use({ preparedVideo: false });
 
   for (const optimal of [true, false]) {
@@ -202,7 +202,37 @@ test.describe('opt-in Test me through the built worker', () => {
   });
 });
 
-test('Test me default build stays hidden', async ({ app }) => {
-  test.skip(process.env.WXT_TESTME_ENABLED === 'true', 'Default-build check.');
+test('Test me explicit opt-out build stays hidden', async ({ app }) => {
+  test.skip(process.env.WXT_TESTME_ENABLED !== 'false', 'Explicit opt-out build check.');
   await expect(app.page.getByRole('button', { name: 'Test me', exact: true })).toHaveCount(0);
+});
+
+
+test.describe('Test me at any playback position', () => {
+  test.skip(process.env.WXT_TESTME_ENABLED === 'false', 'Explicit opt-out build.');
+  test.use({ preparedVideo: false, seekableVideo: true });
+  for (const position of ['start', 'middle', 'end'] as const) {
+    test(`${position}: uses the current timestamp and preserves a native pause`, async ({ app }, info) => {
+      const { page } = app;
+      await page.locator('#start').click();
+      await page.locator('video').evaluate((video, position) => {
+        video.pause(); video.currentTime = position === 'start' ? 0 : position === 'end' ? video.duration : video.duration / 2;
+      }, position);
+      await expect.poll(() => page.locator('video').evaluate(v => v.seeking)).toBe(false);
+      if (position === 'end') await expect.poll(() => page.locator('video').evaluate(v => v.ended)).toBe(true);
+      const timestamp = await page.locator('video').evaluate(v => v.currentTime);
+      const start = page.getByRole('button', { name: 'Test me', exact: true });
+      await expect(start).toBeEnabled();
+      await start.click();
+      await expect(page.getByRole('textbox', { name: 'Python code' })).toBeVisible();
+      expect(app.generations).toHaveLength(1);
+      expect(app.generations[0].timestampS).toBeCloseTo(timestamp, 2);
+      await expect(page.locator('.bp-practice-toolbar')).toBeHidden();
+      await page.getByRole('button', { name: 'Close practice', exact: true }).click();
+      await expect(page.locator('.bp-panel')).toHaveCount(0);
+      await expect(start).toBeVisible();
+      expect(await page.locator('video').evaluate(v => v.paused)).toBe(true);
+      await page.screenshot({ path: info.outputPath(`test-me-${position}-toolbar.png`) });
+    });
+  }
 });

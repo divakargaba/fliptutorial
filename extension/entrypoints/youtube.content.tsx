@@ -44,7 +44,7 @@ export default defineContentScript({
   // WXT still owns isolation, mounting and cleanup; no styles reach YouTube.
   cssInjectionMode: 'manual',
   main(ctx) {
-    const testMeEnabled = import.meta.env.WXT_TESTME_ENABLED === 'true';
+    const testMeEnabled = import.meta.env.WXT_TESTME_ENABLED !== 'false';
     const debug = new URL(location.href).searchParams.has('breakpoint-debug');
     const trace = (stage: string) => { if (debug) performance.mark(`breakpoint:${stage}`); };
     trace('start');
@@ -200,9 +200,9 @@ export default defineContentScript({
       const target = findAnchor();
       return !!target && target.id !== 'player' && ui.shadowHost.parentElement === target;
     };
-    const testMePlayer = () => {
+    const testMePlayer = (allowEnded = false) => {
       const video = player;
-      return video && playerReady && isCurrent() && video === currentPlayer() && !video.seeking && !video.ended &&
+      return video && playerReady && isCurrent() && video === currentPlayer() && !video.seeking && (allowEnded || !video.ended) &&
         !isAd() && !isFullscreen() && mountable() ? video : null;
     };
     const focusBadge = () => ui?.shadow.querySelector<HTMLElement>('[data-breakpoint-badge] .bp-badge')?.focus({ preventScroll: true });
@@ -276,7 +276,7 @@ export default defineContentScript({
       const visiblePanel = panel ?? leavingPanel;
       const request = session.testMe;
       const testMe = testMeEnabled ? {
-        canStart: !active && !request && document.visibilityState === 'visible' && !!testMePlayer(),
+        canStart: !active && !request && document.visibilityState === 'visible' && !!testMePlayer(true),
         request: request ? (request.error ? { status: 'error' as const, error: request.error } : { status: 'loading' as const }) : null,
         aiGenerated: !!visiblePanel?.aiGenerated,
         onStart: startTestMe, onRetry: retryTestMe, onClose: closeTestMe,
@@ -290,11 +290,14 @@ export default defineContentScript({
           } : undefined }}>
           {prepared === false && plan && ['not_coding', 'no_captions'].includes(plan.status) && !dismissedUnavailable
             ? <TopicNotAvailable reason={plan.verdict.reason} onDismiss={() => { dismissedUnavailable = true; render(); }} />
-            : session.route !== 'unsupported' && <div data-breakpoint-badge hidden={!!visiblePanel}>
+            : null}
+          <div className="bp-practice-toolbar" hidden={!!visiblePanel}>
+            {session.route !== 'unsupported' && <div data-breakpoint-badge hidden={!!visiblePanel || !!request}>
             <Badge state={state} total={breakpoints.length} remaining={remaining.length} solved={solved}
               active={!!active && !active.generated} currentIndex={active ? breakpoints.findIndex(b => b.id === active.breakpoint.id) : undefined} nextAtS={remaining[0]?.pauseAtS ?? null} onOpen={openFromBadge} />
           </div>}
-          <TestMeControls />
+            <TestMeControls />
+          </div>
           {refresher && !active && !request && accountReady && playerReady &&
             <RefresherPrompt due={[{ concept: refresher.concept, reason: refresher.reason }]}
               onStart={startRefresher} onDismiss={() => { refresher = null; render(); }} />}
@@ -703,7 +706,7 @@ export default defineContentScript({
 
     function startTestMe() {
       if (!testMeEnabled || document.visibilityState !== 'visible') return;
-      const video = testMePlayer();
+      const video = testMePlayer(true);
       if (!video) return;
       const ticket = session.startTestMe(video.currentTime, !video.paused);
       if (!ticket) return;
@@ -713,7 +716,7 @@ export default defineContentScript({
     }
 
     function retryTestMe() {
-      const video = testMePlayer();
+      const video = testMePlayer(true);
       const request = session.testMe;
       if (!video?.paused || !request || Math.abs(video.currentTime - request.pausedAt) >= 0.25) return;
       const ticket = session.retryTestMe();
@@ -730,7 +733,7 @@ export default defineContentScript({
       const reply = await sendRequest({ type: 'testMe', videoId, timestampS: request.pausedAt }, TestMeResponseSchema, send);
       if (!session.isTestMeCurrent(ticket)) return;
       if (video.currentSrc !== source) { session.interrupt(); render(); return; }
-      if (testMePlayer() !== video || !video.paused ||
+      if (testMePlayer(true) !== video || !video.paused ||
           Math.abs(video.currentTime - request.pausedAt) >= 0.25) {
         closeTestMe(); return;
       }

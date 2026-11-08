@@ -208,11 +208,11 @@ def test_not_python(over):
     assert e.value.code == "NOT_PYTHON" and not e.value.retryable
 
 
-def test_no_exercise_is_generator_unavailable_without_retry():
+def test_no_exercise_is_too_early_without_retry():
     model = StubModel(_good(status="noExercise"))
     with pytest.raises(TestMeError) as e:
         run(gen(model).generate(CLIP, ok_verify()))
-    assert e.value.code == "GENERATOR_UNAVAILABLE" and len(model.prompts) == 1
+    assert e.value.code == "TOO_EARLY" and not e.value.retryable and len(model.prompts) == 1
 
 
 # ---------------------------------------------------------------------------
