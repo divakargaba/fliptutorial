@@ -33,6 +33,14 @@ CREATE TABLE IF NOT EXISTS events (
   received_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS events_by_account ON events(account_id);
+CREATE TABLE IF NOT EXISTS generated_refreshers (
+  id TEXT PRIMARY KEY,
+  concept TEXT NOT NULL,
+  level TEXT NOT NULL,
+  payload TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS generated_by_concept ON generated_refreshers(concept, level);
 """
 
 
@@ -67,6 +75,36 @@ class ProfileStore:
                 "INSERT OR IGNORE INTO accounts(id, display_name, public, seeded, created_at) VALUES (?,?,0,0,?)",
                 (account_id, account_id, iso(datetime.now(timezone.utc))),
             )
+
+    def set_public(self, account_id: str, public: bool) -> dict | None:
+        """Opt in/out of the public profile. Returns the updated account, or None if unknown."""
+        with closing(self._connect()) as conn, conn:
+            cur = conn.execute("UPDATE accounts SET public = ? WHERE id = ?", (int(public), account_id))
+        return self.get_account(account_id) if cur.rowcount else None
+
+    # Generated refresher questions (lane A2's generator), kept so lane A2 can grade them by id and so
+    # a learner sees the same question again until they answer it.
+
+    def add_generated(self, question: dict) -> None:
+        with closing(self._connect()) as conn, conn:
+            conn.execute(
+                "INSERT OR IGNORE INTO generated_refreshers(id, concept, level, payload, created_at) VALUES (?,?,?,?,?)",
+                (question["id"], question["concept"], question["level"], json.dumps(question, sort_keys=True),
+                 iso(datetime.now(timezone.utc))),
+            )
+
+    def generated_for(self, concept: str, level: str) -> list[dict]:
+        with closing(self._connect()) as conn:
+            rows = conn.execute(
+                "SELECT payload FROM generated_refreshers WHERE concept = ? AND level = ? ORDER BY created_at, id",
+                (concept, level),
+            ).fetchall()
+        return [json.loads(r["payload"]) for r in rows]
+
+    def get_generated(self, question_id: str) -> dict | None:
+        with closing(self._connect()) as conn:
+            row = conn.execute("SELECT payload FROM generated_refreshers WHERE id = ?", (question_id,)).fetchone()
+        return json.loads(row["payload"]) if row else None
 
     def list_accounts(self) -> list[dict]:
         with closing(self._connect()) as conn:
