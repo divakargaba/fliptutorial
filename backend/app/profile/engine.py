@@ -287,6 +287,55 @@ def refresher_due(rep: Replay, now: datetime) -> list[dict]:
     return [{"concept": cid, "reason": f"strength below {REFRESHER_THRESHOLD}"} for _, cid in sorted(due)]
 
 
+_END_OF_TIME = datetime(9999, 1, 1, tzinfo=timezone.utc)
+
+
+def _level_ref(lv: dict | None) -> dict | None:
+    return {"level": lv["id"], "levelName": lv["name"], "rank": lv["rank"], "minXp": lv["minXp"]} if lv else None
+
+
+def award(events: Iterable[dict], event_id: str) -> dict | None:
+    """What one stored event earned, per concept: XP gained, level before/after, progress to the next level.
+
+    Compares the replay of every event ordered before it with the replay including it, so later events
+    never change the answer. None when the event is unknown (not delivered yet)."""
+    key = lambda e: (parse_time(e["at"]), e["id"])  # noqa: E731  (same order as replay)
+    events = list(events)
+    target = next((e for e in events if e.get("id") == event_id), None)
+    if target is None:
+        return None
+    upto = key(target)
+    before = replay([e for e in events if key(e) < upto], _END_OF_TIME)
+    after = replay([e for e in events if key(e) <= upto], _END_OF_TIME)
+    awards = []
+    for i, cid in enumerate(target.get("concepts") or []):
+        b = before.concepts.get(cid) or ConceptState(cid)
+        a = after.concepts.get(cid) or ConceptState(cid)
+        lv, nxt = a.level, next_level(a.level)
+        span = (nxt["minXp"] - lv["minXp"]) if nxt else 0
+        awards.append({
+            "concept": cid,
+            "conceptName": CONCEPTS.get(cid, {}).get("name", cid),
+            "primary": i == 0,
+            "xpGained": round(a.xp - b.xp, 1),
+            "xpBefore": round(b.xp, 1),
+            "xp": round(a.xp, 1),
+            "levelBefore": _level_ref(b.level),
+            "level": _level_ref(lv),
+            "nextLevel": _level_ref(nxt),
+            "xpToNext": round(max(0.0, nxt["minXp"] - a.xp), 1) if nxt else 0.0,
+            # Share of the way from this level's floor to the next level (1.0 at the top level).
+            "progress": round(min(1.0, (a.xp - lv["minXp"]) / span), 3) if nxt and span > 0 else 1.0,
+            "leveledUp": lv["rank"] > b.level["rank"],
+        })
+    return {
+        "eventId": event_id, "type": target.get("type"),
+        "totalXpGained": round(sum(x["xpGained"] for x in awards), 1),
+        "leveledUp": any(x["leveledUp"] for x in awards),
+        "awards": awards,
+    }
+
+
 def highlights(rep: Replay) -> list[str]:
     out: list[str] = []
     passed = sorted((st for st in rep.concepts.values() if st.passed), key=lambda s: (-s.xp, s.concept))
