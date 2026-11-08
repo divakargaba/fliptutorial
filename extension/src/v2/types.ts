@@ -57,3 +57,13 @@ export type PublicProfile = {
 };
 
 export type PauseFrequency = 'few' | 'normal' | 'many';
+
+export type LevelInfo = { accountId: string; concept: ConceptId; level: LevelId; levelName: string; rank: number; xp: number; strength: number };
+export type PlanRequest = { videoId: string; learnerLevel?: LevelId; learnerLevels?: Record<ConceptId, LevelId> };
+
+// Extension storage keys (A3 owns the read/write helpers; B2 UI calls them).
+export const SETTINGS_KEY = 'breakpoint:learner-settings';
+export const ACTIVE_ACCOUNT_KEY = 'breakpoint:active-account';
+export type LearnerSettings = { frequency: PauseFrequency; autoPause: boolean; disabledVideos: string[] };
+export const DEFAULT_SETTINGS: LearnerSettings = { frequency: 'normal', autoPause: true, disabledVideos: [] };
+export const DEFAULT_ACCOUNT = 'test-ana';
