@@ -259,7 +259,7 @@ async def set_public(account_id: str, request: Request) -> JSONResponse:
 
 
 @router.get("/refresher/{account_id}", response_model=None)
-async def refresher(account_id: str, now: str | None = Query(default=None)) -> Response:
+async def refresher(account_id: str, now: str | None = Query(default=None), concept: str | None = Query(default=None, max_length=200)) -> Response:
     store = get_store()
     acct = _account_or_404(store, account_id)
     if isinstance(acct, JSONResponse):
@@ -268,7 +268,9 @@ async def refresher(account_id: str, now: str | None = Query(default=None)) -> R
         when = _now(now)
     except ValueError:
         return _bad_now()
-    pick = await skills.pick_refresher(_replay(store, account_id, when), when, store)
+    if concept is not None and concept not in skills.CONCEPTS:
+        return _error(422, "UNKNOWN_CONCEPT", "Unknown skill for review.")
+    pick = await skills.pick_refresher(_replay(store, account_id, when), when, store, concept=concept)
     if pick is None:
         return Response(status_code=204)
     return JSONResponse({"accountId": account_id, **pick})
