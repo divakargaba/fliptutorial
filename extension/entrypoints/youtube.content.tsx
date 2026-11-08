@@ -58,7 +58,7 @@ export default defineContentScript({
     let planLoader: PlanLoader | undefined;
     let planLoadSequence = 0;
     let dismissedUnavailable = false;
-    let layout: PracticeLayout = 'below';
+    let layout: PracticeLayout = 'side';
     let layoutSaving = false;
     let layoutError: string | null = null;
     let feedbackState: { ticket: Ticket; feedback: FeedbackResult; code: string } | null = null;
