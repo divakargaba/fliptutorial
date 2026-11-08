@@ -49,6 +49,24 @@ describe('v2 plan boundary and scheduling', () => {
     expect(s.sample(sample(9803.4, 1400))).toBeNull();
     expect(s.sample(sample(9803.6, 1600))).toBeNull();
   });
+  it('exposes terminal planner failures for retry and recovers without backfilling', () => {
+    const s = new PlaybackSession(); s.navigate(ready.videoId);
+    s.acceptPlan(s.generation, { ...plan(), status: 'error', pauses: [] }, defaultSettings);
+    expect(s.route).toBe('unavailable');
+    expect(s.timelineMarkers(12000)).toEqual([]);
+    expect(s.sample(sample(9803, 1000))).toBeNull();
+    s.acceptPlan(s.generation, plan(), defaultSettings);
+    expect(s.route).toBe('ready');
+    expect(s.sample(sample(9803.4, 1400))).toBeNull();
+  });
+  it('keeps content exclusions unsupported and ignores errors from an old route', () => {
+    const s = new PlaybackSession(); const old = s.navigate(ready.videoId);
+    s.navigate(unavailable.videoId);
+    s.acceptPlan(s.generation, ExercisePlanSchema.parse(unavailable), defaultSettings);
+    expect(s.route).toBe('unsupported');
+    expect(s.acceptPlan(old, { ...plan(), status: 'error', pauses: [] }, defaultSettings)).toBe(false);
+    expect(s.route).toBe('unsupported');
+  });
   it('preserves crossings for unchanged polls', () => {
     const s = new PlaybackSession(); s.navigate(ready.videoId); s.acceptPlan(s.generation, plan(), defaultSettings);
     s.sample(sample(9803, 1000)); s.acceptPlan(s.generation, plan(), defaultSettings);

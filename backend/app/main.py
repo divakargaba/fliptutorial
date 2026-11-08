@@ -202,6 +202,9 @@ async def submit(body: SubmissionRequest, request: Request):
             request_id=request_id,
         )
 
+    if exercise.language != "python":
+        return await _submit_with_runner(exercise, revision, body, request_id)
+
     try:
         result = await grader.grade(
             exercise=exercise,
@@ -223,6 +226,47 @@ async def submit(body: SubmissionRequest, request: Request):
         content=result.model_dump(),
         headers={"X-Request-Id": request_id},
     )
+
+
+async def _submit_with_runner(exercise: ApprovedExercise, revision: str | None, body: SubmissionRequest,
+                              request_id: str) -> JSONResponse:
+    """Grade a non-Python exercise (Test me in javascript/java/cpp) with lane A2's runner for its language."""
+    from .catalog import HiddenResult, SubmissionResponse, VisibleResult
+    from .runners import RunnerBusy, RunnerTimeout, RunnerUnavailable, get_runner
+
+    try:
+        runner = get_runner(exercise.language)
+    except ValueError:
+        return error_response(422, "UNSUPPORTED_LANGUAGE", f"no runner for {exercise.language}",
+                              request_id=request_id)
+    examples = [{"args": c.args, "expected": c.expected} for c in exercise.examples]
+    hidden = [{"args": c.args, "expected": c.expected} for c in exercise.hiddenTests]
+    try:
+        graded = await runner.grade(body.code, exercise.functionName, examples,
+                                    hidden if body.mode == "submit" else None, body.mode)
+    except RunnerUnavailable as exc:
+        return error_response(503, "GRADER_UNAVAILABLE", str(exc), retryable=True, request_id=request_id)
+    except RunnerTimeout as exc:
+        return error_response(504, "GRADER_TIMEOUT", str(exc), retryable=True, request_id=request_id)
+    except RunnerBusy as exc:
+        return error_response(429, "BUSY", str(exc), retryable=True, request_id=request_id)
+
+    result = SubmissionResponse(
+        outcome=graded.outcome,
+        passedCount=graded.passedCount,
+        totalCount=graded.totalCount,
+        results=[
+            VisibleResult(index=r.index, passed=r.passed, args=r.args, expected=r.expected,
+                          actual=r.actual, diagnostic=r.diagnostic) if r.visible
+            else HiddenResult(index=r.index, passed=r.passed)
+            for r in graded.results
+        ],
+    )
+    if body.mode == "submit" and result.outcome == "passed":
+        _remember_pass(exercise.id, revision, body.code)
+    logger.info("grade request_id=%s exercise=%s lang=%s mode=%s passed=%d/%d", request_id, exercise.id,
+                exercise.language, body.mode, result.passedCount, result.totalCount)
+    return JSONResponse(content=result.model_dump(), headers={"X-Request-Id": request_id})
 
 
 # ---------------------------------------------------------------------------

@@ -121,7 +121,10 @@ class VideoState:
 
 
 def planned_kind(section: Section, slot: PauseSlot) -> str:
-    if section.language in coding_languages() and section.format in ("code", "mixed") and slot.trigger != "concept_complete":
+    """Coding first wherever the section shows code in a language we can grade (any trigger,
+    including concept_complete). Concept questions stay for theory, unsupported languages and,
+    in ``_one``, exercises that fail generation or the sandbox verify."""
+    if section.language in coding_languages() and section.format in ("code", "mixed"):
         return "coding"
     return "concept"
 

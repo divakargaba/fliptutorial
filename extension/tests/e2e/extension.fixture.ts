@@ -4,6 +4,8 @@ import { readFile } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import type { AnalysisResponse, HintResponse, LastResult, PracticeResponse } from '../../src/contracts';
+import type { ExercisePlan, PracticeEvent } from '../../src/v2/types';
+import type { Refresher } from '../../src/plan/schemas';
 const practice: PracticeResponse = JSON.parse(readFileSync(new URL('../../../contracts/practice-response.fixture.json', import.meta.url), 'utf8'));
 const failed = JSON.parse(readFileSync(new URL('../../../contracts/submission-response.fixture.json', import.meta.url), 'utf8'));
 const publicProfile = JSON.parse(readFileSync(new URL('../../../contracts/v2/public-profile.fixture.json', import.meta.url), 'utf8'));
@@ -21,6 +23,9 @@ export const correctCode = 'def raise_to_power(base, exponent):\n    return base
 type Submission = { exerciseId: string; revision: string; mode: 'run' | 'submit'; code: string };
 type App = {
   page: Page;
+  planRequests: Array<{ videoId: string; learnerLevels: Record<string, string> }>;
+  answers: Array<{ questionId: string; answer: string }>;
+  events: PracticeEvent[];
   requests: Submission[];
   hold: boolean;
   unavailable: boolean;
@@ -39,14 +44,19 @@ type App = {
   rejectResume(reject: boolean): Promise<void>;
 };
 
-export const test = base.extend<{ app: App; breakpointCount: 1 | 2; preparedVideo: boolean }>({
+export const test = base.extend<{ app: App; breakpointCount: 1 | 2; preparedVideo: boolean; plan: ExercisePlan | null; refresher: Refresher | null; planningPolls: number; planErrors: number; delayedPlayer: boolean }>({
   breakpointCount: [1, { option: true }],
   preparedVideo: [true, { option: true }],
-  app: async ({ viewport, breakpointCount, preparedVideo }, use) => {
+  plan: [null, { option: true }],
+  refresher: [null, { option: true }],
+  planningPolls: [0, { option: true }],
+  planErrors: [0, { option: true }],
+  delayedPlayer: [false, { option: true }],
+  app: async ({ viewport, breakpointCount, preparedVideo, plan, refresher, planningPolls, planErrors, delayedPlayer }, use) => {
     const requests: Submission[] = [];
     const pending: Array<() => void> = [];
     const releasePending = () => pending.splice(0).forEach(fn => fn());
-    const app = { requests, hold: false, unavailable: false, failure: null, revision: practice.revision!, lookupCount: 0,
+    const app = { requests, planRequests: [], answers: [], events: [], hold: false, unavailable: false, failure: null, revision: practice.revision!, lookupCount: 0,
       generations: [], holdGeneration: false, generationFailure: null,
       hints: [], analyses: [], holdAnalysis: false,
       analysis: { ...analysisFixture, optimal: true, best: analysisFixture.learner, betterSolution: null } } as App;
@@ -62,15 +72,56 @@ export const test = base.extend<{ app: App; breakpointCount: 1 | 2; preparedVide
       const json = (status: number, body: unknown) => {
         if (!res.destroyed) res.writeHead(status, { 'Content-Type': 'application/json' }).end(JSON.stringify(body));
       };
-      if (req.method === 'GET' && req.url === '/v2/accounts') {
+      if (req.method === 'GET' && req.url?.startsWith('/v2/refresher/')) {
+        if (refresher && req.url === `/v2/refresher/${refresher.accountId}`) json(200, refresher);
+        else res.writeHead(204).end();
+      } else if (req.method === 'POST' && req.url === '/v2/plan' && plan) {
+        let body = '';
+        for await (const chunk of req) body += chunk;
+        app.planRequests.push(JSON.parse(body));
+        json(200, app.planRequests.length <= planErrors
+          ? { ...plan, status: 'error', verdict: { qualifies: false, reason: 'Fixture planner unavailable.', evidence: [] }, pauses: [] }
+          : app.planRequests.length <= planningPolls ? { ...plan, status: 'planning', pauses: [] } : plan);
+      } else if (req.method === 'POST' && (req.url === '/v2/submit' || req.url === '/v2/answer')) {
+        let body = '';
+        for await (const chunk of req) body += chunk;
+        const input = JSON.parse(body);
+        const feedback = JSON.parse(readFileSync(new URL('../../../contracts/v2/feedback-result.passed.fixture.json', import.meta.url), 'utf8'));
+        feedback.exerciseId = input.exerciseId ?? input.questionId;
+        feedback.summary = feedback.success.explanation;
+        feedback.success.optimization.show = false;
+        if (req.url === '/v2/answer') {
+          app.answers.push(input);
+          json(200, { correct: true, feedback });
+        } else {
+          requests.push(input);
+          json(200, { grade: { outcome: 'passed', passedCount: 1, totalCount: 1,
+            results: [{ kind: 'visible', index: 0, passed: true, args: [2, 3], expected: 8, actual: 8, diagnostic: null }] }, feedback });
+        }
+      } else if (req.method === 'POST' && req.url === '/v2/events') {
+        let body = '';
+        for await (const chunk of req) body += chunk;
+        const events = JSON.parse(body).events as PracticeEvent[];
+        app.events.push(...events);
+        json(200, { accepted: events.length, duplicates: 0, rejected: [] });
+      } else if (req.method === 'GET' && req.url === '/v2/accounts') {
         json(200, [{ accountId: 'test-ana', displayName: 'Ana (test)' }, { accountId: 'test-ben', displayName: 'Ben (test)' }]);
       } else if (req.method === 'GET' && req.url?.startsWith('/v2/profile/')) {
+        const accountId = req.url.split('/')[3];
+        if (req.url.endsWith('/levels')) {
+          json(200, { accountId, levels: { loops: accountId === 'test-ben' ? 'intermediate-1' : 'beginner-1' } });
+          return;
+        }
+        if (req.url.includes('/level/')) {
+          json(200, { accountId, concept: req.url.split('/')[5], level: 'beginner-1', levelName: 'Beginner I', rank: 1, xp: 0, strength: 0 });
+          return;
+        }
         const ben = req.url.endsWith('/test-ben');
         json(200, { ...publicProfile, ...(ben ? { accountId: 'test-ben', displayName: 'Ben (test)', complements: [] } : {}) });
       } else if (req.method === 'GET' && req.url?.startsWith('/v1/videos/')) {
         app.lookupCount++;
         const id = req.url.split('/')[3];
-        json(200, id === practice.videoId ? {
+        json(200, !plan && id === practice.videoId ? {
           ...practice, revision: app.revision, breakpoints: breakpoints.map(b => app.revision === practice.revision ? b : {
             ...b, exercise: { ...b.exercise, title: 'Updated exponent challenge' },
           }),
@@ -150,11 +201,30 @@ export const test = base.extend<{ app: App; breakpointCount: 1 | 2; preparedVide
           : `HTMLMediaElement.prototype.play = globalThis.fixturePlay;` });
         expect(result.exceptionDetails).toBeUndefined();
       };
-      const html = await readFile(new URL('./watch.html', import.meta.url), 'utf8');
+      let html = await readFile(new URL('./watch.html', import.meta.url), 'utf8');
+      if (delayedPlayer) {
+        // Hold the actual MediaStream until the test observes the bind deadline.
+        html = html.replace('video.srcObject = canvas.captureStream(25);',
+          'window.readyFixtureMedia = () => { video.srcObject = canvas.captureStream(25); };');
+      }
+      if (plan) {
+        // The live canvas supplies a real playback clock; give this synthetic
+        // lesson a finite timeline and a native-bar anchor for rail geometry.
+        html = html.replace('</style>', '#movie_player { position: relative; } .ytp-progress-bar { position:absolute; bottom:8px; left:12px; right:12px; height:4px; }</style>')
+          .replace('</video>', '</video><div class="ytp-progress-bar"></div>');
+      }
       await context.route('https://www.youtube.com/**', route => route.fulfill({ contentType: 'text/html', body: html }));
       app.page = page;
-      await page.goto(preparedVideo ? watchUrl : 'https://www.youtube.com/watch?v=unknown0001');
-      if (preparedVideo) await expect(page.getByRole('button', { name: new RegExp(`^Breakpoint · ${breakpointCount} challenge${breakpointCount === 1 ? '' : 's'}`) })).toBeVisible();
+      await page.goto(plan ? `https://www.youtube.com/watch?v=${plan.videoId}` : preparedVideo ? watchUrl : 'https://www.youtube.com/watch?v=unknown0001');
+      if (plan) {
+        await expect(page.getByText('Practice settings', { exact: true }).first()).toBeVisible();
+        const world = worlds.findLast(world => world.origin === `chrome-extension://${id}` || world.name.includes(id));
+        expect(world, 'extension isolated world').toBeDefined();
+        const result = await cdp.send('Runtime.evaluate', { contextId: world!.id, expression:
+          `Object.defineProperty(document.querySelector('video'), 'duration', { get: () => 20 }); document.querySelector('video').dispatchEvent(new Event('durationchange'));` });
+        expect(result.exceptionDetails).toBeUndefined();
+      }
+      else if (preparedVideo) await expect(page.getByRole('button', { name: new RegExp(`^Breakpoint · ${breakpointCount} challenge${breakpointCount === 1 ? '' : 's'}`) })).toBeVisible();
       else await expect(page.getByRole('button', { name: 'Test me', exact: true })).toBeEnabled();
       await use(app);
     } finally {

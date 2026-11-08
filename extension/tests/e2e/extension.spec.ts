@@ -19,7 +19,7 @@ test('built extension pauses once, Run fails, Submit passes and resumes', async 
   await editor.press('Tab');
   await expect(page.getByRole('button', { name: 'Stuck? Get a hint' })).toBeFocused();
   await page.keyboard.press('Tab');
-  await expect(page.getByRole('button', { name: 'Skip and watch' })).toBeFocused();
+  await expect(page.getByRole('button', { name: 'More', exact: true })).toBeFocused();
   await editor.fill('def raise_to_power(base, exponent):\n    return base * exponent');
   await page.getByRole('button', { name: 'Run', exact: true }).click();
   await expect(page.getByText('wrong answer', { exact: false })).toBeVisible();
@@ -61,8 +61,9 @@ test('Skip during pending grading ignores its late response', async ({ app }) =>
   await page.getByRole('textbox', { name: 'Python code' }).fill(correctCode);
   await page.getByRole('button', { name: 'Submit', exact: true }).click();
   await expect.poll(() => app.requests.length).toBe(1);
-  await expect(page.getByRole('button', { name: 'Skip and watch' })).toBeEnabled();
-  await page.getByRole('button', { name: 'Skip and watch' }).click();
+  await expect(page.getByRole('button', { name: 'More', exact: true })).toBeEnabled();
+  await page.getByRole('button', { name: 'More', exact: true }).click();
+  await page.getByRole('button', { name: 'Practice later', exact: true }).click();
   await expectPlaying(page);
   await app.release();
   const time = await page.locator('video').evaluate(video => video.currentTime);
@@ -95,7 +96,8 @@ test('API failure preserves draft and Skip recovers playback', async ({ app }) =
   await expect(editor).toContainText('return base ** exponent');
   await expect(page.getByRole('button', { name: 'Submit', exact: true })).toBeEnabled();
   expect(await page.locator('video').evaluate(video => video.paused)).toBe(true);
-  await page.getByRole('button', { name: 'Skip and watch' }).click();
+  await page.getByRole('button', { name: 'More', exact: true }).click();
+  await page.getByRole('button', { name: 'Practice later', exact: true }).click();
   await expectPlaying(page);
 });
 
@@ -110,7 +112,8 @@ test('ad crossing does not pause; practice stays available from badge', async ({
   await expectPlaying(page);
   await page.getByRole('button', { name: /^Breakpoint · 1 challenge/ }).click();
   await expect(page.locator('.bp-panel')).toBeVisible();
-  await page.getByRole('button', { name: 'Skip and watch' }).click();
+  await page.getByRole('button', { name: 'More', exact: true }).click();
+  await page.getByRole('button', { name: 'Practice later', exact: true }).click();
   await expectPlaying(page);
 });
 
@@ -127,7 +130,8 @@ test('theater moves an open panel after initial player observation ends', async 
   });
   await expect.poll(() => page.locator('breakpoint-practice').evaluate(el => el.parentElement?.id)).toBe('below');
   await expect(page.getByRole('textbox', { name: 'Python code' })).toContainText('# theater draft');
-  await page.getByRole('button', { name: 'Skip and watch' }).click();
+  await page.getByRole('button', { name: 'More', exact: true }).click();
+  await page.getByRole('button', { name: 'Practice later', exact: true }).click();
   await expectPlaying(page);
 });
 
@@ -153,7 +157,8 @@ test('early badge relocates after watch layout hydrates without an unsafe pause'
   await expect.poll(() => page.locator('breakpoint-practice').evaluate(el => el.parentElement?.id)).toBe('below');
   await page.getByRole('button', { name: /^Breakpoint · 1 challenge/ }).click();
   await expect(page.locator('.bp-panel')).toBeVisible();
-  await page.getByRole('button', { name: 'Skip and watch' }).click();
+  await page.getByRole('button', { name: 'More', exact: true }).click();
+  await page.getByRole('button', { name: 'Practice later', exact: true }).click();
   await expectPlaying(page);
 });
 
@@ -181,11 +186,12 @@ test.describe('multiple breakpoints', () => {
   test('skip and solve are independent, and only the solve survives reload', async ({ app }) => {
     const { page } = app;
     const secondHeading = page.getByRole('heading', { name: secondTitle });
-    const skip = page.getByRole('button', { name: 'Skip and watch' });
+    const skip = page.getByRole('button', { name: 'More', exact: true });
     const video = page.locator('video');
 
     await automaticPause(page);
     await skip.click();
+    await page.getByRole('button', { name: 'Practice later', exact: true }).click();
     await expect(secondHeading).toBeVisible();
     const pause = await video.evaluate(v => ({ paused: v.paused, time: v.currentTime }));
     expect(pause.paused).toBe(true);
@@ -200,6 +206,7 @@ test.describe('multiple breakpoints', () => {
     await expect(page.getByRole('button', { name: /^Breakpoint · 1 challenge/ })).toBeVisible();
     await automaticPause(page);
     await skip.click();
+    await page.getByRole('button', { name: 'Practice later', exact: true }).click();
     await expect.poll(() => video.evaluate(v => v.currentTime)).toBeGreaterThan(secondPauseAtS + 0.5);
     await expectPlaying(page);
     await expect(secondHeading).toHaveCount(0);

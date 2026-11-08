@@ -93,7 +93,7 @@ async function realChecks(page, context) {
   await page.keyboard.press('Tab');
   await expect(page.getByRole('button', { name: 'Stuck? Get a hint' })).toBeFocused();
   await page.keyboard.press('Tab');
-  await expect(page.getByRole('button', { name: 'Skip and watch' })).toBeFocused();
+  await expect(page.getByRole('button', { name: 'More', exact: true })).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(page.getByRole('button', { name: 'Run', exact: true })).toBeFocused();
   await page.keyboard.press('Enter');
@@ -141,8 +141,13 @@ async function keyboardControl(page, close) {
     await expect(page.getByRole('button', { name: 'Stuck? Get a hint' })).toBeFocused();
     await page.keyboard.press('Tab');
   }
-  await expect(page.getByRole('button', { name: close ? 'Close practice' : 'Skip and watch' })).toBeFocused();
+  await expect(page.getByRole('button', { name: close ? 'Close practice' : 'More', exact: true })).toBeFocused();
   await page.keyboard.press('Enter');
+  if (!close) {
+    await page.keyboard.press('Tab');
+    await expect(page.getByRole('button', { name: 'Practice later', exact: true })).toBeFocused();
+    await page.keyboard.press('Enter');
+  }
   await expect(panel).toHaveCount(0);
   await expect.poll(() => video.evaluate(v => v.paused)).toBe(false);
   console.log(JSON.stringify({ keyboardControl: close ? 'close' : 'skip', result: 'passed' }));

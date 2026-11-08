@@ -1,0 +1,16 @@
+/* Runtime placement only. B2 owns marker appearance and the accessible list.
+ * Lists open upward inside the player instead of covering native seek/play. */
+:host { all: initial; display: block; }
+.breakpoint-timeline { position: relative; width: 100%; height: 40px; pointer-events: none; }
+.breakpoint-timeline :is(button, summary, a, input) { pointer-events: auto; }
+.breakpoint-timeline .bp-timeline-challenges { position: relative; }
+.breakpoint-timeline .bp-challenge-disclosure,
+.breakpoint-timeline [aria-label='Nearby challenges'] {
+  position: absolute; right: 16px; bottom: 100%;
+  width: min(360px, calc(100% - 32px)); max-height: min(260px, 40vh);
+  overflow-y: auto; overscroll-behavior: contain;
+  background: var(--bp-surface); border: 1px solid var(--bp-line);
+  border-radius: 8px; padding: 8px; pointer-events: auto;
+}
+.breakpoint-timeline .bp-challenge-disclosure:not([open]) { width: auto; }
+.breakpoint-timeline [aria-label='Nearby challenges'] { z-index: 1; }

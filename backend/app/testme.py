@@ -15,6 +15,14 @@ The whole call is bounded by ``budget_s`` (18 s, under the extension's 20 s).
 Errors are ``TestMeError`` with codes ``NOT_PYTHON``, ``GENERATOR_UNAVAILABLE``,
 ``GENERATOR_TIMEOUT`` and ``BUSY``. Prompts, solutions and hidden tests are never
 logged.
+
+Languages: Python always; JavaScript, Java and C++ when listed in
+``BREAKPOINT_TESTME_LANGUAGES`` (comma list, default ``python``) and lane A2's
+runners are installed. Non-Python exercises use the planner's per-language shape and
+static checks (``app.planner.generate.check_coding``) and the planner's runner verify
+(``app.planner.runner_verify``). The public response shape is unchanged; only
+``exercise.language`` differs. ``NOT_PYTHON`` keeps its code and means "not a
+language Test me can grade here".
 """
 
 from __future__ import annotations
@@ -47,7 +55,7 @@ from .transcripts import Clip
 logger = logging.getLogger("breakpoint.testme")
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
-PROMPT_VERSION = "tm2"
+PROMPT_VERSION = "tm3"
 # Test me runs on Haiku for latency headroom under BUDGET_S; ANTHROPIC_TESTME_MODEL
 # overrides it. ANTHROPIC_MODEL (prep scan, Sonnet) does not apply here.
 DEFAULT_MODEL = "claude-haiku-5-5"
@@ -79,6 +87,32 @@ FORBIDDEN = re.compile(
     r"^\s*(?:import|from)\s+(?:os|sys|subprocess|socket|shutil|pathlib|ctypes)\b",
     re.M,
 )
+
+
+LANGUAGE_NAMES = {"python": "Python", "javascript": "JavaScript", "java": "Java", "cpp": "C++"}
+_LANGUAGE_ALIASES = {"js": "javascript", "node": "javascript", "nodejs": "javascript", "c++": "cpp",
+                     "cplusplus": "cpp", "py": "python", "python3": "python"}
+
+
+def normalize_language(name: str) -> str:
+    n = name.strip().lower()
+    return _LANGUAGE_ALIASES.get(n, n)
+
+
+def enabled_languages() -> tuple[str, ...]:
+    """Python plus each language in BREAKPOINT_TESTME_LANGUAGES that a runner can grade."""
+    from .planner.vocab import coding_languages
+
+    raw = os.environ.get("BREAKPOINT_TESTME_LANGUAGES", "python")
+    wanted = {normalize_language(x) for x in raw.split(",") if x.strip()}
+    return ("python",) + tuple(x for x in coding_languages() if x != "python" and x in wanted and x in LANGUAGE_NAMES)
+
+
+def multi_tags() -> tuple[str, ...]:
+    """v1 Test me tags plus the v2 concept ids (non-Python checks use the v2 ids)."""
+    from .planner.vocab import concept_ids
+
+    return tuple(dict.fromkeys((*CONCEPT_TAGS, *concept_ids())))
 
 
 class TestMeError(Exception):
@@ -133,9 +167,11 @@ Verify = Callable[[ApprovedExercise], Awaitable[bool]]
 """Judge0 check: True iff reference passes all cases and wrong fails >= 1."""
 
 
-def build_prompt(clip: Clip, feedback: str | None = None) -> str:
+def build_prompt(clip: Clip, feedback: str | None = None, languages: tuple[str, ...] = ("python",)) -> str:
     lines = "\n".join(f"[{c.id}] ({c.start_s:.1f}s) {c.text}" for c in clip.cues)
     retry = f"\nYour previous answer was rejected: {feedback}. Fix that.\n" if feedback else ""
+    if tuple(languages) != ("python",):
+        return _multi_prompt(clip, retry, lines, tuple(languages))
     return (
         "You write one short practice exercise for a learner watching a programming "
         "tutorial. The learner paused the video; below is everything the instructor "
@@ -169,6 +205,53 @@ def build_prompt(clip: Clip, feedback: str | None = None) -> str:
         "- conceptEvidenceCueIds: ids (copied exactly from the brackets) of the cues "
         "where the instructor teaches the concept.\n"
         "- language: the language being taught; languageEvidence: the code syntax or "
+        "words that show it.\n"
+        f"{retry}\n{lines}\n"
+    )
+
+
+def _multi_prompt(clip: Clip, retry: str, lines: str, languages: tuple[str, ...]) -> str:
+    """One call that picks the taught language and writes the exercise in the planner's shape for it."""
+    from .planner.generate import LANG_RULES
+
+    names = ", ".join(LANGUAGE_NAMES[x] for x in languages)
+    shapes = "".join(
+        f"  - {LANGUAGE_NAMES[x]} (language \"{x}\"): {LANG_RULES[x].shape}"
+        + ("" if LANG_RULES[x].allow_null else " No null in any test value.") + "\n"
+        for x in languages if x != "python"
+    )
+    return (
+        "You write one short practice exercise for a learner watching a programming "
+        "tutorial. The learner paused the video; below is everything the instructor "
+        "said recently, up to the pause.\n"
+        f"Video title: {clip.title}\n"
+        "Rules:\n"
+        f"- First decide which language is being taught. If it is not one of {names}, "
+        "return status \"notPython\".\n"
+        "- If nothing codeable has been taught yet, return status \"noExercise\".\n"
+        "- Otherwise status \"ok\": one self-contained beginner function IN THE TAUGHT LANGUAGE "
+        "that practises a concept the instructor already taught in this excerpt, using only "
+        "what was taught so far. Do not copy the instructor's exact example.\n"
+        "- Shape per language:\n"
+        "  - Python (language \"python\"): one `def name(...)` function that returns a value (no print, "
+        "input, files or imports); starterCode is the def line with a `pass` body.\n"
+        f"{shapes}"
+        "- functionName is the plain function or method name. referenceSolution is correct. "
+        "knownWrongSolution compiles and runs in the same language with a plausible beginner logic "
+        "mistake (off-by-one, wrong operator, missed edge case): never a syntax error. It defines "
+        "the same function, returns the same type, and fails at least one hidden test. Describe the "
+        "mistake in wrongMistake and copy the argsJson of a hidden test it gets wrong into "
+        "wrongFailsOnArgsJson.\n"
+        "- 1 or 2 examples (shown to the learner) and 3 to 5 hiddenTests covering edge cases; inputs "
+        "must all differ. argsJson is ALWAYS a JSON array with exactly one element per parameter, even "
+        "when there is only one: f(5) is \"[5]\". expectedJson is a single JSON value; use only "
+        "integers, strings or booleans (null only in Python or JavaScript): no floats, lists or dicts.\n"
+        f"- title <= {MAX_TITLE} chars; statement <= {MAX_STATEMENT} chars, plain text "
+        "that names the function and says what it returns.\n"
+        f"- conceptTags from: {', '.join(multi_tags())}.\n"
+        "- conceptEvidenceCueIds: ids (copied exactly from the brackets) of the cues "
+        "where the instructor teaches the concept.\n"
+        "- language: the taught language id as written above; languageEvidence: the code syntax or "
         "words that show it.\n"
         f"{retry}\n{lines}\n"
     )
@@ -438,6 +521,10 @@ class ExerciseGenerator:
     rate_limit: int = RATE_LIMIT
     rate_window_s: float = RATE_WINDOW_S
     clock: Callable[[], float] = time.monotonic
+    # None: enabled_languages() at call time. Tests pass a tuple.
+    languages: tuple[str, ...] | None = None
+    # Non-Python sandbox verify; None uses app.planner.runner_verify (lane A2's runners).
+    runner_verify: Verify | None = None
     model_calls: int = 0
     _sets: dict[str, GeneratedSet] = field(default_factory=dict)
     _starts: deque = field(default_factory=deque)
@@ -500,20 +587,43 @@ class ExerciseGenerator:
         finally:
             self._inflight.pop(set_id, None)
 
+    def _check(self, out: GenOutput, clip: Clip, exercise_id: str, languages: tuple[str, ...],
+               verify: Verify) -> tuple[ApprovedExercise, list[str], Verify]:
+        """Static checks for the taught language: (exercise, concept tags, its sandbox verify)."""
+        language = normalize_language(out.language)
+        if out.status.strip().lower() != "ok" or language not in languages or language == "python":
+            if language == "python":
+                out = out.model_copy(update={"language": "python"})
+            tags = CONCEPT_TAGS if languages == ("python",) else multi_tags()
+            exercise, found = check_output(out, clip, exercise_id, allowed_tags=tags)
+            return exercise, found, verify
+        from .planner.generate import GenerationFailed, check_coding
+
+        try:
+            exercise, found = check_coding(out.model_copy(update={"language": language}), clip, exercise_id, language)
+        except GenerationFailed as exc:  # pragma: no cover - noExercise is handled by check_output above
+            raise TestMeError("GENERATOR_UNAVAILABLE", "no exercise fits this part of the video yet", True) from exc
+        if self.runner_verify is not None:
+            return exercise, found, self.runner_verify
+        from .planner import runner_verify
+
+        return exercise, found, runner_verify
+
     async def _generate(self, clip: Clip, set_id: str, verify: Verify) -> GeneratedSet:
         call = self.model_call or anthropic_model_call(self.model_name)
+        languages = tuple(self.languages) if self.languages is not None else enabled_languages()
         started = time.monotonic()
         feedback: str | None = None
         for attempt in (1, 2):
             self.model_calls += 1
-            text = await call(build_prompt(clip, feedback))
+            text = await call(build_prompt(clip, feedback, languages))
             try:
                 try:
                     out = GenOutput.model_validate_json(text)
                 except ValidationError as exc:
                     raise _CheckFailed("output did not match the schema") from exc
-                exercise, tags = check_output(out, clip, f"{set_id}-1")
-                if not await verify(exercise):
+                exercise, tags, sandbox_verify = self._check(out, clip, f"{set_id}-1", languages, verify)
+                if not await sandbox_verify(exercise):
                     raise _CheckFailed(
                         "in the sandbox the reference must pass every test and the "
                         "known-wrong solution must fail at least one"

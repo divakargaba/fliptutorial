@@ -3,6 +3,9 @@ import { ACTIVE_ACCOUNT_KEY, DEFAULT_SETTINGS, SETTINGS_KEY as FROZEN_SETTINGS_K
 import levels from '../../../../contracts/v2/levels.json';
 import concepts from '../../../../contracts/v2/concepts.json';
 import { FeedbackEditor } from './FeedbackEditor';
+import { PracticeMore } from '../PracticeMore';
+export { TimelineMarkers } from '../TimelineChallenges';
+export type { TimelineMarker, TimelineMarkersProps } from '../TimelineChallenges';
 
 export const levelName = (id: LevelId) => levels.levels.find(level => level.id === id)?.name ?? id;
 export const conceptName = (id: string) => concepts.concepts.find(concept => concept.id === id)?.name ?? id;
@@ -48,7 +51,7 @@ function QuestionForm({ question, feedback, checking, error, canResume, onAnswer
         {error && <p role="alert">{error.message}{error.retryable ? ' Try your answer again, or skip and watch.' : ' Skip and watch to continue.'}</p>}
         {canResume && <p role="status">The browser didn’t resume playback. Try Resume video again.</p>}
         {feedback && <FeedbackCard feedback={feedback} code="" />}
-        <div className="bp-v2-actions"><button type="button" onClick={onSkip}>Skip and watch</button>
+        <div className="bp-v2-actions"><PracticeMore onLater={onSkip} />
           {passed ? <button type="button" className="bp-v2-primary" onClick={onResume}>Resume video</button>
             : <button className="bp-v2-primary" disabled={checking || !answer.trim()}>{checking ? 'Checking…' : 'Check answer'}</button>}</div>
         <span role="status">{checking ? 'Checking your answer' : ''}</span>
@@ -61,13 +64,14 @@ export function FeedbackCard({ feedback, code }: FeedbackCardProps) {
   return <section className="bp-v2 bp-v2-feedback" aria-label="Practice feedback" aria-live="polite">
     <LevelChip concept={feedback.concept.id} level={feedback.assessedLevel} />
     <h3>{feedback.outcome === 'passed' ? 'Well done' : 'Try again'}</h3><p>{feedback.summary}</p>
-    {feedback.success && <p>{feedback.success.explanation}</p>}
+    {feedback.success && feedback.success.explanation.trim() !== feedback.summary.trim() && <p>{feedback.success.explanation}</p>}
     {optimization?.show && <details><summary>Improve your solution</summary>
       <p>Your solution: {optimization.learner.time} time · {optimization.learner.space} space</p>
       <p>Target: {optimization.best.time} time · {optimization.best.space} space</p>
       {optimization.tip && <p>{optimization.tip}</p>}{optimization.betterSolution && <pre>{optimization.betterSolution}</pre>}
     </details>}
-    {feedback.diagnosis && <><h4>{feedback.diagnosis.misconception.name}</h4><p>{feedback.diagnosis.misconception.explanation}</p>
+    {feedback.diagnosis && <><h4>{feedback.diagnosis.misconception.name}</h4>
+      {feedback.diagnosis.misconception.explanation.trim() !== feedback.summary.trim() && <p>{feedback.diagnosis.misconception.explanation}</p>}
       {code && <FeedbackEditor code={code} lines={feedback.diagnosis.lines} />}
       <ul>{feedback.diagnosis.lines.map((item, index) => <li key={`${item.line}/${index}`}>Line {item.line}: {item.note}</li>)}</ul>
       {feedback.diagnosis.failingCase && <details><summary>Failing example</summary><pre>{JSON.stringify(feedback.diagnosis.failingCase, null, 2)}</pre></details>}</>}

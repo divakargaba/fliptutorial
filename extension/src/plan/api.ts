@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { apiError, apiOrigin } from '../api';
 import { ApiErrorSchema, type WorkerReply } from '../contracts';
-import { FeedbackSchema, LevelSchema, PlanMessageSchema, responseSchemas, type PlanMessage } from './schemas';
+import { FeedbackSchema, LevelSchema, PlanMessageSchema, RefresherSchema, responseSchemas, type PlanMessage } from './schemas';
 
 export const LevelResultSchema = z.object({ accountId: z.string(), concept: z.string(), level: LevelSchema,
   levelName: z.string(), rank: z.number().int().positive(), xp: z.number().nonnegative(), strength: z.number().min(0).max(1) }).strict();
@@ -20,10 +20,11 @@ export async function requestPlanApi(raw: unknown, base: string, fetcher: typeof
   const timer = setTimeout(() => controller.abort(), deadline(m.type));
   try {
     const { type, ...body } = m;
-    const get = type === 'pollPlan' || type === 'levelV2' || type === 'levelsV2';
+    const get = type === 'pollPlan' || type === 'levelV2' || type === 'levelsV2' || type === 'refresherV2';
     const path = m.type === 'pollPlan' ? `/v2/plan/${encodeURIComponent(m.videoId)}`
       : m.type === 'levelV2' ? `/v2/profile/${encodeURIComponent(m.accountId)}/level/${encodeURIComponent(m.concept)}`
       : m.type === 'levelsV2' ? `/v2/profile/${encodeURIComponent(m.accountId)}/levels`
+      : m.type === 'refresherV2' ? `/v2/refresher/${encodeURIComponent(m.accountId)}`
       : { plan: '/v2/plan', submitV2: '/v2/submit', answerV2: '/v2/answer', hintV2: '/v2/hint', eventsV2: '/v2/events' }[m.type];
     const response = await fetcher(apiOrigin(base) + path, {
       method: get ? 'GET' : 'POST', ...(get ? {} : { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
@@ -42,10 +43,18 @@ export async function requestPlanApi(raw: unknown, base: string, fetcher: typeof
       const rejected = new Set(ack.data.rejected.map(e => e.id));
       return { ok: true, data: { acknowledgedIds: m.events.filter(e => !rejected.has(e.id)).map(e => e.id) } };
     }
+    if (response.status === 204 && m.type === 'refresherV2') return { ok: true, data: null };
     const json: unknown = await response.json();
     if (!response.ok) {
       const error = ApiErrorSchema.safeParse(json);
       return { ok: false, error: error.success ? error.data : apiError('API_ERROR', 'Practice is temporarily unavailable.') };
+    }
+    if (m.type === 'refresherV2') {
+      const pick = RefresherSchema.safeParse(json);
+      if (!pick.success || !pick.data || pick.data.accountId !== m.accountId) {
+        return { ok: false, error: apiError('INVALID_RESPONSE', 'Invalid refresher for this learner.') };
+      }
+      return { ok: true, data: pick.data };
     }
     const schema = m.type === 'levelV2' ? LevelResultSchema : m.type === 'levelsV2' ? LevelsResultSchema
       : responseSchemas[m.type as keyof typeof responseSchemas];
@@ -78,7 +87,7 @@ export async function sendPlanRequest<T>(message: PlanMessage, schema: z.ZodType
       catch (error) {
         // A cold MV3 listener can race the page. Retry only when the browser
         // confirms no receiver existed; never retry a possibly applied submit.
-        if (!['plan', 'pollPlan', 'levelV2', 'levelsV2'].includes(message.type) || attempt >= 2 ||
+        if (!['plan', 'pollPlan', 'levelV2', 'levelsV2', 'refresherV2'].includes(message.type) || attempt >= 2 ||
             !(error instanceof Error) || !error.message.includes('Receiving end does not exist')) throw error;
         await new Promise(resolve => setTimeout(resolve, attempt === 0 ? 100 : 300));
       }

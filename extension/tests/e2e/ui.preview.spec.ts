@@ -16,7 +16,7 @@ test('shadow theme, keyboard isolation, grading and resume controls', async ({ p
   for (const key of ['j', 'k', 'l', 'f']) await editor.press(key);
   expect(await page.evaluate(() => (globalThis as typeof globalThis & { pageHotkeys: number }).pageHotkeys)).toBe(0);
   await editor.press('Tab');
-  await expect(page.getByRole('button', { name: 'Skip and watch' })).toBeFocused();
+  await expect(page.getByRole('button', { name: 'More', exact: true })).toBeFocused();
   await editor.fill('def raise_to_power(base, exponent):\n    return base * exponent');
   await page.getByRole('button', { name: 'Run', exact: true }).click();
   await expect(page.getByText('wrong answer', { exact: false })).toBeVisible();
@@ -55,11 +55,12 @@ test('flushes on close, reloads drafts and isolates revisions', async ({ page })
 test('skip is reachable during grading and after provider failure', async ({ page }) => {
   await page.getByRole('textbox', { name: 'Python code' }).fill('provider_error');
   await page.getByRole('button', { name: 'Submit', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Skip and watch' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'More', exact: true })).toBeEnabled();
   await expect(page.getByText('Grading timed out.', { exact: false })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Submit', exact: true })).toBeEnabled();
   await page.getByRole('button', { name: 'Submit', exact: true }).click();
-  await page.getByRole('button', { name: 'Skip and watch' }).click();
+  await page.getByRole('button', { name: 'More', exact: true }).click();
+  await page.getByRole('button', { name: 'Practice later', exact: true }).click();
   await expect(page.locator('.bp-panel')).toHaveCount(0);
 });
 

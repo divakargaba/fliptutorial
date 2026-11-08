@@ -26,6 +26,16 @@ from app.runners.base import RunnerResult, CaseResult, Runner
 FIXTURES = Path(__file__).parent / "fixtures" / "submissions"
 
 
+@pytest.fixture(autouse=True)
+def _no_live_concept_model():
+    """Keep concept grading/coaching offline even when a local .env holds a real key."""
+    async def unavailable(prompt: str) -> str:
+        raise RuntimeError("concept model disabled in tests")
+
+    with patch("app.feedback.concepts.anthropic_model_call", lambda *a, **k: unavailable):
+        yield
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -757,6 +767,39 @@ async def test_answer_has_schema_version(registered_question):
     assert data["feedback"]["schemaVersion"] == 2
 
 
+def _assert_frozen_feedback(fb):
+    """Mirror of the extension's strict FeedbackSchema outcome invariants."""
+    if fb["outcome"] == "passed":
+        assert fb["diagnosis"] is None
+        opt = fb["success"]["optimization"]
+        assert isinstance(opt, dict) and isinstance(opt["show"], bool)
+        for k in ("learner", "best"):
+            assert set(opt[k]) == {"time", "space"} and all(isinstance(v, str) for v in opt[k].values())
+        assert set(opt) == {"show", "learner", "best", "tip", "betterSolution"}
+    else:
+        assert fb["success"] is None
+        d = fb["diagnosis"]
+        assert d["misconception"]["id"] and isinstance(d["misconception"]["name"], str)
+        assert isinstance(d["lines"], list) and "failingCase" in d
+
+
+@pytest.mark.asyncio
+async def test_answer_matches_frozen_feedback_contract(registered_question):
+    """Correct and wrong /v2/answer responses satisfy the frozen FeedbackResult shape."""
+    q = registered_question
+    from app.main import app
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        for t in q["tests"]:
+            resp = await client.post("/v2/answer", json={
+                "questionId": q["id"], "revision": q["revision"], "answer": t["answer"],
+            })
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["correct"] == (data["feedback"]["outcome"] == "passed")
+            _assert_frozen_feedback(data["feedback"])
+
+
 @pytest.mark.asyncio
 async def test_submit_empty_code_rejected(registered_exercise):
     """POST /v2/submit with empty code returns 422."""
@@ -1209,8 +1252,8 @@ class TestRefresherAnswerIntegration:
         assert "range(3)" in data["feedback"]["summary"]
 
     @pytest.mark.asyncio
-    async def test_answer_refresher_wrong_includes_explanation(self):
-        """Wrong refresher answer includes the curated explanation in the summary."""
+    async def test_answer_refresher_wrong_does_not_reveal_explanation(self):
+        """Wrong refresher answer coaches the mistake but keeps the curated (answer-revealing) explanation back."""
         from fastapi import FastAPI
         from app.feedback import router
 
@@ -1246,5 +1289,7 @@ class TestRefresherAnswerIntegration:
         assert resp.status_code == 200
         data = resp.json()
         assert data["correct"] is False
-        # Wrong answer: should include both the grading result and the refresher explanation
-        assert "A for loop iterates" in data["feedback"]["summary"]
+        # Wrong answer: coach the mistake, never reveal the answer (the curated explanation names it)
+        assert "A for loop iterates" not in json.dumps(data["feedback"])
+        assert '"Declares"' in data["feedback"]["summary"]
+        assert data["feedback"]["diagnosis"]["misconception"]["explanation"] != data["feedback"]["summary"]

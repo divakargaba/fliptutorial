@@ -1,0 +1,2591 @@
+{
+ "videos": {
+  "ZDa-Z5JzLYM": {
+   "status": "classified",
+   "reason": "The video is a Python tutorial on creating classes, instances, __init__ methods and instance methods, with live code demonstrations.",
+   "sections": [
+    {
+     "startS": 0.0,
+     "endS": 67.2,
+     "title": "Series intro and terminology",
+     "format": "off_topic",
+     "language": "unknown",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 67.2,
+     "endS": 200.3,
+     "title": "Classes as blueprints and instances",
+     "format": "mixed",
+     "language": "python",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": [
+      {
+       "id": "p1",
+       "pause_at_s": 178.9,
+       "reveal_at_s": null,
+       "trigger": "concept_complete",
+       "concept": "oop",
+       "idea": "create a simple empty class and two instances, then show that each instance is a distinct object",
+       "rank": 1,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 200.3,
+     "endS": 538.9,
+     "title": "Instance attributes and the __init__ method",
+     "format": "code",
+     "language": "python",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": [
+      {
+       "id": "p2",
+       "pause_at_s": 516.9,
+       "reveal_at_s": null,
+       "trigger": "demonstration",
+       "concept": "oop",
+       "idea": "__init__ that takes arguments and sets instance attributes, with a derived attribute such as email built from the others",
+       "rank": 1,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 538.9,
+     "endS": 858.0,
+     "title": "Instance methods, self and calling methods via the class",
+     "format": "code",
+     "language": "python",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": [
+      {
+       "id": "p3",
+       "pause_at_s": 674.3,
+       "reveal_at_s": null,
+       "trigger": "demonstration",
+       "concept": "oop",
+       "idea": "method on a class that returns a string built from instance attributes, called with parentheses",
+       "rank": 2,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 858.0,
+     "endS": 913.3,
+     "title": "Outro, likes, subscribe and Patreon",
+     "format": "off_topic",
+     "language": "unknown",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    }
+   ]
+  },
+  "vLnPwxZdW4Y": {
+   "status": "classified",
+   "reason": "The video is a beginner C++ course whose opening blocks are an intro, followed by setup, then teaching of program structure, variables, data types, and strings.",
+   "sections": [
+    {
+     "startS": 0.4,
+     "endS": 93.7,
+     "title": "Course intro",
+     "format": "off_topic",
+     "language": "unknown",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 93.7,
+     "endS": 530.4,
+     "title": "Installing the IDE and compiler",
+     "format": "code",
+     "language": "cpp",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 530.4,
+     "endS": 752.8,
+     "title": "Creating a console project and running Hello World",
+     "format": "code",
+     "language": "cpp",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 752.8,
+     "endS": 1188.0,
+     "title": "Program structure, cout output and statement order",
+     "format": "code",
+     "language": "cpp",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": [
+      {
+       "id": "p1",
+       "pause_at_s": 1031.5,
+       "reveal_at_s": null,
+       "trigger": "demonstration",
+       "concept": "io",
+       "idea": "a sequence of cout statements that draws a shape line by line",
+       "rank": 1,
+       "screen": ""
+      },
+      {
+       "id": "p2",
+       "pause_at_s": 1165.0,
+       "reveal_at_s": null,
+       "trigger": "demonstration",
+       "concept": "io",
+       "idea": "reorder output statements and predict how the printed result changes",
+       "rank": 2,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 1188.0,
+     "endS": 1896.5,
+     "title": "Variables: storing, inserting and reassigning values",
+     "format": "code",
+     "language": "cpp",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": [
+      {
+       "id": "p3",
+       "pause_at_s": 1786.6,
+       "reveal_at_s": null,
+       "trigger": "demonstration",
+       "concept": "variables",
+       "idea": "store a value in a variable and insert it into cout output",
+       "rank": 1,
+       "screen": ""
+      },
+      {
+       "id": "p4",
+       "pause_at_s": 1876.4,
+       "reveal_at_s": null,
+       "trigger": "concept_complete",
+       "concept": "variables",
+       "idea": "reassign a variable partway through a program and predict the later output",
+       "rank": 2,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 1896.5,
+     "endS": 2339.3,
+     "title": "Basic data types: char, string, int, double, bool and constants",
+     "format": "code",
+     "language": "cpp",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": [
+      {
+       "id": "p5",
+       "pause_at_s": 2290.9,
+       "reveal_at_s": null,
+       "trigger": "concept_complete",
+       "concept": "types",
+       "idea": "choose the right type (int, double, bool, char or string) for a given value",
+       "rank": 1,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 2339.3,
+     "endS": 2405.2,
+     "title": "Strings in c++",
+     "format": "code",
+     "language": "cpp",
+     "qualifies": true,
+     "confidence": "medium",
+     "pauses": []
+    }
+   ]
+  },
+  "eIrMbAQSU34": {
+   "status": "classified",
+   "reason": "Java course by Mosh that mixes sponsor and channel intros with setup, then teaches Java syntax, program structure, variables, types, objects and memory.",
+   "sections": [
+    {
+     "startS": 0.0,
+     "endS": 113.9,
+     "title": "Intro and sponsor",
+     "format": "off_topic",
+     "language": "unknown",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 113.9,
+     "endS": 247.6,
+     "title": "Installing JDK and IntelliJ",
+     "format": "off_topic",
+     "language": "unknown",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 247.6,
+     "endS": 512.6,
+     "title": "Anatomy of a Java program: functions, classes, methods, naming",
+     "format": "theory",
+     "language": "java",
+     "qualifies": true,
+     "confidence": "medium",
+     "pauses": [
+      {
+       "id": "p1",
+       "pause_at_s": 512.6,
+       "reveal_at_s": null,
+       "trigger": "concept_complete",
+       "concept": "functions",
+       "idea": "method with a void return type and camelCase name -> write a method signature for a given task",
+       "rank": 1,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 512.6,
+     "endS": 736.4,
+     "title": "Creating the Hello World project and touring the files",
+     "format": "off_topic",
+     "language": "java",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 736.4,
+     "endS": 940.6,
+     "title": "Writing the first Hello World program",
+     "format": "code",
+     "language": "java",
+     "qualifies": true,
+     "confidence": "medium",
+     "pauses": [
+      {
+       "id": "p2",
+       "pause_at_s": 940.6,
+       "reveal_at_s": null,
+       "trigger": "concept_complete",
+       "concept": "strings",
+       "idea": "print a string literal with println -> print a string literal you choose",
+       "rank": 1,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 940.6,
+     "endS": 986.1,
+     "title": "Channel plug",
+     "format": "off_topic",
+     "language": "unknown",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 986.1,
+     "endS": 1259.3,
+     "title": "Compiling with javac and running with java (bytecode and JVM)",
+     "format": "mixed",
+     "language": "java",
+     "qualifies": true,
+     "confidence": "medium",
+     "pauses": []
+    },
+    {
+     "startS": 1259.3,
+     "endS": 1548.8,
+     "title": "Java history, editions and course overview",
+     "format": "off_topic",
+     "language": "unknown",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 1548.8,
+     "endS": 1732.7,
+     "title": "Declaring, initializing and reassigning variables",
+     "format": "code",
+     "language": "java",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": [
+      {
+       "id": "p3",
+       "pause_at_s": 1636.7,
+       "reveal_at_s": null,
+       "trigger": "concept_complete",
+       "concept": "variables",
+       "idea": "declare and initialize an int variable then reassign it -> predict the printed value after reassignment",
+       "rank": 1,
+       "screen": ""
+      },
+      {
+       "id": "p4",
+       "pause_at_s": 1732.7,
+       "reveal_at_s": null,
+       "trigger": "concept_complete",
+       "concept": "variables",
+       "idea": "copy one variable into another -> predict what a copy prints after the original changes",
+       "rank": 2,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 1732.7,
+     "endS": 1844.9,
+     "title": "Primitive types and their sizes",
+     "format": "theory",
+     "language": "java",
+     "qualifies": true,
+     "confidence": "medium",
+     "pauses": [
+      {
+       "id": "p5",
+       "pause_at_s": 1844.9,
+       "reveal_at_s": null,
+       "trigger": "concept_complete",
+       "concept": "types",
+       "idea": "choose the smallest primitive type that fits a value range -> pick a type for a given value",
+       "rank": 2,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 1844.9,
+     "endS": 2072.6,
+     "title": "Applying types: long and float suffixes, char, boolean, keywords",
+     "format": "code",
+     "language": "java",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": [
+      {
+       "id": "p6",
+       "pause_at_s": 2022.2,
+       "reveal_at_s": null,
+       "trigger": "concept_complete",
+       "concept": "types",
+       "idea": "numeric literal needs a suffix to match a variable type -> fix a type mismatch compile error",
+       "rank": 1,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 2072.6,
+     "endS": 2250.1,
+     "title": "Reference types, new operator and objects",
+     "format": "mixed",
+     "language": "java",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": [
+      {
+       "id": "p7",
+       "pause_at_s": 2250.1,
+       "reveal_at_s": null,
+       "trigger": "concept_complete",
+       "concept": "oop",
+       "idea": "create an object with new and call one of its methods with the dot operator -> create an object and call a method on it",
+       "rank": 2,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 2250.1,
+     "endS": 2363.7,
+     "title": "Object members and printing a Date object",
+     "format": "code",
+     "language": "java",
+     "qualifies": true,
+     "confidence": "medium",
+     "pauses": []
+    },
+    {
+     "startS": 2363.7,
+     "endS": 2405.2,
+     "title": "Primitive variables and independent memory locations",
+     "format": "theory",
+     "language": "java",
+     "qualifies": false,
+     "confidence": "low",
+     "pauses": []
+    }
+   ]
+  },
+  "kqtD5dpn9C8": {
+   "status": "classified",
+   "reason": "A beginner Python tutorial that moves from intro and setup through variables, input, types, strings, operators and if statements, with practice exercises along the way.",
+   "sections": [
+    {
+     "startS": 2.2,
+     "endS": 88.5,
+     "title": "Intro and uses of Python",
+     "format": "off_topic",
+     "language": "python",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 88.5,
+     "endS": 254.2,
+     "title": "Installing Python and PyCharm and creating a project",
+     "format": "off_topic",
+     "language": "python",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 254.2,
+     "endS": 316.8,
+     "title": "Strings and printing hello world",
+     "format": "code",
+     "language": "python",
+     "qualifies": true,
+     "confidence": "medium",
+     "pauses": [
+      {
+       "id": "p1",
+       "pause_at_s": 296.8,
+       "reveal_at_s": null,
+       "trigger": "concept_complete",
+       "concept": "strings",
+       "idea": "print a string literal wrapped in single or double quotes",
+       "rank": 1,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 316.8,
+     "endS": 552.5,
+     "title": "Variables and booleans",
+     "format": "code",
+     "language": "python",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": [
+      {
+       "id": "p2",
+       "pause_at_s": 547.8,
+       "reveal_at_s": null,
+       "trigger": "question_posed",
+       "concept": "variables",
+       "idea": "declare variables for a patient's name, age and new-patient flag",
+       "rank": 2,
+       "screen": "clear"
+      }
+     ]
+    },
+    {
+     "startS": 552.5,
+     "endS": 659.1,
+     "title": "Reading user input with input()",
+     "format": "code",
+     "language": "python",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": [
+      {
+       "id": "p3",
+       "pause_at_s": 659.1,
+       "reveal_at_s": null,
+       "trigger": "concept_complete",
+       "concept": "io",
+       "idea": "read a value with input() and build a greeting by concatenating strings",
+       "rank": 1,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 659.1,
+     "endS": 1134.0,
+     "title": "Type conversion with int, float and str",
+     "format": "code",
+     "language": "python",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": [
+      {
+       "id": "p4",
+       "pause_at_s": 891.6,
+       "reveal_at_s": 892.6,
+       "trigger": "question_posed",
+       "concept": "types",
+       "idea": "read two numbers with input and print their sum as a number rather than concatenated text",
+       "rank": 2,
+       "screen": "clear"
+      }
+     ]
+    },
+    {
+     "startS": 1134.0,
+     "endS": 1407.8,
+     "title": "String methods and the in operator",
+     "format": "code",
+     "language": "python",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": [
+      {
+       "id": "p5",
+       "pause_at_s": 1365.9,
+       "reveal_at_s": null,
+       "trigger": "concept_complete",
+       "concept": "strings",
+       "idea": "predict whether a string method changes the original string or returns a new one",
+       "rank": 1,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 1407.8,
+     "endS": 1635.7,
+     "title": "Arithmetic operators and precedence",
+     "format": "code",
+     "language": "python",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 1635.7,
+     "endS": 1721.6,
+     "title": "Comparison operators",
+     "format": "code",
+     "language": "python",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": [
+      {
+       "id": "p6",
+       "pause_at_s": 1721.6,
+       "reveal_at_s": null,
+       "trigger": "concept_complete",
+       "concept": "operators",
+       "idea": "compare values with comparison operators to produce a boolean",
+       "rank": 1,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 1721.6,
+     "endS": 1853.1,
+     "title": "Logical operators and, or, not",
+     "format": "code",
+     "language": "python",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 1853.1,
+     "endS": 2170.2,
+     "title": "If, elif and else statements",
+     "format": "code",
+     "language": "python",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": [
+      {
+       "id": "p7",
+       "pause_at_s": 2170.2,
+       "reveal_at_s": null,
+       "trigger": "demonstration",
+       "concept": "conditionals",
+       "idea": "chain if, elif and else on a numeric range to print a different message per range",
+       "rank": 1,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 2170.2,
+     "endS": 2401.3,
+     "title": "Weight converter exercise and solution",
+     "format": "code",
+     "language": "python",
+     "qualifies": true,
+     "confidence": "medium",
+     "pauses": []
+    }
+   ]
+  },
+  "W6NZfCO5SIk": {
+   "status": "classified",
+   "reason": "A beginner JavaScript course that covers an intro, browser and editor setup, then teaches statements, variables, constants, primitive types, objects and arrays.",
+   "sections": [
+    {
+     "startS": 1.3,
+     "endS": 202.6,
+     "title": "Intro and JavaScript FAQ",
+     "format": "off_topic",
+     "language": "javascript",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 202.6,
+     "endS": 273.9,
+     "title": "Browser console hello world",
+     "format": "code",
+     "language": "javascript",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 273.9,
+     "endS": 465.6,
+     "title": "Editor, Node and Live Server setup",
+     "format": "code",
+     "language": "unknown",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 465.6,
+     "endS": 582.3,
+     "title": "Where to place the script element",
+     "format": "theory",
+     "language": "javascript",
+     "qualifies": false,
+     "confidence": "medium",
+     "pauses": []
+    },
+    {
+     "startS": 582.3,
+     "endS": 817.2,
+     "title": "Statements, strings, comments and external JS file",
+     "format": "mixed",
+     "language": "javascript",
+     "qualifies": true,
+     "confidence": "medium",
+     "pauses": [
+      {
+       "id": "p1",
+       "pause_at_s": 647.3,
+       "reveal_at_s": null,
+       "trigger": "concept_complete",
+       "concept": "strings",
+       "idea": "console.log with a string literal and a semicolon -> print a custom message",
+       "rank": 1,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 817.2,
+     "endS": 939.6,
+     "title": "Running JavaScript with Node",
+     "format": "code",
+     "language": "javascript",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 939.6,
+     "endS": 960.3,
+     "title": "Channel promo for full course",
+     "format": "off_topic",
+     "language": "unknown",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 960.3,
+     "endS": 1313.2,
+     "title": "Variables and naming rules",
+     "format": "code",
+     "language": "javascript",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": [
+      {
+       "id": "p2",
+       "pause_at_s": 1119.9,
+       "reveal_at_s": null,
+       "trigger": "demonstration",
+       "concept": "variables",
+       "idea": "let declaration with a string value -> log the variable and predict the output",
+       "rank": 2,
+       "screen": ""
+      },
+      {
+       "id": "p3",
+       "pause_at_s": 1271.2,
+       "reveal_at_s": null,
+       "trigger": "concept_complete",
+       "concept": "variables",
+       "idea": "camelCase variable naming rules -> pick valid identifiers",
+       "rank": 1,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 1313.2,
+     "endS": 1424.4,
+     "title": "Constants and reassignment errors",
+     "format": "code",
+     "language": "javascript",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": [
+      {
+       "id": "p4",
+       "pause_at_s": 1403.7,
+       "reveal_at_s": null,
+       "trigger": "demonstration",
+       "concept": "variables",
+       "idea": "const declaration then reassignment -> predict whether it errors and choose const or let",
+       "rank": 2,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 1424.4,
+     "endS": 1610.4,
+     "title": "Primitive types",
+     "format": "mixed",
+     "language": "javascript",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": [
+      {
+       "id": "p5",
+       "pause_at_s": 1606.9,
+       "reveal_at_s": null,
+       "trigger": "concept_complete",
+       "concept": "types",
+       "idea": "declare variables of each primitive type (string, number, boolean, undefined, null) -> name the type of each",
+       "rank": 1,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 1610.4,
+     "endS": 1791.5,
+     "title": "Dynamic typing and typeof",
+     "format": "code",
+     "language": "javascript",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 1791.5,
+     "endS": 2114.9,
+     "title": "Objects and property access",
+     "format": "code",
+     "language": "javascript",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": [
+      {
+       "id": "p6",
+       "pause_at_s": 1959.7,
+       "reveal_at_s": null,
+       "trigger": "demonstration",
+       "concept": "dicts",
+       "idea": "object literal with key-value pairs -> read and update a property with dot notation",
+       "rank": 1,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 2114.9,
+     "endS": 2386.8,
+     "title": "Arrays, indexes and length",
+     "format": "code",
+     "language": "javascript",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": [
+      {
+       "id": "p7",
+       "pause_at_s": 2362.0,
+       "reveal_at_s": null,
+       "trigger": "concept_complete",
+       "concept": "lists",
+       "idea": "array index access and length property -> read an element and count items",
+       "rank": 1,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 2386.8,
+     "endS": 2407.5,
+     "title": "Functions introduction (start)",
+     "format": "theory",
+     "language": "javascript",
+     "qualifies": false,
+     "confidence": "low",
+     "pauses": []
+    },
+    {
+     "startS": 2407.5,
+     "endS": 2863.5,
+     "title": "Functions: declaration, parameters, arguments and return values",
+     "format": "mixed",
+     "language": "javascript",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": [
+      {
+       "id": "p8",
+       "pause_at_s": 2590.4,
+       "reveal_at_s": null,
+       "trigger": "concept_complete",
+       "concept": "functions",
+       "idea": "function with parameters -> pass different arguments and explain parameter vs argument",
+       "rank": 2,
+       "screen": ""
+      },
+      {
+       "id": "p9",
+       "pause_at_s": 2773.9,
+       "reveal_at_s": null,
+       "trigger": "demonstration",
+       "concept": "functions",
+       "idea": "function that returns a value -> store the returned value in a variable or pass it directly to console.log",
+       "rank": 1,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 2863.5,
+     "endS": 2896.4,
+     "title": "Instructor promotion of his full course",
+     "format": "off_topic",
+     "language": "unknown",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    }
+   ]
+  },
+  "KJgsSFOSQv0": {
+   "status": "classified",
+   "reason": "This is a beginner C programming course that covers setup, printf, variables and data types, with an intro and install walkthroughs before the teaching starts.",
+   "sections": [
+    {
+     "startS": 0.0,
+     "endS": 92.1,
+     "title": "Course intro and overview",
+     "format": "off_topic",
+     "language": "c",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 92.1,
+     "endS": 304.9,
+     "title": "Installing code::blocks and the GNU compiler on Windows",
+     "format": "off_topic",
+     "language": "c",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 304.9,
+     "endS": 551.8,
+     "title": "Installing a C compiler and IDE on macOS",
+     "format": "off_topic",
+     "language": "c",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 551.8,
+     "endS": 774.6,
+     "title": "Creating a console project and running the default Hello World",
+     "format": "off_topic",
+     "language": "c",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 774.6,
+     "endS": 1241.4,
+     "title": "Anatomy of a C program: main, printf, semicolons and statement order",
+     "format": "code",
+     "language": "c",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": [
+      {
+       "id": "p1",
+       "pause_at_s": 1241.0,
+       "reveal_at_s": null,
+       "trigger": "concept_complete",
+       "concept": "functions",
+       "idea": "predict the output when printf statements are reordered",
+       "rank": 1,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 1241.4,
+     "endS": 1936.5,
+     "title": "Variables: declaring, assigning and reusing values with printf placeholders",
+     "format": "code",
+     "language": "c",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": [
+      {
+       "id": "p2",
+       "pause_at_s": 1827.2,
+       "reveal_at_s": null,
+       "trigger": "demonstration",
+       "concept": "io",
+       "idea": "use printf placeholders for a string and an int stored in variables",
+       "rank": 1,
+       "screen": ""
+      },
+      {
+       "id": "p3",
+       "pause_at_s": 1916.0,
+       "reveal_at_s": null,
+       "trigger": "concept_complete",
+       "concept": "variables",
+       "idea": "reassign a variable mid-program and predict the printed output",
+       "rank": 2,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 1936.5,
+     "endS": 2315.0,
+     "title": "Basic data types: int, double, char and character arrays as strings",
+     "format": "mixed",
+     "language": "c",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": [
+      {
+       "id": "p4",
+       "pause_at_s": 2203.3,
+       "reveal_at_s": null,
+       "trigger": "concept_complete",
+       "concept": "types",
+       "idea": "choose int, double or char for a given value and predict whether a char can hold several letters",
+       "rank": 1,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 2315.0,
+     "endS": 2401.6,
+     "title": "Using printf to print text, newlines and special characters",
+     "format": "code",
+     "language": "c",
+     "qualifies": true,
+     "confidence": "medium",
+     "pauses": []
+    }
+   ]
+  },
+  "GhQdlIFylQ8": {
+   "status": "classified",
+   "reason": "The video is a beginner C# course that moves from intro and Visual Studio setup into writing console statements, variables, data types and strings.",
+   "sections": [
+    {
+     "startS": 0.5,
+     "endS": 88.9,
+     "title": "Course intro",
+     "format": "off_topic",
+     "language": "csharp",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 88.9,
+     "endS": 266.3,
+     "title": "Installing Visual Studio and creating a console project",
+     "format": "mixed",
+     "language": "csharp",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 266.3,
+     "endS": 571.3,
+     "title": "Touring the generated template file",
+     "format": "mixed",
+     "language": "csharp",
+     "qualifies": false,
+     "confidence": "medium",
+     "pauses": []
+    },
+    {
+     "startS": 571.3,
+     "endS": 1048.2,
+     "title": "Writing Console.WriteLine and Console.ReadLine statements",
+     "format": "code",
+     "language": "csharp",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": [
+      {
+       "id": "p1",
+       "pause_at_s": 881.0,
+       "reveal_at_s": null,
+       "trigger": "demonstration",
+       "concept": "io",
+       "idea": "sequence of WriteLine calls that prints a text shape line by line",
+       "rank": 1,
+       "screen": ""
+      },
+      {
+       "id": "p2",
+       "pause_at_s": 996.1,
+       "reveal_at_s": null,
+       "trigger": "concept_complete",
+       "concept": "io",
+       "idea": "reorder statements and predict how the printed output changes",
+       "rank": 2,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 1048.2,
+     "endS": 1809.5,
+     "title": "Variables and string concatenation",
+     "format": "code",
+     "language": "csharp",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": [
+      {
+       "id": "p3",
+       "pause_at_s": 1653.7,
+       "reveal_at_s": null,
+       "trigger": "demonstration",
+       "concept": "strings",
+       "idea": "build a sentence by concatenating string literals with an int variable",
+       "rank": 1,
+       "screen": ""
+      },
+      {
+       "id": "p4",
+       "pause_at_s": 1788.5,
+       "reveal_at_s": null,
+       "trigger": "concept_complete",
+       "concept": "variables",
+       "idea": "reassign a variable mid-program and predict the resulting output",
+       "rank": 2,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 1809.5,
+     "endS": 2224.2,
+     "title": "Core data types: string, char, int, double, decimal, bool",
+     "format": "mixed",
+     "language": "csharp",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": [
+      {
+       "id": "p5",
+       "pause_at_s": 2152.6,
+       "reveal_at_s": null,
+       "trigger": "concept_complete",
+       "concept": "types",
+       "idea": "choose the right data type for text, a whole number, a decimal or a true/false value",
+       "rank": 1,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 2224.2,
+     "endS": 2406.3,
+     "title": "Strings, escape characters and concatenation",
+     "format": "code",
+     "language": "csharp",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": [
+      {
+       "id": "p6",
+       "pause_at_s": 2359.0,
+       "reveal_at_s": null,
+       "trigger": "concept_complete",
+       "concept": "strings",
+       "idea": "use escape characters like newline and quote inside a string literal",
+       "rank": 2,
+       "screen": ""
+      }
+     ]
+    }
+   ]
+  },
+  "HXV3zeQKqGY": {
+   "status": "not_coding",
+   "reason": "The transcript so far is a course intro followed by conceptual explanations of databases, DBMSs and table keys, with no SQL code written yet.",
+   "sections": [
+    {
+     "startS": 0.0,
+     "endS": 154.1,
+     "title": "Course introduction and overview",
+     "format": "off_topic",
+     "language": "unknown",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 154.1,
+     "endS": 1389.6,
+     "title": "What databases, DBMSs and SQL are (conceptual)",
+     "format": "theory",
+     "language": "sql",
+     "qualifies": false,
+     "confidence": "medium",
+     "pauses": []
+    },
+    {
+     "startS": 1389.6,
+     "endS": 2403.9,
+     "title": "Tables, primary keys, foreign keys and composite keys (conceptual)",
+     "format": "theory",
+     "language": "pseudocode",
+     "qualifies": false,
+     "confidence": "low",
+     "pauses": []
+    }
+   ]
+  },
+  "0IAPZzGSbME": {
+   "status": "not_coding",
+   "reason": "An introductory lecture that opens with channel housekeeping and then defines algorithms and contrasts them with programs, with no code practice.",
+   "sections": [
+    {
+     "startS": 0.0,
+     "endS": 196.1,
+     "title": "Course introduction and feedback request",
+     "format": "off_topic",
+     "language": "unknown",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 196.1,
+     "endS": 709.4,
+     "title": "What an algorithm is and how it differs from a program",
+     "format": "theory",
+     "language": "pseudocode",
+     "qualifies": false,
+     "confidence": "medium",
+     "pauses": []
+    }
+   ]
+  },
+  "SqcY0GlETPk": {
+   "status": "classified",
+   "reason": "A React beginners course by Mosh that moves from intro and setup into building components, JSX, lists, conditionals and click handlers in TypeScript.",
+   "sections": [
+    {
+     "startS": 2.4,
+     "endS": 104.4,
+     "title": "Course intro and channel plug",
+     "format": "off_topic",
+     "language": "unknown",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 104.4,
+     "endS": 294.9,
+     "title": "What React is and why it exists",
+     "format": "theory",
+     "language": "javascript",
+     "qualifies": false,
+     "confidence": "medium",
+     "pauses": []
+    },
+    {
+     "startS": 294.9,
+     "endS": 677.3,
+     "title": "Environment setup: Node, VS Code, Vite project and file tour",
+     "format": "code",
+     "language": "typescript",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 677.3,
+     "endS": 994.1,
+     "title": "Creating the first function component and JSX expressions",
+     "format": "code",
+     "language": "typescript",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": [
+      {
+       "id": "p1",
+       "pause_at_s": 972.6,
+       "reveal_at_s": null,
+       "trigger": "concept_complete",
+       "concept": "react-components",
+       "idea": "embed a computed value or function call inside JSX curly braces to render dynamic content",
+       "rank": 1,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 994.1,
+     "endS": 1211.0,
+     "title": "Virtual DOM, React DOM and library versus framework",
+     "format": "theory",
+     "language": "javascript",
+     "qualifies": false,
+     "confidence": "medium",
+     "pauses": []
+    },
+    {
+     "startS": 1211.0,
+     "endS": 1273.9,
+     "title": "Sponsor and course promotion",
+     "format": "off_topic",
+     "language": "unknown",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 1273.9,
+     "endS": 2400.0,
+     "title": "Building a Bootstrap list group with map, conditional rendering and click handle",
+     "format": "code",
+     "language": "typescript",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": [
+      {
+       "id": "p2",
+       "pause_at_s": 1898.3,
+       "reveal_at_s": null,
+       "trigger": "demonstration",
+       "concept": "lists",
+       "idea": "map an array of strings to list item JSX elements with curly braces",
+       "rank": 1,
+       "screen": ""
+      },
+      {
+       "id": "p3",
+       "pause_at_s": 2316.7,
+       "reveal_at_s": null,
+       "trigger": "concept_complete",
+       "concept": "conditionals",
+       "idea": "render an element only when a condition holds using logical AND in JSX",
+       "rank": 2,
+       "screen": ""
+      },
+      {
+       "id": "p4",
+       "pause_at_s": 2384.7,
+       "reveal_at_s": null,
+       "trigger": "demonstration",
+       "concept": "functions",
+       "idea": "attach an arrow function as an onClick handler that logs the clicked item",
+       "rank": 2,
+       "screen": ""
+      }
+     ]
+    }
+   ]
+  },
+  "rfscVS0vtbw": {
+   "status": "classified",
+   "reason": "A beginner Python course that moves from channel intro and installation through print, variables, strings and numbers.",
+   "sections": [
+    {
+     "startS": 0.0,
+     "endS": 118.5,
+     "title": "Course intro and channel welcome",
+     "format": "off_topic",
+     "language": "python",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 118.5,
+     "endS": 393.4,
+     "title": "Installing Python 3 and PyCharm",
+     "format": "off_topic",
+     "language": "python",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 393.4,
+     "endS": 615.8,
+     "title": "Creating a PyCharm project and running Hello World",
+     "format": "off_topic",
+     "language": "python",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 615.8,
+     "endS": 904.0,
+     "title": "Print statements, drawing a triangle, and top-to-bottom execution",
+     "format": "code",
+     "language": "python",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": [
+      {
+       "id": "p1",
+       "pause_at_s": 818.9,
+       "reveal_at_s": null,
+       "trigger": "demonstration",
+       "concept": "io",
+       "idea": "chain several print statements with spaces and symbols -> reproduce a small printed text shape",
+       "rank": 2,
+       "screen": ""
+      },
+      {
+       "id": "p2",
+       "pause_at_s": 884.0,
+       "reveal_at_s": null,
+       "trigger": "concept_complete",
+       "concept": "io",
+       "idea": "reorder print statements in a file -> predict the order of output lines",
+       "rank": 1,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 904.0,
+     "endS": 1612.6,
+     "title": "Variables and basic data types",
+     "format": "mixed",
+     "language": "python",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": [
+      {
+       "id": "p3",
+       "pause_at_s": 1446.2,
+       "reveal_at_s": null,
+       "trigger": "concept_complete",
+       "concept": "variables",
+       "idea": "reassign an existing variable to a new value -> print output that shows the updated value",
+       "rank": 1,
+       "screen": ""
+      },
+      {
+       "id": "p4",
+       "pause_at_s": 1612.6,
+       "reveal_at_s": null,
+       "trigger": "concept_complete",
+       "concept": "types",
+       "idea": "classify literal values as string, number or boolean -> predict the type of each value",
+       "rank": 2,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 1612.6,
+     "endS": 2303.8,
+     "title": "String basics and string methods",
+     "format": "mixed",
+     "language": "python",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": [
+      {
+       "id": "p5",
+       "pause_at_s": 2109.2,
+       "reveal_at_s": null,
+       "trigger": "concept_complete",
+       "concept": "strings",
+       "idea": "index characters in a string from zero -> predict the character at a given index",
+       "rank": 1,
+       "screen": ""
+      },
+      {
+       "id": "p6",
+       "pause_at_s": 2281.2,
+       "reveal_at_s": null,
+       "trigger": "demonstration",
+       "concept": "strings",
+       "idea": "chain string methods such as upper, lower and replace -> transform a given string into a target form",
+       "rank": 2,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 2303.8,
+     "endS": 2404.5,
+     "title": "Numbers and basic arithmetic",
+     "format": "code",
+     "language": "python",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": [
+      {
+       "id": "p7",
+       "pause_at_s": 2398.3,
+       "reveal_at_s": null,
+       "trigger": "demonstration",
+       "concept": "operators",
+       "idea": "combine integer and decimal literals with arithmetic operators -> predict the printed result",
+       "rank": 2,
+       "screen": ""
+      }
+     ]
+    }
+   ]
+  },
+  "mB5HXBb_HY8": {
+   "status": "classified",
+   "reason": "The video explains the merge sort algorithm, traces its recursive splitting and merging on example arrays, and derives its time complexity.",
+   "sections": [
+    {
+     "startS": 0.5,
+     "endS": 260.3,
+     "title": "Divide and conquer idea and merge sort pseudocode",
+     "format": "theory",
+     "language": "pseudocode",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": [
+      {
+       "id": "p1",
+       "pause_at_s": 237.9,
+       "reveal_at_s": null,
+       "trigger": "concept_complete",
+       "concept": "recursion",
+       "idea": "write a recursive merge sort outline with low/high base case and mid split, then say which recursive calls are made",
+       "rank": 1,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 260.3,
+     "endS": 600.8,
+     "title": "Tracing merge sort on an eight-element array by indices",
+     "format": "mixed",
+     "language": "pseudocode",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": [
+      {
+       "id": "p2",
+       "pause_at_s": 558.5,
+       "reveal_at_s": null,
+       "trigger": "concept_complete",
+       "concept": "sorting",
+       "idea": "trace recursive split-then-merge of a small unsorted array, listing the sub-ranges at each level",
+       "rank": 1,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 600.8,
+     "endS": 1047.1,
+     "title": "Tracing with numbers and the recursion tree",
+     "format": "mixed",
+     "language": "pseudocode",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": [
+      {
+       "id": "p3",
+       "pause_at_s": 1004.2,
+       "reveal_at_s": null,
+       "trigger": "demonstration",
+       "concept": "sorting",
+       "idea": "trace merge sort on a new small list of numbers, writing each recursive call and merge result in order",
+       "rank": 1,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 1047.1,
+     "endS": 1219.8,
+     "title": "Time complexity via recurrence and master theorem",
+     "format": "theory",
+     "language": "pseudocode",
+     "qualifies": true,
+     "confidence": "medium",
+     "pauses": [
+      {
+       "id": "p4",
+       "pause_at_s": 1200.0,
+       "reveal_at_s": null,
+       "trigger": "concept_complete",
+       "concept": "complexity",
+       "idea": "write the recurrence for a recursive algorithm that halves input and merges in linear time, then pick the master theorem case to get its complexity",
+       "rank": 2,
+       "screen": ""
+      }
+     ]
+    }
+   ]
+  },
+  "pTB0EiLXUC8": {
+   "status": "classified",
+   "reason": "The video explains the four core object-oriented programming concepts (encapsulation, abstraction, inheritance, polymorphism) with conceptual examples and a short outro promoting a course.",
+   "sections": [
+    {
+     "startS": 0.2,
+     "endS": 107.6,
+     "title": "Intro and what encapsulation means",
+     "format": "theory",
+     "language": "pseudocode",
+     "qualifies": true,
+     "confidence": "medium",
+     "pauses": []
+    },
+    {
+     "startS": 107.6,
+     "endS": 212.8,
+     "title": "Encapsulation with employee wage example",
+     "format": "mixed",
+     "language": "pseudocode",
+     "qualifies": true,
+     "confidence": "medium",
+     "pauses": [
+      {
+       "id": "p1",
+       "pause_at_s": 212.8,
+       "reveal_at_s": null,
+       "trigger": "concept_complete",
+       "concept": "oop",
+       "idea": "refactor a procedural function that takes many parameters into an object with those values as properties and a method with fewer parameters",
+       "rank": 1,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 212.8,
+     "endS": 278.3,
+     "title": "Abstraction hiding inner details",
+     "format": "theory",
+     "language": "pseudocode",
+     "qualifies": true,
+     "confidence": "medium",
+     "pauses": [
+      {
+       "id": "p2",
+       "pause_at_s": 278.3,
+       "reveal_at_s": null,
+       "trigger": "concept_complete",
+       "concept": "oop",
+       "idea": "hide some properties and methods of an object behind a simpler public interface so internal changes do not affect outside code",
+       "rank": 2,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 278.3,
+     "endS": 322.6,
+     "title": "Inheritance to remove redundant code",
+     "format": "theory",
+     "language": "pseudocode",
+     "qualifies": true,
+     "confidence": "medium",
+     "pauses": []
+    },
+    {
+     "startS": 322.6,
+     "endS": 410.0,
+     "title": "Polymorphism and recap of the four concepts",
+     "format": "theory",
+     "language": "pseudocode",
+     "qualifies": true,
+     "confidence": "medium",
+     "pauses": []
+    },
+    {
+     "startS": 410.0,
+     "endS": 455.0,
+     "title": "Outro and course promotion",
+     "format": "off_topic",
+     "language": "unknown",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    }
+   ]
+  },
+  "x7X9w_GIm1s": {
+   "status": "not_coding",
+   "reason": "A short overview of the Python language covering its history, readability philosophy, variables, indentation-based blocks, functions, and paradigms, with the outro at the end.",
+   "sections": [
+    {
+     "startS": 0.2,
+     "endS": 145.2,
+     "title": "Python overview",
+     "format": "theory",
+     "language": "python",
+     "qualifies": false,
+     "confidence": "low",
+     "pauses": []
+    }
+   ]
+  },
+  "kCc8FmEb1nY": {
+   "status": "classified",
+   "reason": "A live coding tutorial that builds a GPT-style character-level Transformer from scratch in Python with PyTorch, mixing theory explanations with code.",
+   "sections": [
+    {
+     "startS": 0.2,
+     "endS": 469.4,
+     "title": "Intro, ChatGPT background and project overview",
+     "format": "theory",
+     "language": "unknown",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 469.4,
+     "endS": 510.8,
+     "title": "Setting up Colab notebook and loading the dataset",
+     "format": "mixed",
+     "language": "python",
+     "qualifies": false,
+     "confidence": "medium",
+     "pauses": []
+    },
+    {
+     "startS": 510.8,
+     "endS": 575.0,
+     "title": "Building the character vocabulary with set, list and sort",
+     "format": "code",
+     "language": "python",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": [
+      {
+       "id": "p1",
+       "pause_at_s": 575.0,
+       "reveal_at_s": null,
+       "trigger": "concept_complete",
+       "concept": "sets",
+       "idea": "derive a sorted unique vocabulary from a string by converting to set, then list, then sorting",
+       "rank": 1,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 575.0,
+     "endS": 659.8,
+     "title": "Writing character-level encoder and decoder lookup tables",
+     "format": "code",
+     "language": "python",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": [
+      {
+       "id": "p2",
+       "pause_at_s": 659.8,
+       "reveal_at_s": null,
+       "trigger": "concept_complete",
+       "concept": "dicts",
+       "idea": "build encode and decode lookup tables mapping characters to integers and back for a given string",
+       "rank": 2,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 659.8,
+     "endS": 766.6,
+     "title": "Theory of subword tokenizers (SentencePiece, tiktoken, BPE)",
+     "format": "theory",
+     "language": "unknown",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 766.6,
+     "endS": 851.1,
+     "title": "Encoding the dataset into a torch tensor and train/validation split",
+     "format": "code",
+     "language": "python",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 851.1,
+     "endS": 1086.2,
+     "title": "Chunking the data into blocks and packing multiple training examples",
+     "format": "mixed",
+     "language": "python",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": [
+      {
+       "id": "p3",
+       "pause_at_s": 1022.2,
+       "reveal_at_s": null,
+       "trigger": "demonstration",
+       "concept": "loops",
+       "idea": "for loop over positions t pairing x[:t+1] as context with y[t] as target from a sequence",
+       "rank": 1,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 1086.2,
+     "endS": 1320.5,
+     "title": "Adding a batch dimension and stacking random chunks into batches",
+     "format": "code",
+     "language": "python",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 1320.5,
+     "endS": 1727.0,
+     "title": "Bigram language model with nn.Module, embedding table and cross entropy loss",
+     "format": "code",
+     "language": "python",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": [
+      {
+       "id": "p4",
+       "pause_at_s": 1493.2,
+       "reveal_at_s": null,
+       "trigger": "concept_complete",
+       "concept": "functions",
+       "idea": "embedding lookup that maps each token index to a row of per-token logits",
+       "rank": 1,
+       "screen": ""
+      },
+      {
+       "id": "p5",
+       "pause_at_s": 1706.4,
+       "reveal_at_s": null,
+       "trigger": "demonstration",
+       "concept": "functions",
+       "idea": "reshape a B by T by C tensor to (B*T) by C and compute cross entropy against flattened targets",
+       "rank": 2,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 1727.0,
+     "endS": 1938.3,
+     "title": "Writing the generate function with softmax and multinomial sampling",
+     "format": "code",
+     "language": "python",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": [
+      {
+       "id": "p6",
+       "pause_at_s": 1854.7,
+       "reveal_at_s": null,
+       "trigger": "concept_complete",
+       "concept": "functions",
+       "idea": "sample the next token from softmax probabilities of the last time step's logits with torch.multinomial",
+       "rank": 1,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 1938.3,
+     "endS": 2086.5,
+     "title": "Running generation from a random model and discussing its inefficiency",
+     "format": "code",
+     "language": "python",
+     "qualifies": true,
+     "confidence": "medium",
+     "pauses": []
+    },
+    {
+     "startS": 2086.5,
+     "endS": 2259.7,
+     "title": "Training loop with Adam optimizer and loss tracking",
+     "format": "code",
+     "language": "python",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": [
+      {
+       "id": "p7",
+       "pause_at_s": 2169.8,
+       "reveal_at_s": null,
+       "trigger": "demonstration",
+       "concept": "loops",
+       "idea": "training loop: sample a batch, compute loss, zero gradients, backpropagate, then optimizer step",
+       "rank": 1,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 2259.7,
+     "endS": 2402.9,
+     "title": "Refactoring notebook into a script and adding GPU device support",
+     "format": "mixed",
+     "language": "python",
+     "qualifies": true,
+     "confidence": "medium",
+     "pauses": []
+    }
+   ]
+  },
+  "446E-r0rXHI": {
+   "status": "classified",
+   "reason": "A short overview of the Go programming language covering its history, setup, variables, and concurrency.",
+   "sections": [
+    {
+     "startS": 0.2,
+     "endS": 43.1,
+     "title": "Introduction and history of Go",
+     "format": "theory",
+     "language": "go",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 43.1,
+     "endS": 84.1,
+     "title": "Installing Go and creating a first program",
+     "format": "code",
+     "language": "go",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 84.1,
+     "endS": 125.5,
+     "title": "Variables and type inference in Go",
+     "format": "mixed",
+     "language": "go",
+     "qualifies": true,
+     "confidence": "medium",
+     "pauses": [
+      {
+       "id": "p1",
+       "pause_at_s": 125.5,
+       "reveal_at_s": null,
+       "trigger": "concept_complete",
+       "concept": "variables",
+       "idea": "declare variables with var and the short := syntax, letting Go infer the type, and define several variables on one line",
+       "rank": 1,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 125.5,
+     "endS": 150.6,
+     "title": "Concurrency with goroutines and closing outro",
+     "format": "theory",
+     "language": "go",
+     "qualifies": false,
+     "confidence": "medium",
+     "pauses": []
+    }
+   ]
+  },
+  "-DVyjdw4t9I": {
+   "status": "not_coding",
+   "reason": "This is a podcast conversation with Guido van Rossum about Python's history, design choices and programming culture, not a hands-on tutorial that teaches the learner to write code.",
+   "sections": [
+    {
+     "startS": 0.0,
+     "endS": 361.1,
+     "title": "Intro and programming language as a recipe analogy",
+     "format": "off_topic",
+     "language": "unknown",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 361.1,
+     "endS": 937.6,
+     "title": "Code readability, social software development and indentation style",
+     "format": "theory",
+     "language": "python",
+     "qualifies": false,
+     "confidence": "medium",
+     "pauses": []
+    },
+    {
+     "startS": 937.6,
+     "endS": 1278.1,
+     "title": "Why Python uses indentation instead of braces",
+     "format": "theory",
+     "language": "python",
+     "qualifies": false,
+     "confidence": "medium",
+     "pauses": []
+    },
+    {
+     "startS": 1278.1,
+     "endS": 1559.3,
+     "title": "History of the dollar sign in shell scripts and PHP",
+     "format": "theory",
+     "language": "unknown",
+     "qualifies": false,
+     "confidence": "medium",
+     "pauses": []
+    },
+    {
+     "startS": 1559.3,
+     "endS": 1901.6,
+     "title": "Bugs per line of code and software reliability statistics",
+     "format": "theory",
+     "language": "unknown",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 1901.6,
+     "endS": 2401.0,
+     "title": "Typing, keyboards, typos and tool preferences",
+     "format": "off_topic",
+     "language": "unknown",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    }
+   ]
+  },
+  "8mAITcNt710": {
+   "status": "classified",
+   "reason": "A Harvard CS50 course intro that moves from a welcome and motivation into foundational theory on binary, text encoding, media, and finally a phone-book search algorithm.",
+   "sections": [
+    {
+     "startS": 0.0,
+     "endS": 305.4,
+     "title": "Course welcome and motivation",
+     "format": "off_topic",
+     "language": "unknown",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 305.4,
+     "endS": 830.3,
+     "title": "Computer science as problem solving and counting in binary",
+     "format": "theory",
+     "language": "unknown",
+     "qualifies": false,
+     "confidence": "medium",
+     "pauses": []
+    },
+    {
+     "startS": 830.3,
+     "endS": 1540.6,
+     "title": "Representing letters with ASCII and bytes",
+     "format": "theory",
+     "language": "unknown",
+     "qualifies": false,
+     "confidence": "medium",
+     "pauses": []
+    },
+    {
+     "startS": 1540.6,
+     "endS": 2161.2,
+     "title": "Representing colours, video and compression",
+     "format": "theory",
+     "language": "unknown",
+     "qualifies": false,
+     "confidence": "medium",
+     "pauses": []
+    },
+    {
+     "startS": 2161.2,
+     "endS": 2400.2,
+     "title": "Algorithms: searching a phone book",
+     "format": "mixed",
+     "language": "pseudocode",
+     "qualifies": true,
+     "confidence": "medium",
+     "pauses": [
+      {
+       "id": "p1",
+       "pause_at_s": 2327.0,
+       "reveal_at_s": 2338.9,
+       "trigger": "question_posed",
+       "concept": "searching",
+       "idea": "sorted list lookup: check the middle element and discard the half that cannot contain the target, then repeat on the remaining half",
+       "rank": 1,
+       "screen": "clear"
+      }
+     ]
+    }
+   ]
+  },
+  "dQw4w9WgXcQ": {
+   "status": "not_coding",
+   "reason": "This is a music video of the song Never Gonna Give You Up, with no programming content.",
+   "sections": [
+    {
+     "startS": 1.4,
+     "endS": 211.3,
+     "title": "Music video performance of Never Gonna Give You Up",
+     "format": "off_topic",
+     "language": "unknown",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    }
+   ]
+  },
+  "zjkBMFhNj_g": {
+   "status": "not_coding",
+   "reason": "This is a conceptual talk on how large language models are built, trained, and evaluated, with no code the learner is taught to write, read, or debug.",
+   "sections": [
+    {
+     "startS": 0.2,
+     "endS": 190.5,
+     "title": "Intro and what an LLM is",
+     "format": "theory",
+     "language": "unknown",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 190.5,
+     "endS": 548.8,
+     "title": "Training as compression and next-word prediction",
+     "format": "theory",
+     "language": "unknown",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 548.8,
+     "endS": 843.1,
+     "title": "Inference, hallucination and the Transformer",
+     "format": "theory",
+     "language": "unknown",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 843.1,
+     "endS": 1420.4,
+     "title": "Fine-tuning, assistants and labeling",
+     "format": "theory",
+     "language": "unknown",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 1420.4,
+     "endS": 1547.7,
+     "title": "Leaderboard of open and closed models",
+     "format": "theory",
+     "language": "unknown",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 1547.7,
+     "endS": 1675.9,
+     "title": "Scaling laws",
+     "format": "theory",
+     "language": "unknown",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 1675.9,
+     "endS": 2099.1,
+     "title": "Tool use and multimodality demos",
+     "format": "off_topic",
+     "language": "python",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 2099.1,
+     "endS": 2401.7,
+     "title": "Future directions: System 1/2 thinking and self-improvement",
+     "format": "theory",
+     "language": "unknown",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    }
+   ]
+  },
+  "iG9CE55wbtY": {
+   "status": "not_coding",
+   "reason": "A TED talk by Sir Ken Robinson on creativity and education with no programming content.",
+   "sections": [
+    {
+     "startS": 27.1,
+     "endS": 1165.2,
+     "title": "Sir Ken Robinson talk on creativity in education",
+     "format": "off_topic",
+     "language": "unknown",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    }
+   ]
+  },
+  "UF8uR6Z6KLc": {
+   "status": "not_coding",
+   "reason": "This is a Stanford commencement speech by Steve Jobs about life stories, with no programming instruction.",
+   "sections": [
+    {
+     "startS": 7.5,
+     "endS": 903.8,
+     "title": "Steve Jobs 2005 Stanford commencement address",
+     "format": "off_topic",
+     "language": "unknown",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    }
+   ]
+  },
+  "arj7oStGLkU": {
+   "status": "not_coding",
+   "reason": "This is a TED talk about procrastination psychology and the speaker's personal anecdotes; it contains no programming content.",
+   "sections": [
+    {
+     "startS": 12.6,
+     "endS": 842.6,
+     "title": "Talk on procrastination (whole video)",
+     "format": "off_topic",
+     "language": "unknown",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    }
+   ]
+  },
+  "aircAruvnKk": {
+   "status": "not_coding",
+   "reason": "This is a machine learning theory video about the structure of neural networks, explained with math and diagrams and no code.",
+   "sections": [
+    {
+     "startS": 4.2,
+     "endS": 112.1,
+     "title": "Intro: recognizing handwritten digits",
+     "format": "theory",
+     "language": "pseudocode",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 112.1,
+     "endS": 336.3,
+     "title": "Network layers and activations overview",
+     "format": "theory",
+     "language": "pseudocode",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 336.3,
+     "endS": 531.4,
+     "title": "Why layered structure might work",
+     "format": "theory",
+     "language": "pseudocode",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 531.4,
+     "endS": 806.8,
+     "title": "Weights, biases and sigmoid",
+     "format": "theory",
+     "language": "pseudocode",
+     "qualifies": false,
+     "confidence": "medium",
+     "pauses": []
+    },
+    {
+     "startS": 806.8,
+     "endS": 987.6,
+     "title": "Matrix and vector notation for layers",
+     "format": "theory",
+     "language": "pseudocode",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 987.6,
+     "endS": 1030.7,
+     "title": "Subscribe reminder, Patreon and sponsor",
+     "format": "off_topic",
+     "language": "unknown",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 1030.7,
+     "endS": 1105.6,
+     "title": "Guest discussion of sigmoid and ReLU",
+     "format": "theory",
+     "language": "pseudocode",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    }
+   ]
+  },
+  "spUNpyF58BY": {
+   "status": "not_coding",
+   "reason": "This is a 3Blue1Brown-style math explainer on the Fourier transform as a geometric 'winding' idea, with no code written, run, or read.",
+   "sections": [
+    {
+     "startS": 4.3,
+     "endS": 49.1,
+     "title": "Introduction and goals",
+     "format": "off_topic",
+     "language": "unknown",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 49.1,
+     "endS": 633.6,
+     "title": "Winding signals around a circle to find frequencies",
+     "format": "theory",
+     "language": "pseudocode",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 633.6,
+     "endS": 700.8,
+     "title": "Motivating application: sound editing and inverse transform",
+     "format": "theory",
+     "language": "pseudocode",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 700.8,
+     "endS": 1105.2,
+     "title": "Deriving the Fourier transform formula",
+     "format": "theory",
+     "language": "pseudocode",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 1105.2,
+     "endS": 1171.8,
+     "title": "Infinite bounds and channel outro",
+     "format": "off_topic",
+     "language": "unknown",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    }
+   ]
+  },
+  "oBt53YbR9Kk": {
+   "status": "classified",
+   "reason": "The video is a JavaScript dynamic programming course that teaches recursion, complexity analysis, and memoization through Fibonacci and grid-path examples, with a short course intro at the start.",
+   "sections": [
+    {
+     "startS": 3.7,
+     "endS": 200.5,
+     "title": "Course intro and prerequisites",
+     "format": "off_topic",
+     "language": "unknown",
+     "qualifies": false,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 200.5,
+     "endS": 357.9,
+     "title": "Writing a recursive Fibonacci function",
+     "format": "code",
+     "language": "javascript",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": [
+      {
+       "id": "p1",
+       "pause_at_s": 337.2,
+       "reveal_at_s": null,
+       "trigger": "demonstration",
+       "concept": "recursion",
+       "idea": "write a recursive function with a base case and two recursive calls that sum the previous two results",
+       "rank": 1,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 357.9,
+     "endS": 650.7,
+     "title": "Drawing the recursion tree for fib of 7",
+     "format": "theory",
+     "language": "pseudocode",
+     "qualifies": true,
+     "confidence": "medium",
+     "pauses": [
+      {
+       "id": "p2",
+       "pause_at_s": 650.7,
+       "reveal_at_s": null,
+       "trigger": "concept_complete",
+       "concept": "recursion",
+       "idea": "trace a recursive call tree bottom-up, summing child return values for a given n",
+       "rank": 1,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 650.7,
+     "endS": 899.2,
+     "title": "Time and space complexity of foo and bar",
+     "format": "theory",
+     "language": "pseudocode",
+     "qualifies": true,
+     "confidence": "medium",
+     "pauses": []
+    },
+    {
+     "startS": 899.2,
+     "endS": 1209.4,
+     "title": "Did function: recursion tree, time and call-stack space",
+     "format": "theory",
+     "language": "pseudocode",
+     "qualifies": true,
+     "confidence": "medium",
+     "pauses": [
+      {
+       "id": "p3",
+       "pause_at_s": 1098.8,
+       "reveal_at_s": null,
+       "trigger": "concept_complete",
+       "concept": "complexity",
+       "idea": "derive exponential time from node count doubling at each level of a binary recursion tree",
+       "rank": 1,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 1209.4,
+     "endS": 1419.4,
+     "title": "Lib function and the implications of 2 to the n",
+     "format": "theory",
+     "language": "pseudocode",
+     "qualifies": true,
+     "confidence": "medium",
+     "pauses": []
+    },
+    {
+     "startS": 1419.4,
+     "endS": 1553.4,
+     "title": "Overlapping subproblems and the definition of dynamic programming",
+     "format": "theory",
+     "language": "pseudocode",
+     "qualifies": true,
+     "confidence": "medium",
+     "pauses": [
+      {
+       "id": "p4",
+       "pause_at_s": 1532.4,
+       "reveal_at_s": null,
+       "trigger": "concept_complete",
+       "concept": "dynamic-programming",
+       "idea": "spot repeated identical subtrees in a recursion tree as overlapping subproblems",
+       "rank": 1,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 1553.4,
+     "endS": 1782.3,
+     "title": "Adding a memo object and checking for existing keys",
+     "format": "code",
+     "language": "javascript",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": []
+    },
+    {
+     "startS": 1782.3,
+     "endS": 1914.8,
+     "title": "Storing results and passing the memo through recursive calls",
+     "format": "code",
+     "language": "javascript",
+     "qualifies": true,
+     "confidence": "high",
+     "pauses": [
+      {
+       "id": "p5",
+       "pause_at_s": 1872.0,
+       "reveal_at_s": null,
+       "trigger": "demonstration",
+       "concept": "dynamic-programming",
+       "idea": "add a memo argument defaulting to an empty object and store each result before returning",
+       "rank": 1,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 1914.8,
+     "endS": 2157.3,
+     "title": "Tracing memoized fib of 6",
+     "format": "theory",
+     "language": "pseudocode",
+     "qualifies": true,
+     "confidence": "medium",
+     "pauses": [
+      {
+       "id": "p6",
+       "pause_at_s": 2157.3,
+       "reveal_at_s": null,
+       "trigger": "concept_complete",
+       "concept": "dynamic-programming",
+       "idea": "trace a memoized recursion and mark which calls return cached values early",
+       "rank": 2,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 2157.3,
+     "endS": 2320.6,
+     "title": "Complexity of memoized fib is linear",
+     "format": "theory",
+     "language": "pseudocode",
+     "qualifies": true,
+     "confidence": "medium",
+     "pauses": [
+      {
+       "id": "p7",
+       "pause_at_s": 2320.6,
+       "reveal_at_s": null,
+       "trigger": "concept_complete",
+       "concept": "complexity",
+       "idea": "count unique subproblems to derive the time complexity of a memoized recursion",
+       "rank": 1,
+       "screen": ""
+      }
+     ]
+    },
+    {
+     "startS": 2320.6,
+     "endS": 2403.6,
+     "title": "Introducing the grid traveler problem",
+     "format": "theory",
+     "language": "pseudocode",
+     "qualifies": true,
+     "confidence": "medium",
+     "pauses": []
+    }
+   ]
+  }
+ },
+ "model": "claude-haiku-5-5"
+}

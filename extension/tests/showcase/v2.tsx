@@ -4,6 +4,7 @@ import css from '../../src/ui/theme.css?inline';
 import { ConceptQuestionPanel, FeedbackCard, LearnerSettings, LevelUp, RefresherPrompt, TopicNotAvailable, defaultSettings } from '../../src/ui/v2';
 import { ProfilePage, ProfileView } from '../../src/profile-ui';
 import { PracticePanel } from '../../src/ui/PracticePanel';
+import { TimelineChallenges } from '../../src/ui/TimelineChallenges';
 import practice from '../../../contracts/practice-response.fixture.json';
 import type { Breakpoint } from '../../src/contracts';
 import type { ExercisePlan, FeedbackResult, Language, PlanQuestion, PublicProfile } from '../../src/v2/types';
@@ -11,6 +12,15 @@ import plan from '../../../contracts/v2/exercise-plan.fixture.json';
 import failed from '../../../contracts/v2/feedback-result.failed.fixture.json';
 import passed from '../../../contracts/v2/feedback-result.passed.fixture.json';
 import profile from '../../../contracts/v2/public-profile.fixture.json';
+import { ACCOUNT_KEY, SETTINGS_KEY, readAccount, readSettings } from '../../src/plan/settings';
+
+// The preview has no extension context; production uses A3's browser helpers.
+const previewPreferences = {
+  async loadActiveAccount() { return readAccount(JSON.parse(localStorage.getItem(ACCOUNT_KEY) ?? 'null')); },
+  async loadLearnerSettings() { return readSettings(JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? 'null') ?? undefined); },
+  async setActiveAccount(value: string) { localStorage.setItem(ACCOUNT_KEY, JSON.stringify(value)); },
+  async saveLearnerSettings(value: typeof defaultSettings) { localStorage.setItem(SETTINGS_KEY, JSON.stringify(value)); },
+};
 
 const params = new URLSearchParams(location.search);
 const state = params.get('state') ?? 'question';
@@ -35,7 +45,17 @@ function Showcase() {
   const [checking, setChecking] = useState(state === 'question-checking');
   const [action, setAction] = useState('');
   const [accountId, setAccountId] = useState('test-ana');
-  if (state === 'profile-live') return <ProfilePage />;
+  if (state === 'timeline') {
+    const pauses = (plan as ExercisePlan).pauses.map((pause, index) => ({ ...pause, pauseAtS: 1000 + index * 20 }));
+    return <><TimelineChallenges durationS={10000} pauses={[
+      ...pauses,
+      { ...pauses[0]!, id: 'nearby', pauseAtS: pauses[0]!.pauseAtS + 10 },
+      { ...pauses[0]!, id: 'later', pauseAtS: 9000 },
+      { ...pauses[0]!, id: 'not-ready', ready: false, pauseAtS: 8000 },
+      { ...pauses[0]!, id: 'missing-exercise', exercise: null, pauseAtS: 7000 },
+    ]} passedIds={new Set(['later'])} onOpen={setAction} /><output aria-label="Opened challenge">{action}</output></>;
+  }
+  if (state === 'profile-live') return <ProfilePage preferences={previewPreferences} />;
   if (state === 'profile') return <ProfileView profile={profile as PublicProfile} />;
   if (state === 'coding-language' || state === 'coding-accounts') {
     const language = (params.get('language') ?? 'javascript') as Language;

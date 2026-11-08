@@ -26,7 +26,7 @@ from ..runners import (
 )
 from .diagnosis import diagnose, FailingCase
 from .optimization import analyze_success
-from .concepts import grade_multiple_choice, grade_predict_output, grade_short_answer
+from .concepts import explain_wrong_answer, grade_multiple_choice, grade_predict_output, grade_short_answer
 from .exercise_store import get_store, StoredExercise
 
 logger = logging.getLogger("breakpoint.feedback")
@@ -306,6 +306,17 @@ class AnswerRequest(BaseModel):
     learnerLevel: str = "beginner-1"
 
 
+def _planner_explanation(question_id: str) -> str | None:
+    """The planner's stored "why this is right" text for one of its questions, if any."""
+    try:
+        from ..planner import find_question as planner_find_question
+        priv = planner_find_question(question_id)
+        text = (getattr(priv, "explanation", "") or "").strip() if priv is not None else ""
+        return text or None
+    except Exception:
+        return None
+
+
 @router.post("/answer")
 async def answer(body: AnswerRequest) -> JSONResponse:
     request_id = uuid.uuid4().hex[:12]
@@ -375,10 +386,26 @@ async def answer(body: AnswerRequest) -> JSONResponse:
     else:
         return _error(422, "UNKNOWN_STYLE", f"unsupported question style: {question.style}", request_id=request_id)
 
-    # Use the refresher's curated explanation when available
-    explanation_text = result.explanation
-    if refresher_explanation:
-        explanation_text = refresher_explanation if result.correct else f"{result.explanation} {refresher_explanation}"
+    # The curated "why it's right" text: refresher explanation, else the planner's stored one
+    # (planner questions reach the store via register_question, which carries no explanation).
+    stored_explanation = refresher_explanation or _planner_explanation(body.questionId)
+
+    wrong = None
+    if result.correct:
+        explanation_text = stored_explanation or result.explanation
+    else:
+        # Coach the specific mistake; never reveal the answer so the learner can retry.
+        wrong = await explain_wrong_answer(
+            style=question.style or "",
+            prompt=question.prompt or question.statement,
+            learner_answer=body.answer,
+            correct_answer=question.correctAnswer or "",
+            explanation=stored_explanation or "",
+            choices=question.choices,
+            concept_name=concept_name,
+            learner_level=body.learnerLevel,
+        )
+        explanation_text = wrong.whyWrong
 
     feedback = {
         "schemaVersion": 2,
@@ -387,9 +414,27 @@ async def answer(body: AnswerRequest) -> JSONResponse:
         "concept": {"id": concept_id, "name": concept_name},
         "assessedLevel": body.learnerLevel,
         "summary": explanation_text,
-        "success": {"explanation": explanation_text, "optimization": None} if result.correct else None,
-        "diagnosis": None,
-        "aiGenerated": result.aiGenerated,
+        # Concept answers have no code, so complexity is explicitly not applicable (frozen contract: never null).
+        "success": {
+            "explanation": explanation_text,
+            "optimization": {
+                "show": False,
+                "learner": {"time": "n/a", "space": "n/a"},
+                "best": {"time": "n/a", "space": "n/a"},
+                "tip": None,
+                "betterSolution": None,
+            },
+        } if result.correct else None,
+        "diagnosis": None if wrong is None else {
+            "misconception": {
+                "id": f"{concept_id}-concept-misread",
+                "name": wrong.misconception,
+                "explanation": wrong.nextStep,
+            },
+            "lines": [],
+            "failingCase": None,
+        },
+        "aiGenerated": result.aiGenerated or bool(wrong and wrong.aiGenerated),
     }
 
     return JSONResponse(

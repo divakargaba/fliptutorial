@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { PublicProfile } from '../v2/types';
 import levels from '../../../contracts/v2/levels.json';
-import { ACCOUNT_KEY, conceptName, defaultSettings, LearnerSettings, SETTINGS_KEY, type LearnerSettingsValue } from '../ui/v2';
+import { conceptName, defaultSettings, LearnerSettings, type LearnerSettingsValue } from '../ui/v2';
 import { z } from 'zod';
 
 const accountSchema = z.object({ accountId: z.string().min(1), displayName: z.string() });
@@ -12,18 +12,17 @@ const profileSchema = z.object({
   topInDemand: z.array(z.object({ concept: z.string(), reason: z.string(), videoUrl: z.string() })),
   complements: z.array(z.object({ accountId: z.string(), displayName: z.string(), why: z.string() })),
 });
-const settingsSchema = z.object({ frequency: z.enum(['few', 'normal', 'many']), autoPause: z.boolean(), disabledVideos: z.array(z.string()) });
 export type LocalAccount = { accountId: string; displayName: string };
-function storage() {
-  const api = (globalThis as typeof globalThis & { chrome?: { storage?: { local?: {
-    get(keys: string[]): Promise<Record<string, unknown>>; set(values: Record<string, unknown>): Promise<void>;
-  } } } }).chrome?.storage?.local;
-  if (!api) throw new Error('Local extension storage is unavailable.');
-  return api;
-}
+type Preferences = Pick<typeof import('../plan/preferences'), 'loadLearnerSettings' | 'saveLearnerSettings' | 'loadActiveAccount' | 'setActiveAccount'>;
+const preferences: Preferences = {
+  loadLearnerSettings: async () => (await import('../plan/preferences')).loadLearnerSettings(),
+  saveLearnerSettings: async value => (await import('../plan/preferences')).saveLearnerSettings(value),
+  loadActiveAccount: async () => (await import('../plan/preferences')).loadActiveAccount(),
+  setActiveAccount: async value => (await import('../plan/preferences')).setActiveAccount(value),
+};
 let writeQueue = Promise.resolve();
-function persist(values: Record<string, unknown>) {
-  const next = writeQueue.catch(() => {}).then(() => storage().set(values));
+function persist(save: () => Promise<void>) {
+  const next = writeQueue.catch(() => {}).then(save);
   writeQueue = next;
   return next;
 }
@@ -62,7 +61,7 @@ export function ProfileView({ profile }: { profile: PublicProfile }) {
     <section className="bp-v2-card"><h2>Complementary teammates</h2>{!profile.complements.length && <p>No complementary profiles yet.</p>}{profile.complements.map(person => <div key={person.accountId}><h3>{person.displayName}</h3><p>{person.why}</p></div>)}</section>
   </article>;
 }
-export function ProfilePage() {
+export function ProfilePage({ preferences: prefs = preferences }: { preferences?: Preferences } = {}) {
   const [accounts, setAccounts] = useState<LocalAccount[]>([]);
   const [account, setAccount] = useState('');
   const [profile, setProfile] = useState<PublicProfile | null>(null);
@@ -74,22 +73,21 @@ export function ProfilePage() {
   useEffect(() => {
     const controller = new AbortController();
     setError(''); setProfile(null); setAccount('');
-    const saved = storage().get([ACCOUNT_KEY, SETTINGS_KEY]).then(stored => {
+    const saved = Promise.all([prefs.loadActiveAccount(), prefs.loadLearnerSettings()]).then(([accountId, settings]) => {
       if (!controller.signal.aborted) {
-        const parsed = settingsSchema.safeParse(stored[SETTINGS_KEY]);
-        setSettings(parsed.success ? parsed.data : defaultSettings); setStorageReady(true);
+        setSettings(settings); setStorageReady(true);
       }
-      return stored;
+      return accountId;
     });
     void Promise.all([get('/v2/accounts', controller.signal), saved]).then(([data, stored]) => {
       if (controller.signal.aborted) return;
       const parsed = z.union([z.array(accountSchema), z.object({ accounts: z.array(accountSchema) }).transform(value => value.accounts)]).parse(data);
       setAccounts(parsed);
-      setAccount(parsed.some(item => item.accountId === stored[ACCOUNT_KEY]) ? stored[ACCOUNT_KEY] as string : parsed[0]?.accountId ?? '');
+      setAccount(parsed.some(item => item.accountId === stored) ? stored : parsed[0]?.accountId ?? '');
       if (!parsed.length) setError('No local test accounts are available yet.');
     }).catch(cause => { if (!controller.signal.aborted) setError(loadError(cause)); });
     return () => controller.abort();
-  }, [retry]);
+  }, [retry, prefs]);
   useEffect(() => {
     if (!account) return;
     const controller = new AbortController();
@@ -104,13 +102,14 @@ export function ProfilePage() {
   }, [account]);
   return <main className="bp-v2 bp-v2-profile"><header><strong>Breakpoint</strong></header>
     {!!accounts.length && <label className="bp-v2-setting">Test account<select value={account} onChange={event => {
-      setAccount(event.target.value);
-      void persist({ [ACCOUNT_KEY]: event.target.value }).catch(() => setSavingError('Account selection could not be saved.'));
+      const accountId = event.target.value;
+      setAccount(accountId); setSavingError('');
+      void persist(() => prefs.setActiveAccount(accountId)).catch(() => setSavingError('Account selection could not be saved.'));
     }}>{accounts.map(item => <option key={item.accountId} value={item.accountId}>{item.displayName}</option>)}</select></label>}
     {error ? <div role="alert"><p>{error}</p><button onClick={() => setRetry(value => value + 1)}>Retry</button></div> : profile ? <ProfileView profile={profile} /> : <p role="status">Loading profile…</p>}
     {storageReady && <LearnerSettings value={settings} onChange={value => {
       setSettings(value); setSavingError('');
-      void persist({ [SETTINGS_KEY]: value }).catch(() => setSavingError('Practice settings could not be saved.'));
+      void persist(() => prefs.saveLearnerSettings(value)).catch(() => setSavingError('Practice settings could not be saved.'));
     }} />}{savingError && <p role="alert">{savingError}</p>}
   </main>;
 }

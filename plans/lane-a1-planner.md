@@ -68,6 +68,9 @@ Any YouTube video id → a cached, timestamped exercise plan before the learner 
   Two live runs (`claude-haiku-5-5`, the live classification path): section "qualifies" precision 0.918 / 0.962, recall 0.876 / 0.874,
   and 77/78 pauses inside labelled teaching and before a labelled answer. That meets the bar (precision ≥ 0.9 in every run), so auto-pause
   can be on. Every false positive is a "create project + Hello World" setup boundary. No non-coding video got a qualifying section.
+- [x] Setup boundary tightened (lead follow-up): the classifier prompt now puts setup (install tools, create a project, tour files/IDE,
+  run the starter Hello World) in its own non-qualifying section with no pauses. Two new live runs: precision **1.000 / 1.000**
+  (0 FP, lower bound 0.953), recall 0.830 / 0.782 (was 0.876 / 0.874), pauses 80/80 correct. The earlier runs are kept as `results-v1-run*.json`.
   Harness: `python -m app.planner.evaluate run|score` (`app/planner/evaluate.py`); offline scoring tests are in `tests/test_planner_eval.py` (7/7).
 - [x] Classification progress is saved after every ~40-min window (`classifyProgress` in the plan cache: windows done, numberer state, caption digest).
   A restarted backend resumes at the next window with the same section/pause ids and ranks, and reuses items already generated. If the captions changed
@@ -81,3 +84,22 @@ Any YouTube video id → a cached, timestamped exercise plan before the learner 
   A2's `find_exercise` fallback gets the real language. Offline: `tests/test_planner_languages.py` 26/26. Live 2026-11-08: A2's
   runners at `8a8cacc` on ce.judge0.com verified JS/Java/C++ sum loops, a Java String and a C++ bool exercise; a Java known-wrong
   that does not compile was rejected. SQL is not planned (its exercises have a different shape).
+- [x] Coding first (lead 6717767247): `planned_kind` gives every pause in a code/mixed section in a gradable language a coding
+  exercise, including `concept_complete` (the coding prompt then asks for a NEW problem applying the idea). Concept questions
+  stay for theory, unsupported languages and generation/verify failures. Live eval run 3 (`results-run3.json`, 26 videos,
+  `claude-haiku-5-5`): precision 1.000 (79/79, lower bound 0.954), recall 0.814, pauses 74/74. Planned coding : MC is
+  **45 : 29** (20 : 54 under the old rule); runs 1/2 rescored give 50 : 30 and 45 : 31. These kinds are planned before
+  generation, so a verify fallback can still turn a coding pause into MC. Report: `backend/content/eval/REPORT.md`.
+- [x] Multi-language Test me (backend): `app.testme` writes Python, JavaScript, Java or C++ in one model call, using the
+  planner's per-language shapes and `check_coding`, and verifies non-Python through `app.planner.runner_verify` (A2 runners).
+  The `/v1/test-me` response keys are unchanged; only `exercise.language` differs. Non-Python is off until
+  `BREAKPOINT_TESTME_LANGUAGES=python,javascript,java,cpp` is set, because two things outside A1 still assume Python:
+  the extension's v1 `ExerciseSchema` (`language: z.literal('python')`, A3) and `/v1/submissions` (`grader.grade` is the
+  Python wrapper, lead's `main.py`). No `main.py` change was needed. The v1 shape cannot carry a concept question, so where
+  coding is impossible Test me still answers `NOT_PYTHON` / `GENERATOR_UNAVAILABLE`. Offline: `tests/test_testme_languages.py`.
+- [x] Non-Python `/v1/submissions` (lead handoff 6718339579, `backend/app/main.py`): exercises whose `language` isn't python
+  (Test me javascript/java/cpp) are graded by `app.runners.get_runner(language).grade(...)` and mapped to `SubmissionResponse`
+  (visible/hidden results, same 409/410/404 resolution; 503/504/429 from `RunnerUnavailable`/`RunnerTimeout`/`RunnerBusy`;
+  422 `UNSUPPORTED_LANGUAGE` with no runner). A passing submit unlocks `/v1/analysis` as for Python. Python keeps `grader.grade`.
+  `_resolve_exercise` needed no change (already language-agnostic). Offline: `tests/test_submissions_languages.py` (Judge0 stubbed
+  at the runner's submit/poll). Default-on for all four languages waits on A3's `ExerciseSchema` change.
