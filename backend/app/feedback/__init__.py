@@ -522,11 +522,14 @@ async def hint(body: V2HintRequest) -> JSONResponse:
     from ..hints import LastResult
 
     hint_lang = exercise.language if exercise.language in ("python", "javascript", "java", "cpp", "sql") else "python"
+    # ApprovedExercise is the frozen Python catalog shape; it only carries the exercise text here.
+    # The real language goes to the hint service (doc index) and into the statement for the model.
+    statement = exercise.statement if hint_lang == "python" else f"(Language: {exercise.language})\n{exercise.statement}"
     approved = ApprovedExercise(
         id=exercise.id,
         title=exercise.title,
-        statement=exercise.statement,
-        language=hint_lang,
+        statement=statement,
+        language="python",
         functionName=exercise.functionName,
         starterCode=exercise.starterCode,
         conceptTags=exercise.concepts,
