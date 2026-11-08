@@ -148,3 +148,20 @@ test('codex runner commits, pushes and posts the agent handoff outside the sandb
   const last = f.read().comments.at(-1).body;
   assert.match(last, /^\[Mico\] @all feature done\n\nCommit: [0-9a-f]{7}/);
 });
+
+test('lane mode works on lane/<lane>, pushes that branch and leaves main alone', t => {
+  const f = fixture(t);
+  f.update({ agentWrites:{ 'lane.txt':'x\n', '.autopilot/commit-msg':'Lane work\n' } });
+  const ident = { GIT_AUTHOR_NAME:'Mico', GIT_AUTHOR_EMAIL:'m@example.invalid', GIT_COMMITTER_NAME:'Mico', GIT_COMMITTER_EMAIL:'m@example.invalid' };
+  succeeds(f.run('autopilot', ['--once','codex'], { AUTOPILOT_NAME:'Mico', AUTOPILOT_LANE:'a1-test', ...ident }));
+  const git = (...args) => spawnSync(realGit, args, { cwd:f.repo, encoding:'utf8' }).stdout.trim();
+  assert.equal(git('rev-parse','--abbrev-ref','HEAD'), 'lane/a1-test');
+  assert.equal(git('log','-1','--format=%s','origin/lane/a1-test'), 'Lane work');
+  assert.equal(git('log','-1','--format=%s','origin/main'), 'fixture');
+  assert.match(f.read().agentArgs.at(-1), /lane\/a1-test/);
+});
+
+test('lane names are validated', t => {
+  const f = fixture(t);
+  assert.notEqual(f.run('autopilot', ['--once','codex'], { AUTOPILOT_LANE:'../main' }).status, 0);
+});

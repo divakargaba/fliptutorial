@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 2,
+  "exerciseId": "g-rfsc-exp-1",
+  "outcome": "passed",
+  "concept": {
+    "id": "loops",
+    "name": "Loops"
+  },
+  "assessedLevel": "intermediate-1",
+  "summary": "You used a loop to repeat a multiplication: that's accumulation.",
+  "success": {
+    "explanation": "This tested accumulating a result across loop iterations.",
+    "optimization": {
+      "show": true,
+      "learner": {
+        "time": "O(n)",
+        "space": "O(1)"
+      },
+      "best": {
+        "time": "O(log n)",
+        "space": "O(1)"
+      },
+      "tip": "Square the base and halve the exponent each step.",
+      "betterSolution": "def raise_to_power(b, p):\n    r = 1\n    while p:\n        if p % 2:\n            r *= b\n        b *= b\n        p //= 2\n    return r\n"
+    }
+  },
+  "diagnosis": null,
+  "aiGenerated": true
+}

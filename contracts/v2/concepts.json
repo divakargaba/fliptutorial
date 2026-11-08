@@ -1,0 +1,181 @@
+{
+  "schemaVersion": 2,
+  "note": "Stable concept ids shared by planner, feedback, profile and UI. Add new ids only through the lead.",
+  "concepts": [
+    {
+      "id": "variables",
+      "name": "Variables & assignment",
+      "group": "fundamentals"
+    },
+    {
+      "id": "types",
+      "name": "Data types & conversion",
+      "group": "fundamentals"
+    },
+    {
+      "id": "operators",
+      "name": "Arithmetic & comparison operators",
+      "group": "fundamentals"
+    },
+    {
+      "id": "strings",
+      "name": "Strings",
+      "group": "fundamentals"
+    },
+    {
+      "id": "io",
+      "name": "Input & output",
+      "group": "fundamentals"
+    },
+    {
+      "id": "conditionals",
+      "name": "Conditionals",
+      "group": "control-flow"
+    },
+    {
+      "id": "loops",
+      "name": "Loops",
+      "group": "control-flow"
+    },
+    {
+      "id": "functions",
+      "name": "Functions",
+      "group": "control-flow"
+    },
+    {
+      "id": "recursion",
+      "name": "Recursion",
+      "group": "control-flow"
+    },
+    {
+      "id": "errors",
+      "name": "Errors & exceptions",
+      "group": "control-flow"
+    },
+    {
+      "id": "lists",
+      "name": "Lists / arrays",
+      "group": "data-structures"
+    },
+    {
+      "id": "dicts",
+      "name": "Dictionaries / hash maps",
+      "group": "data-structures"
+    },
+    {
+      "id": "sets",
+      "name": "Sets",
+      "group": "data-structures"
+    },
+    {
+      "id": "stacks-queues",
+      "name": "Stacks & queues",
+      "group": "data-structures"
+    },
+    {
+      "id": "linked-lists",
+      "name": "Linked lists",
+      "group": "data-structures"
+    },
+    {
+      "id": "trees",
+      "name": "Trees",
+      "group": "data-structures"
+    },
+    {
+      "id": "graphs",
+      "name": "Graphs",
+      "group": "data-structures"
+    },
+    {
+      "id": "heaps",
+      "name": "Heaps",
+      "group": "data-structures"
+    },
+    {
+      "id": "sorting",
+      "name": "Sorting",
+      "group": "algorithms"
+    },
+    {
+      "id": "searching",
+      "name": "Searching & binary search",
+      "group": "algorithms"
+    },
+    {
+      "id": "two-pointers",
+      "name": "Two pointers & sliding window",
+      "group": "algorithms"
+    },
+    {
+      "id": "dynamic-programming",
+      "name": "Dynamic programming",
+      "group": "algorithms"
+    },
+    {
+      "id": "greedy",
+      "name": "Greedy algorithms",
+      "group": "algorithms"
+    },
+    {
+      "id": "complexity",
+      "name": "Time & space complexity",
+      "group": "theory"
+    },
+    {
+      "id": "oop",
+      "name": "Classes & objects",
+      "group": "paradigms"
+    },
+    {
+      "id": "functional",
+      "name": "Functional programming",
+      "group": "paradigms"
+    },
+    {
+      "id": "sql-select",
+      "name": "SQL: SELECT & filtering",
+      "group": "databases"
+    },
+    {
+      "id": "sql-joins",
+      "name": "SQL: joins & aggregation",
+      "group": "databases"
+    },
+    {
+      "id": "js-dom",
+      "name": "JavaScript: DOM & events",
+      "group": "web"
+    },
+    {
+      "id": "js-async",
+      "name": "JavaScript: async & promises",
+      "group": "web"
+    },
+    {
+      "id": "react-components",
+      "name": "React: components & props",
+      "group": "web"
+    },
+    {
+      "id": "react-state",
+      "name": "React: state & effects",
+      "group": "web"
+    },
+    {
+      "id": "http-apis",
+      "name": "HTTP & APIs",
+      "group": "web"
+    },
+    {
+      "id": "git",
+      "name": "Git & version control",
+      "group": "tools"
+    },
+    {
+      "id": "testing",
+      "name": "Testing",
+      "group": "tools"
+    }
+  ]
+}

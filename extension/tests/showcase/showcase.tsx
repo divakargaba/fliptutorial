@@ -116,7 +116,7 @@ function Shell() {
     createRoot(mount).render(<>
       <Badge state="ready" total={1} remaining={panel ? 0 : 1} solved={0} active={panel} nextAtS={breakpoint.pauseAtS} onOpen={() => {}} />
       {panel && <div style={{ width: '100%' }}><HintsContext.Provider value={hintsStub}><PracticePanel videoId="rfscVS0vtbw" revision="demo" breakpoint={breakpoint}
-        attempt="editing" result={null} error={null} canResume={false}
+        attempt="editing" result={null} error={null} canResume={false} ownsPause
         onRun={() => {}} onSubmit={() => {}} onSkip={() => {}} onResume={() => {}} onClose={() => {}} {...props[state]} /></HintsContext.Provider></div>}
     </>);
   };

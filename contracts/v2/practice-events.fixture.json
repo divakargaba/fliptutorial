@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 2,
+  "events": [
+    {
+      "id": "e1",
+      "accountId": "test-ana",
+      "at": "2026-11-08T03:01:00Z",
+      "type": "watched",
+      "videoId": "rfscVS0vtbw",
+      "watchedS": [
+        9600,
+        9803.3
+      ]
+    },
+    {
+      "id": "e2",
+      "accountId": "test-ana",
+      "at": "2026-11-08T03:02:10Z",
+      "type": "failed",
+      "videoId": "rfscVS0vtbw",
+      "exerciseId": "g-rfsc-exp-1",
+      "concepts": [
+        "loops",
+        "functions"
+      ],
+      "level": "beginner-1",
+      "attempts": 1,
+      "hintsUsed": 0,
+      "misconception": "loop-no-progress"
+    },
+    {
+      "id": "e3",
+      "accountId": "test-ana",
+      "at": "2026-11-08T03:03:30Z",
+      "type": "hint_used",
+      "videoId": "rfscVS0vtbw",
+      "exerciseId": "g-rfsc-exp-1",
+      "concepts": [
+        "loops"
+      ],
+      "hintLevel": 1
+    },
+    {
+      "id": "e4",
+      "accountId": "test-ana",
+      "at": "2026-11-08T03:04:05Z",
+      "type": "passed",
+      "videoId": "rfscVS0vtbw",
+      "exerciseId": "g-rfsc-exp-1",
+      "concepts": [
+        "loops",
+        "functions"
+      ],
+      "level": "beginner-1",
+      "attempts": 2,
+      "hintsUsed": 1,
+      "optimal": false
+    },
+    {
+      "id": "e5",
+      "accountId": "test-ana",
+      "at": "2026-11-08T03:05:00Z",
+      "type": "skipped",
+      "videoId": "rfscVS0vtbw",
+      "exerciseId": "q-rfsc-2d-1",
+      "concepts": [
+        "lists"
+      ]
+    },
+    {
+      "id": "e6",
+      "accountId": "test-ana",
+      "at": "2026-11-09T18:00:00Z",
+      "type": "refresher_answered",
+      "concepts": [
+        "loops"
+      ],
+      "correct": true
+    }
+  ]
+}

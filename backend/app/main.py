@@ -51,6 +51,15 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Breakpoint", lifespan=lifespan)
 
+# Roadmap v2 lanes: one router per lane, wired once by the lead. Lanes never edit this file.
+from .feedback import router as feedback_router  # noqa: E402  lane A2
+from .planner import router as planner_router  # noqa: E402  lane A1
+from .profile import router as profile_router  # noqa: E402  lane B1
+
+app.include_router(planner_router)
+app.include_router(feedback_router)
+app.include_router(profile_router)
+
 # CORS for the Chrome extension
 app.add_middleware(
     CORSMiddleware,

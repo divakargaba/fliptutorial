@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 2,
+  "videoId": "dQw4w9WgXcQ",
+  "planId": "plan-dQw4w9WgXcQ-01",
+  "status": "not_coding",
+  "generatedAt": "2026-11-08T03:00:00Z",
+  "learnerLevel": "beginner-1",
+  "verdict": {
+    "qualifies": false,
+    "reason": "Music video; no programming is taught or demonstrated.",
+    "evidence": [
+      {
+        "startS": 0,
+        "endS": 15,
+        "text": "We're no strangers to love"
+      }
+    ]
+  },
+  "sections": [],
+  "pauses": []
+}

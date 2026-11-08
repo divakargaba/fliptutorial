@@ -27,3 +27,4 @@ Thumbs.db
 backend/content/drafts/*
 !backend/content/drafts/.gitkeep
 .autopilot/
+backend/data/

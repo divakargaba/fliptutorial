@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 2,
+  "exerciseId": "g-rfsc-exp-1",
+  "outcome": "failed",
+  "concept": {
+    "id": "loops",
+    "name": "Loops"
+  },
+  "assessedLevel": "beginner-1",
+  "summary": "Your loop never changes the value it checks, so it never ends.",
+  "success": null,
+  "diagnosis": {
+    "misconception": {
+      "id": "loop-no-progress",
+      "name": "Loop condition never changes",
+      "explanation": "A while loop keeps going until its condition is false; nothing inside updates pow_num."
+    },
+    "lines": [
+      {
+        "line": 3,
+        "note": "while pow_num > 0 checks pow_num…"
+      },
+      {
+        "line": 4,
+        "note": "…but this line never changes it"
+      }
+    ],
+    "failingCase": {
+      "args": [
+        2,
+        3
+      ],
+      "expected": 8,
+      "actual": null,
+      "error": "time_limit"
+    }
+  },
+  "aiGenerated": true
+}

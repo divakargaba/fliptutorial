@@ -1,0 +1,161 @@
+{
+  "schemaVersion": 2,
+  "videoId": "rfscVS0vtbw",
+  "planId": "plan-rfscVS0vtbw-7f3a",
+  "status": "ready",
+  "generatedAt": "2026-11-08T03:00:00Z",
+  "learnerLevel": "beginner-1",
+  "verdict": {
+    "qualifies": true,
+    "reason": "A Python tutorial that writes and runs code in most sections.",
+    "evidence": [
+      {
+        "startS": 9680,
+        "endS": 9692,
+        "text": "let's create a function that raises a number to a power"
+      }
+    ]
+  },
+  "sections": [
+    {
+      "id": "s12",
+      "startS": 9680,
+      "endS": 10033,
+      "title": "Exponent Function",
+      "qualifies": true,
+      "format": "code",
+      "language": "python",
+      "concepts": [
+        "loops",
+        "functions"
+      ],
+      "evidence": [
+        {
+          "startS": 9700,
+          "endS": 9712,
+          "text": "we can use a for loop to multiply the base"
+        }
+      ]
+    },
+    {
+      "id": "s13",
+      "startS": 10033,
+      "endS": 10400,
+      "title": "2D Lists & Nested Loops",
+      "qualifies": true,
+      "format": "mixed",
+      "language": "python",
+      "concepts": [
+        "lists",
+        "loops"
+      ],
+      "evidence": [
+        {
+          "startS": 10040,
+          "endS": 10050,
+          "text": "a 2D list is basically a list inside a list"
+        }
+      ]
+    },
+    {
+      "id": "s14",
+      "startS": 10400,
+      "endS": 10520,
+      "title": "Channel announcement",
+      "qualifies": false,
+      "format": "off_topic",
+      "language": "unknown",
+      "concepts": [],
+      "evidence": [
+        {
+          "startS": 10402,
+          "endS": 10410,
+          "text": "before we continue, make sure to subscribe"
+        }
+      ]
+    }
+  ],
+  "pauses": [
+    {
+      "id": "p1",
+      "sectionId": "s12",
+      "pauseAtS": 9803.3,
+      "revealAtS": 9805.3,
+      "kind": "coding",
+      "rank": 1,
+      "ready": true,
+      "exercise": {
+        "id": "g-rfsc-exp-1",
+        "revision": "r1",
+        "title": "Raise a number to a power",
+        "language": "python",
+        "statement": "Write raise_to_power(base_num, pow_num) using a loop instead of **.",
+        "starterCode": "def raise_to_power(base_num, pow_num):\n    pass\n",
+        "examples": [
+          {
+            "args": [
+              2,
+              3
+            ],
+            "expected": 8
+          }
+        ],
+        "concepts": [
+          "loops",
+          "functions"
+        ],
+        "level": "beginner-1",
+        "aiGenerated": true
+      }
+    },
+    {
+      "id": "p2",
+      "sectionId": "s13",
+      "pauseAtS": 10120.0,
+      "revealAtS": null,
+      "kind": "concept",
+      "rank": 2,
+      "ready": true,
+      "question": {
+        "id": "q-rfsc-2d-1",
+        "revision": "r1",
+        "title": "Reading a 2D list",
+        "style": "multiple_choice",
+        "prompt": "grid = [[1, 2], [3, 4]]. What does grid[1][0] give?",
+        "choices": [
+          {
+            "id": "a",
+            "text": "1"
+          },
+          {
+            "id": "b",
+            "text": "2"
+          },
+          {
+            "id": "c",
+            "text": "3"
+          },
+          {
+            "id": "d",
+            "text": "4"
+          }
+        ],
+        "concepts": [
+          "lists"
+        ],
+        "level": "beginner-1",
+        "aiGenerated": true
+      }
+    },
+    {
+      "id": "p3",
+      "sectionId": "s13",
+      "pauseAtS": 10300.0,
+      "revealAtS": 10310.0,
+      "kind": "coding",
+      "rank": 3,
+      "ready": false,
+      "exercise": null
+    }
+  ]
+}

@@ -1,0 +1,181 @@
+{
+  "schemaVersion": 2,
+  "note": "Per-concept levels. Everyone starts at beginner-1 on every concept. Optimization feedback is shown from tier 'intermediate' upward.",
+  "levels": [
+    {
+      "id": "beginner-1",
+      "rank": 1,
+      "tier": "beginner",
+      "name": "Beginner I",
+      "minXp": 0
+    },
+    {
+      "id": "beginner-2",
+      "rank": 2,
+      "tier": "beginner",
+      "name": "Beginner II",
+      "minXp": 40
+    },
+    {
+      "id": "beginner-3",
+      "rank": 3,
+      "tier": "beginner",
+      "name": "Beginner III",
+      "minXp": 100
+    },
+    {
+      "id": "beginner-4",
+      "rank": 4,
+      "tier": "beginner",
+      "name": "Beginner IV",
+      "minXp": 180
+    },
+    {
+      "id": "beginner-5",
+      "rank": 5,
+      "tier": "beginner",
+      "name": "Beginner V",
+      "minXp": 280
+    },
+    {
+      "id": "intermediate-1",
+      "rank": 6,
+      "tier": "intermediate",
+      "name": "Intermediate I",
+      "minXp": 400
+    },
+    {
+      "id": "intermediate-2",
+      "rank": 7,
+      "tier": "intermediate",
+      "name": "Intermediate II",
+      "minXp": 540
+    },
+    {
+      "id": "intermediate-3",
+      "rank": 8,
+      "tier": "intermediate",
+      "name": "Intermediate III",
+      "minXp": 700
+    },
+    {
+      "id": "intermediate-4",
+      "rank": 9,
+      "tier": "intermediate",
+      "name": "Intermediate IV",
+      "minXp": 880
+    },
+    {
+      "id": "intermediate-5",
+      "rank": 10,
+      "tier": "intermediate",
+      "name": "Intermediate V",
+      "minXp": 1080
+    },
+    {
+      "id": "advanced-1",
+      "rank": 11,
+      "tier": "advanced",
+      "name": "Advanced I",
+      "minXp": 1300
+    },
+    {
+      "id": "advanced-2",
+      "rank": 12,
+      "tier": "advanced",
+      "name": "Advanced II",
+      "minXp": 1540
+    },
+    {
+      "id": "advanced-3",
+      "rank": 13,
+      "tier": "advanced",
+      "name": "Advanced III",
+      "minXp": 1800
+    },
+    {
+      "id": "advanced-4",
+      "rank": 14,
+      "tier": "advanced",
+      "name": "Advanced IV",
+      "minXp": 2080
+    },
+    {
+      "id": "advanced-5",
+      "rank": 15,
+      "tier": "advanced",
+      "name": "Advanced V",
+      "minXp": 2380
+    },
+    {
+      "id": "expert-1",
+      "rank": 16,
+      "tier": "expert",
+      "name": "Expert I",
+      "minXp": 2700
+    },
+    {
+      "id": "expert-2",
+      "rank": 17,
+      "tier": "expert",
+      "name": "Expert II",
+      "minXp": 3040
+    },
+    {
+      "id": "expert-3",
+      "rank": 18,
+      "tier": "expert",
+      "name": "Expert III",
+      "minXp": 3400
+    },
+    {
+      "id": "expert-4",
+      "rank": 19,
+      "tier": "expert",
+      "name": "Expert IV",
+      "minXp": 3780
+    },
+    {
+      "id": "expert-5",
+      "rank": 20,
+      "tier": "expert",
+      "name": "Expert V",
+      "minXp": 4180
+    },
+    {
+      "id": "expert-6",
+      "rank": 21,
+      "tier": "expert",
+      "name": "Expert VI",
+      "minXp": 4600
+    },
+    {
+      "id": "expert-7",
+      "rank": 22,
+      "tier": "expert",
+      "name": "Expert VII",
+      "minXp": 5040
+    },
+    {
+      "id": "expert-8",
+      "rank": 23,
+      "tier": "expert",
+      "name": "Expert VIII",
+      "minXp": 5500
+    },
+    {
+      "id": "expert-9",
+      "rank": 24,
+      "tier": "expert",
+      "name": "Expert IX",
+      "minXp": 5980
+    },
+    {
+      "id": "expert-10",
+      "rank": 25,
+      "tier": "expert",
+      "name": "Expert X",
+      "minXp": 6480
+    }
+  ]
+}

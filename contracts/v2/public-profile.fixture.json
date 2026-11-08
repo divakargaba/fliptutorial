@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 2,
+  "accountId": "test-ana",
+  "displayName": "Ana (test)",
+  "public": true,
+  "skills": [
+    {
+      "concept": "loops",
+      "level": "beginner-3",
+      "levelName": "Beginner III",
+      "xp": 145,
+      "strength": 0.82,
+      "lastPracticedAt": "2026-11-09T18:00:00Z",
+      "passed": 5,
+      "tutorials": 3
+    },
+    {
+      "concept": "functions",
+      "level": "beginner-2",
+      "levelName": "Beginner II",
+      "xp": 70,
+      "strength": 0.64,
+      "lastPracticedAt": "2026-11-08T03:04:05Z",
+      "passed": 2,
+      "tutorials": 1
+    },
+    {
+      "concept": "lists",
+      "level": "beginner-1",
+      "levelName": "Beginner I",
+      "xp": 10,
+      "strength": 0.31,
+      "lastPracticedAt": "2026-11-01T12:00:00Z",
+      "passed": 0,
+      "tutorials": 1
+    }
+  ],
+  "highlights": [
+    "Python loops · 5 challenges passed across 3 tutorials"
+  ],
+  "refresherDue": [
+    {
+      "concept": "lists",
+      "reason": "strength below 0.35"
+    }
+  ],
+  "topInDemand": [
+    {
+      "concept": "react-state",
+      "reason": "Frequent in front-end job posts this month",
+      "videoUrl": "https://www.youtube.com/watch?v=O6P86uwfdR0"
+    }
+  ],
+  "complements": [
+    {
+      "accountId": "test-ben",
+      "displayName": "Ben (test)",
+      "why": "Advanced in sql-joins and http-apis, where Ana is a beginner"
+    }
+  ]
+}
