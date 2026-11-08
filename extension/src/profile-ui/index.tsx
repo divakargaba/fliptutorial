@@ -172,9 +172,9 @@ function reasonFor(p: Pairing) {
   return `Learning ${n(p.shared.length)} at your level`;
 }
 function TeammatesCard({ pairings, onView }: { pairings: Pairing[]; onView?(accountId: string): void }) {
-  if (!pairings.length) return <section className="bp-v2-card bp-pf-card"><header className="bp-pf-card-head"><h2>Teammates</h2></header>
+  if (!pairings.length) return <section className="bp-v2-card bp-pf-card"><header className="bp-pf-card-head"><h2>Network</h2></header>
     <p className="bp-pf-sub">No matches yet. Matches appear as your skills grow.</p></section>;
-  return <section className="bp-v2-card bp-pf-card" aria-label="Teammates">
+  return <section className="bp-v2-card bp-pf-card" aria-label="Network">
     {SECTIONS.map(section => {
       const rows = pairings.filter(p => p.kind === section.kind);
       if (!rows.length) return null;
@@ -223,7 +223,7 @@ export function ProfileView({ profile, accountIds, onViewProfile, toggle }: { pr
     <HeaderCard profile={profile} toggle={toggle} />
     <div className="bp-pf-tabs" role="tablist" aria-label="Profile sections">
       <button type="button" role="tab" id="tab-skills" aria-controls="panel-skills" aria-selected={tab === 'skills'} onClick={() => setTab('skills')}>Skills</button>
-      <button type="button" role="tab" id="tab-teammates" aria-controls="panel-teammates" aria-selected={tab === 'teammates'} onClick={() => setTab('teammates')}>Teammates
+      <button type="button" role="tab" id="tab-teammates" aria-controls="panel-teammates" aria-selected={tab === 'teammates'} onClick={() => setTab('teammates')}>Network
         {!!pairings.length && <span className="bp-pf-count">{pairings.length}</span>}</button>
     </div>
     <AnimatePresence mode="wait" initial={false}>
@@ -367,7 +367,7 @@ export function ProfilePage({ preferences: prefs = preferences }: { preferences?
     setSettings(value); setSavingError('');
     void persist(() => prefs.saveLearnerSettings(value)).catch(() => setSavingError('Practice settings could not be saved.'));
   };
-  const toggle = profile && <label className="bp-pf-toggle"><span><span className="bp-pf-toggle-title">Visible to teammates</span>
+  const toggle = profile && <label className="bp-pf-toggle"><span><span className="bp-pf-toggle-title">Visible in Network</span>
     <span className="bp-pf-sub">{profile.public ? 'Others can find and match with you' : 'Hidden from matches'}</span></span>
     <input type="checkbox" role="switch" checked={profile.public} disabled={busy} onChange={event => {
       const next = event.target.checked; setBusy(true); setSavingError('');
