@@ -78,3 +78,6 @@ pytest driven by `practice-events.fixture.json` + generated event streams: level
 - [x] Feedback handoff (2) backend: `GET /v2/profile/{accountId}/award/{eventId}` -> what one delivered event earned per
   concept (xpGained, xpBefore/xp, levelBefore/level/nextLevel, xpToNext, progress 0-1, leveledUp); 404 EVENT_NOT_FOUND
   until delivered. Extension display (progress card after a pass) goes through the lead.
+- [x] In demand redesign: `app/profile/pull_in_demand.py` pulls Adzuna Canada once (cached, title-based counts, Calgary ->
+  Alberta -> Canada) into `in-demand.json` `fields`; `GET /v2/skills/fields?accountId=` adds the learner's level per skill
+  chip; popup "In demand 🔥" list with tutorials verified through the planner; old card is the fallback.

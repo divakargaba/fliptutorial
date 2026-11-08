@@ -554,3 +554,61 @@ def test_contacts_are_optional_and_private_accounts_hidden(seeded):
     assert seeded.get("/v2/profile/test-dee/contacts").json() == {"accountId": "test-dee"}
     assert seeded.get("/v2/profile/test-eli/contacts").status_code == 404
     assert seeded.get("/v2/profile/nobody/contacts").status_code == 404
+
+
+# --- in demand: hiring fields from the dated job-posting snapshot -----------------------------------
+
+FIELDS_SNAPSHOT = {
+    "fieldsPulledAt": "2026-11-08", "fieldsMethod": "test",
+    "sources": [{"id": "adzuna", "title": "Adzuna", "url": "https://www.adzuna.ca/"}],
+    "skills": [],
+    "fields": [{
+        "id": "energy-data", "name": "Energy data analytics", "summary": "s", "rising": True, "wefSkill": "AI and big data",
+        "postings": {"calgary": 40, "alberta": 47, "canada": 80, "count": 40, "where": "Calgary", "scope": "city",
+                     "searchUrl": "https://www.adzuna.ca/search?q=analyst", "titleContains": "analyst"},
+        "skills": [{"name": "Python", "share": 0.14, "mentions": 11, "concepts": ["loops", "functions"]},
+                   {"name": "SQL", "share": 0.19, "mentions": 15, "concepts": ["sql-select", "sql-joins"]},
+                   {"name": "Excel", "share": 0.57, "mentions": 46, "concepts": []}],
+        "alsoAskedFor": [{"name": "Degree", "mentions": 55, "share": 0.69}],
+        "tutorials": [{"videoId": "vV12dGe_Fho", "url": "https://www.youtube.com/watch?v=vV12dGe_Fho", "title": "t",
+                       "codingChallenges": 4, "firstChallenge": {"atS": 327, "title": "Extract the hour"}}],
+    }],
+}
+
+
+def test_fields_show_the_learners_level_per_skill_chip(empty):
+    skills.set_source(lambda: FIELDS_SNAPSHOT)
+    try:
+        empty.post("/v2/events", json={"events": [_pass(1, "functions", NOW), _pass(2, "functions", NOW)]})
+        body = empty.get("/v2/skills/fields", params={"accountId": "test-x", **NOW_Q}).json()
+        assert body["pulledAt"] == "2026-11-08" and len(body["fields"]) == 1
+        f = body["fields"][0]
+        assert f["postings"]["calgary"] == 40 and f["rising"] is True and f["tutorials"][0]["codingChallenges"] == 4
+        chips = {c["name"]: c for c in f["skills"]}
+        assert chips["Python"]["tracked"] and chips["Python"]["level"]["concept"] == "functions"
+        assert chips["Python"]["level"]["levelName"] == "Beginner II"  # 75 XP across two first-try passes
+        assert chips["SQL"]["tracked"] and chips["SQL"]["level"] is None  # not started
+        assert chips["Excel"]["tracked"] is False and chips["Excel"]["level"] is None  # a tool Breakpoint doesn't teach
+        anon = empty.get("/v2/skills/fields").json()["fields"][0]
+        assert all(c["level"] is None for c in anon["skills"])
+    finally:
+        skills.set_source(skills.file_source())
+
+
+def test_fields_are_empty_before_the_first_pull(empty):
+    skills.set_source(lambda: {"skills": []})
+    try:
+        assert empty.get("/v2/skills/fields").json() == {"pulledAt": None, "method": None, "sources": [], "fields": []}
+    finally:
+        skills.set_source(skills.file_source())
+
+
+def test_shipped_snapshot_has_dated_fields_with_verified_tutorials():
+    data = json.loads((Path(__file__).resolve().parents[1] / "content" / "skills" / "in-demand.json").read_text(encoding="utf-8"))
+    assert data["fieldsPulledAt"] and 3 <= len(data["fields"]) <= 5
+    for f in data["fields"]:
+        assert f["postings"]["searchUrl"].startswith("https://www.adzuna.ca/search?")
+        assert f["skills"] and all(0 <= s["share"] <= 1 for s in f["skills"])
+        assert all(r["share"] >= 0.10 for r in f["alsoAskedFor"])
+        assert all(t["codingChallenges"] > 0 and t["url"].startswith("https://www.youtube.com/watch?v=") for t in f["tutorials"])
+    assert data["skills"], "the old hand-picked list stays as the fallback card"

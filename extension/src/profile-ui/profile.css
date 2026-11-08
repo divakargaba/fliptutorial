@@ -174,3 +174,22 @@ html:has(.bp-pf-root) { width: 400px; }
 .bp-pf-skel { height: 160px; border-radius: 12px; background: linear-gradient(90deg, var(--pf-group), var(--pf-raised), var(--pf-group)) 0 0 / 200% 100%; animation: bp-pf-shimmer 1.4s linear infinite; }
 @keyframes bp-pf-shimmer { to { background-position: -200% 0; } }
 @media (prefers-reduced-motion: reduce) { .bp-pf-root *, .bp-pf-root *::after { animation: none !important; transition: none !important; } }
+
+/* In demand: hiring fields (details/summary rows) */
+.bp-pf-field details > summary { list-style: none; display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; cursor: pointer; border-radius: 11px; }
+.bp-pf-field details > summary::-webkit-details-marker { display: none; }
+.bp-pf-field details > summary:hover { background: var(--pf-raised); }
+.bp-pf-field details > summary:focus-visible { outline: 2px solid var(--pf-accent); outline-offset: -2px; }
+.bp-pf-field details[open] .bp-pf-field-chevron { transform: rotate(180deg); }
+.bp-pf-field-chevron { margin-top: 2px; transition: transform .2s ease; flex: none; }
+.bp-pf-tags-sm { margin-top: 6px; }
+.bp-pf-tags-sm li { font-size: 12px; padding: 2px 7px; color: var(--pf-text-2); }
+.bp-pf-rising { margin-left: 8px; padding: 1px 6px; border-radius: 99px; font-size: 11px; font-weight: 600; color: var(--pf-warning); background: rgba(245, 158, 11, .12); vertical-align: middle; }
+.bp-pf-field-body { display: grid; gap: 10px; padding: 0 14px 14px; }
+.bp-pf-field-skills { display: grid; gap: 6px; list-style: none; margin: 0; padding: 0; }
+.bp-pf-field-skills li { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; font-size: 13px; color: var(--pf-text); }
+.bp-pf-field-block ul { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 6px; }
+.bp-pf-field-link { display: grid; gap: 2px; padding: 8px 10px; border-radius: 8px; background: var(--pf-raised); color: var(--pf-text); text-decoration: none; font-size: 13px; }
+.bp-pf-field-link:hover { outline: 1px solid var(--pf-border); }
+.bp-pf-field-jobs { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--pf-accent); text-decoration: none; }
+.bp-pf-field-jobs:hover { text-decoration: underline; }

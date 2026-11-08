@@ -54,6 +54,31 @@ def in_demand_list() -> dict:
     return {"asOf": data.get("asOf"), "method": data.get("method"), "skills": skills}
 
 
+def in_demand_fields(rep: Replay | None) -> dict:
+    """Hiring fields from the dated Adzuna snapshot (pull_in_demand.py), with the learner's Breakpoint level
+    for each skill chip: the best level across the chip's concepts they have practiced, None when they have
+    not started, and `tracked: false` for tools Breakpoint does not teach (ArcGIS, Power BI...)."""
+    data = _source()
+    fields = []
+    for f in data.get("fields", []):
+        chips = []
+        for s in f.get("skills", []):
+            concepts = [c for c in s.get("concepts", []) if c in CONCEPTS]
+            practiced = [rep.concepts[c] for c in concepts
+                         if rep and c in rep.concepts and (rep.concepts[c].active or rep.concepts[c].xp > 0)]
+            best = max(practiced, key=lambda st: (st.level["rank"], st.xp), default=None)
+            chips.append({
+                "name": s["name"], "share": s.get("share"), "mentions": s.get("mentions"), "tracked": bool(concepts),
+                "level": ({"level": best.level["id"], "levelName": best.level["name"], "rank": best.level["rank"],
+                           "concept": best.concept} if best else None),
+            })
+        fields.append({**{k: f[k] for k in ("id", "name", "summary", "rising", "wefSkill", "postings") if k in f},
+                       "skills": chips, "alsoAskedFor": f.get("alsoAskedFor", []), "tutorials": f.get("tutorials", [])})
+    sources = [s for s in data.get("sources", []) if s.get("id") in ("adzuna", "wef-foj-2025")]
+    return {"pulledAt": data.get("fieldsPulledAt"), "method": data.get("fieldsMethod"), "sources": sources,
+            "fields": fields}
+
+
 def top_in_demand(rep: Replay | None, limit: int = 3) -> list[dict]:
     """Top N in-demand skills, skipping ones the learner is already Advanced+ in."""
     out = []
